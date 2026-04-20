@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ápice · Programa de Formação Executiva</title>
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS E BASE
+═══════════════════════════════════════════ */
+:root {
+  --serif : 'Palatino Linotype','Book Antiqua',Palatino,Georgia,'Times New Roman',serif;
+  --sans  : -apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
+
+  --k0:#0E0E0E; --k1:#1C1C1C; --k2:#2E2E2E; --k3:#505050;
+  --k4:#7A7A7A; --k5:#A6A6A6; --k6:#C8C8C8; --k7:#E2E2E2;
+  --k8:#F0F0EE; --k9:#F8F8F6; --wh:#FFFFFF;
+
+  --gold   : #9B7E46;
+  --gold2  : #B8975A;
+  --golddim: rgba(155,126,70,.09);
+  --goldbd : rgba(155,126,70,.22);
+  --bd     : rgba(14,14,14,.08);
+  --bd2    : rgba(14,14,14,.05);
+
+  --bar-h : 52px;
+  --sw    : 292px;
+  --ease  : cubic-bezier(.16,1,.3,1);
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0 }
+html  { scroll-behavior:smooth }
+body  {
+  font-family:var(--sans); background:var(--k9); color:var(--k1);
+  font-size:14px; line-height:1.55;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  min-height:100vh;
+}
+button,textarea { font-family:inherit }
+a     { color:inherit; text-decoration:none }
+::selection { background:rgba(155,126,70,.18) }
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar {
+  position:fixed; top:0; left:0; right:0; height:var(--bar-h);
+  background:var(--k0); border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex; align-items:center; padding:0 32px; z-index:400;
+}
+.tb-brand {
+  font-family:var(--serif); font-size:18px; font-weight:400;
+  color:var(--wh); letter-spacing:.05em;
+  display:flex; align-items:center; gap:12px;
+  margin-right:40px; flex-shrink:0;
+}
+.tb-vr   { width:1px; height:16px; background:rgba(255,255,255,.14) }
+.tb-sub  { font-size:10.5px; font-weight:300; letter-spacing:.15em; text-transform:uppercase; color:rgba(255,255,255,.28) }
+.tb-path {
+  display:flex; align-items:center; gap:8px;
+  font-size:11.5px; font-weight:300; color:rgba(255,255,255,.3); letter-spacing:.03em;
+}
+.tb-cur  { color:rgba(255,255,255,.62); font-weight:400 }
+.tb-sep  { color:rgba(255,255,255,.16) }
+.tb-right{ margin-left:auto; display:flex; align-items:center; gap:4px }
+.tb-pill {
+  height:28px; padding:0 14px; border:none; border-radius:1px;
+  font-size:11px; font-weight:400; letter-spacing:.06em;
+  color:rgba(255,255,255,.38); background:transparent;
+  cursor:pointer; transition:all .15s; display:inline-flex; align-items:center;
+}
+.tb-pill:hover { color:rgba(255,255,255,.75); background:rgba(255,255,255,.07) }
+.tb-pill-g { color:var(--gold2); border:1px solid rgba(155,126,70,.28) }
+.tb-pill-g:hover { background:rgba(155,126,70,.1) }
+.tb-av {
+  width:28px; height:28px; border-radius:50%; border:1px solid rgba(255,255,255,.14);
+  display:grid; place-items:center;
+  font-size:10px; font-weight:500; letter-spacing:.05em;
+  color:rgba(255,255,255,.42); margin-left:8px;
+}
+
+/* ═══════════════════════════════════════════
+   SHELL
+═══════════════════════════════════════════ */
+.shell { display:flex; margin-top:var(--bar-h); min-height:calc(100vh - var(--bar-h)) }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+.sidebar {
+  width:var(--sw); flex-shrink:0;
+  position:sticky; top:var(--bar-h); height:calc(100vh - var(--bar-h));
+  overflow-y:auto; scrollbar-width:none;
+  background:var(--wh); border-right:1px solid var(--bd);
+  display:flex; flex-direction:column;
+  animation:sbIn .45s var(--ease) both;
+}
+.sidebar::-webkit-scrollbar { display:none }
+@keyframes sbIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+
+.sb-top     { padding:28px 24px 22px; border-bottom:1px solid var(--bd); flex-shrink:0 }
+.sb-eyebrow {
+  font-size:9px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--k5); margin-bottom:11px;
+  display:flex; align-items:center; gap:10px;
+}
+.sb-eyebrow::before { content:''; width:18px; height:1px; background:var(--gold); opacity:.7 }
+.sb-title   { font-family:var(--serif); font-size:16px; font-weight:400; line-height:1.25; letter-spacing:-.01em; color:var(--k1); margin-bottom:22px }
+
+/* Progresso */
+.sb-prog      { margin-bottom:18px }
+.sb-prog-nums { display:flex; align-items:baseline; gap:5px; margin-bottom:7px }
+.sb-prog-big  { font-family:var(--serif); font-size:40px; font-weight:300; letter-spacing:-.04em; line-height:1; color:var(--k1) }
+.sb-prog-den  { font-size:12.5px; font-weight:300; color:var(--k5) }
+.sb-prog-track{ height:1.5px; background:var(--k7); position:relative; margin-bottom:5px }
+.sb-prog-fill {
+  position:absolute; left:0; top:0; bottom:0; background:var(--k1);
+  transition:width 1s var(--ease);
+}
+.sb-prog-fill::after { content:''; position:absolute; right:0; top:-2px; width:1px; height:6px; background:var(--k1) }
+.sb-prog-note { font-size:11px; font-weight:300; color:var(--k5) }
+
+/* Fatos */
+.sb-facts { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--bd); border:1px solid var(--bd); border-radius:1px }
+.sb-fact  { background:var(--wh); padding:9px 11px }
+.sb-fact-v{ font-family:var(--serif); font-size:16px; font-weight:400; letter-spacing:-.015em; color:var(--k1); display:block; margin-bottom:1px }
+.sb-fact-v.g { color:var(--gold) }
+.sb-fact-k{ font-size:9.5px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--k5) }
+
+/* Nav */
+.sb-nav     { flex:1; padding:14px 0 8px }
+.nav-ch     { margin-bottom:1px }
+.nav-ch-hd  {
+  display:flex; align-items:center; gap:11px; padding:7px 24px;
+  cursor:pointer; user-select:none;
+}
+.nav-ch-hd:hover .nav-ch-nm { color:var(--k2) }
+.nav-ch-n   { font-size:9px; letter-spacing:.14em; color:var(--k6); min-width:22px }
+.nav-ch-nm  { font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--k5); flex:1; transition:color .12s }
+.nav-arr    { color:var(--k6); transition:transform .2s var(--ease); flex-shrink:0 }
+.nav-ch.open .nav-arr   { transform:rotate(90deg) }
+.nav-ch-items           { display:none; padding-bottom:4px }
+.nav-ch.open .nav-ch-items { display:block }
+
+.nav-entry  {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:8px 24px 8px 20px; cursor:pointer;
+  border-left:2px solid transparent; transition:all .12s;
+}
+.nav-entry:hover                 { background:var(--k9) }
+.nav-entry.done .nav-entry-txt  { color:var(--k5) }
+.nav-entry.current               { background:var(--k8); border-left-color:var(--k1) }
+.nav-entry.current .nav-entry-txt{ color:var(--k1); font-weight:500 }
+.nav-entry.locked                { cursor:default; opacity:.35 }
+.nav-entry.locked:hover          { background:none }
+
+.ndot   { width:16px; height:16px; border-radius:50%; border:1.5px solid; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; font-size:7px }
+.nd-done{ border-color:var(--k2); background:var(--k2); color:var(--wh) }
+.nd-cur { border-color:var(--k1); background:var(--wh); color:var(--k1) }
+.nd-todo{ border-color:var(--k7); background:transparent }
+.nd-lock{ border-color:var(--k7); background:transparent }
+
+.nav-entry-txt  { flex:1; font-size:12px; font-weight:400; color:var(--k4); line-height:1.35 }
+.nav-entry-num  { font-family:var(--serif); font-style:italic; font-size:10.5px; color:var(--k6); flex-shrink:0; margin-top:2px }
+
+/* Sidebar rodapé */
+.sb-bot       { border-top:1px solid var(--bd); padding:18px 24px; flex-shrink:0 }
+.sb-next      { border-left:2px solid var(--gold); padding:10px 0 10px 14px }
+.sb-next-tag  { font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-bottom:4px }
+.sb-next-title{ font-size:13px; font-weight:500; color:var(--k1); margin-bottom:2px; line-height:1.3 }
+.sb-next-meta { font-size:11px; font-weight:300; color:var(--k4) }
+
+/* ═══════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════ */
+.main { flex:1; min-width:0; background:var(--k9); animation:mainIn .5s .05s var(--ease) both }
+@keyframes mainIn { from{opacity:0} to{opacity:1} }
+
+/* Ribbon */
+.ribbon {
+  display:none; align-items:center; gap:14px; padding:0 44px; height:44px;
+  background:var(--k1); font-size:12px; font-weight:300; letter-spacing:.03em;
+  color:rgba(255,255,255,.45); border-bottom:1px solid rgba(255,255,255,.05);
+}
+.ribbon.show    { display:flex }
+.ribbon-rule    { width:18px; height:1px; background:var(--gold); flex-shrink:0 }
+.ribbon strong  { color:rgba(255,255,255,.82); font-weight:500 }
+.ribbon-close   { margin-left:auto; color:rgba(255,255,255,.25); font-size:18px; line-height:1; cursor:pointer; background:none; border:none }
+.ribbon-close:hover { color:rgba(255,255,255,.6) }
+
+/* Intro */
+.intro {
+  background:var(--wh); border-bottom:1px solid var(--bd);
+  padding:56px 60px 48px; position:relative; overflow:hidden;
+}
+.intro::before {
+  content:''; position:absolute; top:0; right:0; width:45%; height:100%;
+  background-image:
+    linear-gradient(var(--bd) 1px,transparent 1px),
+    linear-gradient(90deg,var(--bd) 1px,transparent 1px);
+  background-size:36px 36px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,rgba(0,0,0,.5));
+  mask-image:linear-gradient(90deg,transparent,rgba(0,0,0,.5));
+  pointer-events:none;
+}
+.intro-kicker {
+  font-size:10px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--k5); margin-bottom:22px; display:flex; align-items:center; gap:14px;
+}
+.intro-kicker::before { content:''; width:28px; height:1px; background:var(--k2) }
+.intro-h1 {
+  font-family:var(--serif); font-size:clamp(34px,4.5vw,52px);
+  font-weight:400; line-height:1.07; letter-spacing:-.025em; color:var(--k1); margin-bottom:8px;
+}
+.intro-h1 em  { font-style:italic; color:var(--k4) }
+.intro-sub    { font-family:var(--serif); font-style:italic; font-size:17px; font-weight:300; color:var(--k5); margin-bottom:20px; letter-spacing:.01em }
+.intro-desc   { font-size:13.5px; font-weight:300; color:var(--k3); max-width:510px; line-height:1.8; margin-bottom:36px }
+
+/* KPIs */
+.kpis { display:flex; align-items:stretch; border:1px solid var(--bd); background:var(--k9); width:fit-content; border-radius:1px }
+.kpi  { padding:14px 28px; border-right:1px solid var(--bd); display:flex; flex-direction:column; gap:3px }
+.kpi:last-child { border-right:none }
+.kpi-v{ font-family:var(--serif); font-size:26px; font-weight:400; line-height:1; letter-spacing:-.03em; color:var(--k1) }
+.kpi-v.g{ color:var(--gold) }
+.kpi-k{ font-size:9.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--k5) }
+
+/* Instrutor */
+.inst-row { display:flex; align-items:center; gap:18px; margin-top:30px; padding-top:24px; border-top:1px solid var(--bd2) }
+.inst-sq  { width:34px; height:34px; border:1px solid var(--bd); display:grid; place-items:center; font-family:var(--serif); font-size:11px; color:var(--k2); flex-shrink:0; letter-spacing:.04em }
+.inst-role{ font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--k5); margin-bottom:2px }
+.inst-name{ font-size:13px; font-weight:500; color:var(--k1) }
+.vr       { width:1px; height:22px; background:var(--bd) }
+.ghost-btn{ height:29px; padding:0 14px; border:1px solid var(--bd); background:transparent; font-size:11px; font-weight:400; letter-spacing:.05em; color:var(--k3); cursor:pointer; transition:all .13s; display:inline-flex; align-items:center }
+.ghost-btn:hover { border-color:var(--k4); color:var(--k1) }
+
+/* Separador de capítulo */
+.ch-div  { display:flex; align-items:center; gap:18px; padding:30px 44px 14px }
+.ch-rule { flex:1; height:1px; background:var(--bd) }
+.ch-lbl  { font-size:9.5px; font-weight:600; letter-spacing:.22em; text-transform:uppercase; color:var(--k5); display:flex; align-items:center; gap:11px; white-space:nowrap }
+.ch-num  { font-family:var(--serif); font-size:12px; font-style:italic; color:var(--k6); letter-spacing:0 }
+
+/* Padding de módulos */
+.mpad { padding:0 44px 6px }
+
+/* ═══════════════════════════════════════════
+   MÓDULO
+═══════════════════════════════════════════ */
+.mod {
+  border:1px solid var(--bd); background:var(--wh); margin-bottom:2px; overflow:hidden;
+  transition:border-color .18s, box-shadow .18s;
+}
+.mod:hover:not(.active):not(.locked) { border-color:rgba(14,14,14,.13) }
+.mod.active  { border-color:var(--k1) }
+.mod.locked  { background:var(--k9); border-color:transparent }
+
+.mod-hd { display:flex; align-items:center; cursor:pointer; user-select:none }
+.mod.locked .mod-hd { cursor:default }
+
+.mod-idx {
+  width:50px; flex-shrink:0; align-self:stretch;
+  display:flex; align-items:center; justify-content:center; border-right:1px solid var(--bd);
+  font-family:var(--serif); font-size:13px; font-style:italic; color:var(--k6); transition:color .15s;
+}
+.mod.active .mod-idx { color:var(--k1) }
+
+.mod-info  { flex:1; padding:17px 20px; min-width:0 }
+.mod-top   { display:flex; align-items:baseline; gap:12px; margin-bottom:4px; flex-wrap:wrap }
+.mod-title { font-family:var(--serif); font-size:15.5px; font-weight:400; color:var(--k1); letter-spacing:-.01em; line-height:1.2 }
+.mod.locked .mod-title { color:var(--k5) }
+.mod-sub   { font-family:var(--serif); font-style:italic; font-size:12px; color:var(--k5); margin:2px 0 5px }
+.mod-tag   { font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; padding:3px 8px; border:1px solid; border-radius:1px; flex-shrink:0 }
+.tg-done   { color:var(--k4);  border-color:var(--k7) }
+.tg-active { color:var(--k1);  border-color:var(--k2) }
+.tg-todo   { color:var(--k5);  border-color:var(--k7) }
+.tg-lock   { color:var(--k6);  border-color:var(--k7) }
+.mod-meta  { font-size:11.5px; font-weight:300; color:var(--k5); display:flex; gap:12px; flex-wrap:wrap }
+.mm-sep    { color:var(--k7) }
+.mm-hi     { color:var(--gold); font-weight:400 }
+.mod-right { padding:0 18px; display:flex; align-items:center; gap:8px; flex-shrink:0 }
+.mod-num   { font-family:var(--serif); font-size:17px; font-weight:400; letter-spacing:-.02em; color:var(--k4) }
+.icon-btn  { width:28px; height:28px; border:1px solid var(--bd); background:none; display:grid; place-items:center; color:var(--k5); cursor:pointer; transition:all .12s; border-radius:1px }
+.icon-btn:hover { border-color:var(--k6); color:var(--k3) }
+.mod-chev  { color:var(--k6); transition:transform .22s var(--ease) }
+.mod.open .mod-chev { transform:rotate(180deg) }
+
+/* Corpo */
+.mod-body { display:none; border-top:1px solid var(--bd2) }
+.mod.open .mod-body { display:block; animation:bIn .28s var(--ease) }
+@keyframes bIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+.mod-inner{ padding:26px 26px 0 }
+
+/* Done banner */
+.done-row  { display:flex; align-items:center; overflow:hidden; border:1px solid var(--bd); margin-bottom:22px }
+.done-acc  { width:3px; align-self:stretch; background:var(--k1); flex-shrink:0 }
+.done-txt  { flex:1; padding:12px 16px; font-size:12.5px; font-weight:300; color:var(--k3) }
+.done-txt strong { color:var(--k1); font-weight:500 }
+.done-num  { padding:0 20px; font-family:var(--serif); font-size:22px; font-weight:400; letter-spacing:-.02em; color:var(--k1) }
+.done-num small { font-size:11px; color:var(--k5); font-family:var(--sans) }
+
+/* Grid 2 colunas */
+.cols2  { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--bd); border:1px solid var(--bd); margin-bottom:24px }
+.col    { background:var(--wh); padding:18px 22px }
+.col-hd { font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--k5); padding-bottom:12px; border-bottom:1px solid var(--bd2); margin-bottom:14px }
+.col-ul { list-style:none; display:flex; flex-direction:column; gap:9px }
+.col-ul li { font-size:12.5px; font-weight:300; color:var(--k2); line-height:1.55; padding-left:15px; position:relative }
+.col-ul li::before { content:''; position:absolute; left:0; top:9px; width:6px; height:1px; background:var(--k1) }
+
+/* Seção heading */
+.sec-hd { font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--k5); margin-bottom:12px; display:flex; align-items:center; gap:14px }
+.sec-hd::after { content:''; flex:1; height:1px; background:var(--bd) }
+
+/* Lista de materiais */
+.mat-list  { display:flex; flex-direction:column; gap:1px; background:var(--bd); border:1px solid var(--bd); margin-bottom:24px }
+.mat-row   {
+  background:var(--wh); display:flex; align-items:center; padding:13px 17px;
+  text-decoration:none; color:inherit; position:relative; transition:background .12s;
+}
+.mat-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:0; background:var(--k1); transition:width .18s var(--ease) }
+.mat-row.linkable:hover::before { width:2px }
+.mat-row.linkable:hover         { background:var(--k9); cursor:pointer }
+.mat-row.internal { cursor:default }
+.mat-type { width:76px; flex-shrink:0; font-size:9px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--k5); padding-right:14px }
+.mat-vr   { width:1px; height:18px; background:var(--bd); flex-shrink:0; margin-right:16px }
+.mat-info { flex:1; min-width:0 }
+.mat-name { font-size:12.5px; font-weight:400; color:var(--k2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px }
+.mat-sub  { font-size:10.5px; font-weight:300; color:var(--k5); display:flex; gap:8px; align-items:center }
+.mat-badge{ font-size:9px; font-weight:600; letter-spacing:.08em; padding:2px 7px; border:1px solid; border-radius:1px }
+.mb-ext   { color:var(--gold); border-color:var(--goldbd) }
+.mb-int   { color:var(--k5);   border-color:var(--k7) }
+.mat-icon { flex-shrink:0; padding-left:12px; color:var(--k6) }
+.mat-row.linkable .mat-icon { color:var(--k4) }
+
+/* Entregável badge */
+.entregavel {
+  display:flex; align-items:center; gap:12px; padding:13px 18px;
+  border:1px solid var(--goldbd); background:var(--golddim); margin-bottom:24px;
+}
+.entregavel-ico { color:var(--gold); flex-shrink:0 }
+.entregavel-txt { font-size:12.5px; font-weight:400; color:var(--k2) }
+.entregavel-txt strong { color:var(--k1); font-weight:500 }
+.entregavel-orig{ font-size:10px; font-weight:300; color:var(--k5); margin-left:auto; white-space:nowrap }
+
+/* Bloco de metodologia (no módulo ativo) */
+.metod-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--bd); border:1px solid var(--bd); margin-bottom:24px }
+.metod-cell { background:var(--wh); padding:12px 14px }
+.metod-n    { font-family:var(--serif); font-size:18px; font-weight:300; letter-spacing:-.02em; color:var(--k2); margin-bottom:4px }
+.metod-hd   { font-size:9px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--k5); margin-bottom:5px }
+.metod-desc { font-size:11px; font-weight:300; color:var(--k4); line-height:1.5 }
+
+/* Lock message */
+.lock-msg  { display:flex; align-items:center; gap:14px; padding:14px 22px; border-top:1px solid var(--bd2); background:var(--k9) }
+.lock-ico  { width:28px; height:28px; border:1px solid var(--bd); display:grid; place-items:center; color:var(--k5); flex-shrink:0 }
+.lock-body strong { font-size:12px; color:var(--k3); font-weight:500; display:block; margin-bottom:2px }
+.lock-body p      { font-size:11.5px; font-weight:300; color:var(--k5) }
+
+/* Rodapé de módulo */
+.mod-foot   { display:flex; align-items:center; gap:9px; padding:14px 26px; border-top:1px solid var(--bd2); background:var(--k9); margin-top:24px }
+.btn-prime  { height:36px; padding:0 22px; background:var(--k1); border:1px solid var(--k1); color:var(--wh); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .15s }
+.btn-prime:hover    { background:var(--k2); transform:translateY(-1px); box-shadow:0 4px 14px rgba(14,14,14,.18) }
+.btn-prime:disabled { opacity:.4; cursor:default; transform:none; box-shadow:none }
+.btn-sec    { height:36px; padding:0 18px; background:transparent; border:1px solid var(--bd); color:var(--k3); font-size:11px; font-weight:400; letter-spacing:.07em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:all .12s }
+.btn-sec:hover { border-color:var(--k4); color:var(--k1) }
+.foot-note  { margin-left:auto; font-size:10.5px; font-weight:300; color:var(--k6); letter-spacing:.03em }
+
+/* ═══════════════════════════════════════════
+   CARTÃO DE MÉTRICAS (fixo)
+═══════════════════════════════════════════ */
+.metrics { position:fixed; bottom:26px; right:28px; width:188px; background:var(--k0); z-index:200; animation:metIn .6s .4s var(--ease) both; overflow:hidden }
+@keyframes metIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+.met-gold  { height:1px; background:var(--gold) }
+.met-body  { padding:16px }
+.met-lbl   { font-size:8.5px; font-weight:600; letter-spacing:.24em; text-transform:uppercase; color:rgba(255,255,255,.2); margin-bottom:15px }
+.met-rows  { display:flex; flex-direction:column; gap:11px }
+.met-row-hd{ display:flex; justify-content:space-between; margin-bottom:5px; font-size:11px; font-weight:300; color:rgba(255,255,255,.3) }
+.met-row-hd span { font-family:var(--serif); font-size:13px; font-style:italic; color:rgba(255,255,255,.65) }
+.met-track { height:1px; background:rgba(255,255,255,.1) }
+.met-fill  { height:100%; transition:width 1s var(--ease) }
+
+/* Spinner de loading */
+.loading { display:flex; flex-direction:column; align-items:center; justify-content:center; height:60vh; gap:16px; color:var(--k5) }
+.spin    { width:28px; height:28px; border:1.5px solid var(--k7); border-top-color:var(--k3); border-radius:50%; animation:spin .8s linear infinite }
+@keyframes spin { to{transform:rotate(360deg)} }
+.spin-lbl{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:500 }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVO
+═══════════════════════════════════════════ */
+@media(max-width:860px) {
+  .sidebar  { display:none }
+  .intro    { padding:36px 24px 32px }
+  .ch-div,.mpad { padding-left:20px; padding-right:20px }
+  .cols2    { grid-template-columns:1fr }
+  .metod-grid { grid-template-columns:1fr 1fr }
+  .metrics  { display:none }
+  .tb-sub,.tb-path { display:none }
+  .kpis     { flex-wrap:wrap }
+}
+
+::-webkit-scrollbar       { width:4px }
+::-webkit-scrollbar-track { background:transparent }
+::-webkit-scrollbar-thumb { background:var(--k7) }
+.pb-end { padding-bottom:80px }
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR (preenchida pelo JS) ══ -->
+<header class="topbar">
+  <div class="tb-brand">
+    <span>Ápice</span>
+    <div class="tb-vr"></div>
+    <span class="tb-sub">Desenvolvimento Executivo</span>
+  </div>
+  <div class="tb-path">
+    <span>Programas</span>
+    <span class="tb-sep">/</span>
+    <span class="tb-cur" id="tbCur">—</span>
+  </div>
+  <div class="tb-right">
+    <button class="tb-pill">Agenda</button>
+    <button class="tb-pill tb-pill-g">Progresso</button>
+    <div class="tb-av" id="tbAv">CL</div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- ══ SIDEBAR (preenchida pelo JS) ══ -->
+  <aside class="sidebar">
+    <div class="sb-top">
+      <div class="sb-eyebrow">Programa em curso</div>
+      <div class="sb-title"   id="sbTitle">—</div>
+      <div class="sb-prog">
+        <div class="sb-prog-nums">
+          <span class="sb-prog-big"  id="progBig">0</span>
+          <span class="sb-prog-den"  id="progDen">de 0 encontros</span>
+        </div>
+        <div class="sb-prog-track">
+          <div class="sb-prog-fill"  id="progFill" style="width:0%"></div>
+        </div>
+        <div class="sb-prog-note"    id="progNote">—</div>
+      </div>
+      <div class="sb-facts" id="sbFacts"></div>
+    </div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-bot">
+      <div class="sb-next">
+        <div class="sb-next-tag">Próximo Encontro</div>
+        <div class="sb-next-title" id="sbNextTitle">—</div>
+        <div class="sb-next-meta"  id="sbNextMeta">—</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN (preenchida pelo JS) ══ -->
+  <div class="main">
+    <div class="ribbon" id="ribbon">
+      <div class="ribbon-rule"></div>
+      <span id="ribbonMsg">Encontro concluído.</span>
+      <button class="ribbon-close" onclick="document.getElementById('ribbon').classList.remove('show')">&#x2715;</button>
+    </div>
+    <div id="mainContent">
+      <div class="loading">
+        <div class="spin"></div>
+        <div class="spin-lbl">Carregando programa</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- ══ MÉTRICAS (preenchida pelo JS) ══ -->
+<div class="metrics">
+  <div class="met-gold"></div>
+  <div class="met-body">
+    <div class="met-lbl">Status do Programa</div>
+    <div class="met-rows" id="metRows"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ① JSON — fonte única de dados
+        (substitua aqui ou faça fetch externo)
+══════════════════════════════════════════════════════ -->
+<script id="programaData" type="application/json">
+{
+  "_id": { "$oid": "69a0724edc4c454abe86989a" },
+  "programa_formacao_executiva": {
+    "cabecalho": {
+      "titulo": "PROGRAMA DE FORMAÇÃO EXECUTIVA",
+      "tema": "INTELIGÊNCIA ARTIFICIAL",
+      "publico": "PARA C-LEVEL E GESTORES",
+      "trilha": "Trilha de Aprendizagem Completa",
+      "estrutura_resumo": "10 Encontros | 5 Semanas | Mentoria Personalizada",
+      "status": "DOCUMENTO CONFIDENCIAL",
+      "ano": "2026"
+    },
+    "visao_geral": {
+      "objetivo": "Capacitar líderes de alto nível a tomar decisões estratégicas informadas sobre IA, liderar transformações digitais e construir vantagem competitiva.",
+      "instrutor": "Conduzido por um PhD em IA com mais de 13 anos de experiência empresarial.",
+      "logistica": {
+        "formato": "Mentoria executiva com encontros síncronos ao vivo.",
+        "duracao": "5 semanas (10 encontros síncronos).",
+        "frequencia": "2 encontros por semana.",
+        "pre_requisitos": "Nenhum conhecimento técnico prévio em IA necessário.",
+        "metodologia": "Aulas expositivas, casos reais, exercícios práticos e mentoria.",
+        "entregavel_final": "Portfólio de projetos de IA e Plano de ação executivo 90 dias."
+      }
+    },
+    "jornada_aprendizagem": [
+      {
+        "semana": 1,
+        "tema_central": "FUNDAMENTOS E CONTEXTO",
+        "encontros": [
+          {
+            "id": 1,
+            "titulo": "Fundamentos e Desmistificando a IA",
+            "subtitulo": "Nivelamento Conceitual para Lideranças",
+            "tema": "Alinhar o vocabulário e desmistificar mitos comuns.",
+            "objetivos": [
+              "Compreender IA, Machine Learning, Deep Learning e IA Generativa.",
+              "Diferenciar IA fraca (narrow AI) de IA geral (AGI).",
+              "Mapear ecossistema atual: principais players, plataformas e tendências.",
+              "Identificar e desconstruir os 10 mitos mais comuns sobre IA."
+            ],
+            "resultados_esperados": [
+              "Glossário executivo de IA dominado.",
+              "Mapa mental individual do ecossistema de IA atualizado.",
+              "Autoavaliação de maturidade em IA preenchida."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: State of AI Report 2024 - Air Street Capital", "url": "https://www.stateof.ai/" },
+              { "item": "Vídeo: AI for Everyone - Andrew Ng (Módulo 1)", "url": "https://www.coursera.org/learn/ai-for-everyone" },
+              { "item": "Exercício: Quiz de nivelamento conceitual", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Artificial Intelligence: A Guide for Thinking Humans - Melanie Mitchell", "url": "https://melaniemitchell.me/aibook/" },
+              { "item": "Template: Autoavaliação de maturidade digital e IA", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 2,
+            "titulo": "O Cenário Estratégico da IA nos Negócios",
+            "subtitulo": "IA como Vantagem Competitiva",
+            "tema": "Entender como a IA transforma indústrias e posicionar a organização.",
+            "objetivos": [
+              "Analisar principais casos de uso por setor.",
+              "Compreender modelos de criação de valor: eficiência, experiência, inovação e receita.",
+              "Identificar fatores críticos de sucesso e barreiras na adoção.",
+              "Avaliar posicionamento usando frameworks de maturidade."
+            ],
+            "resultados_esperados": [
+              "Análise SWOT da organização sob a perspectiva de IA.",
+              "Mapeamento de 5 oportunidades concretas para o negócio.",
+              "Benchmarking inicial frente a concorrentes."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: The State of AI in Early 2024 - McKinsey", "url": "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai" },
+              { "item": "Caso: HBR - How Netflix Uses AI / AI at JPMorgan", "url": "https://hbr.org/2020/01/competing-in-the-age-of-ai" },
+              { "item": "Vídeo: AI Transformation Playbook - Andrew Ng", "url": "https://landing.ai/wp-content/uploads/2020/05/LandingAI_Transformation_Playbook_11-19.pdf" },
+              { "item": "Exercício: Canvas de oportunidades de IA", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Competing in the Age of AI - Iansiti & Lakhani", "url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=56633" },
+              { "item": "Framework: Modelo de Maturidade em IA (5 níveis)", "url": "N/A - Material Interno" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 2,
+        "tema_central": "DADOS E IA AGÊNTICA",
+        "encontros": [
+          {
+            "id": 3,
+            "titulo": "Dados como Ativo Estratégico",
+            "subtitulo": "A Fundação de Qualquer Iniciativa de IA",
+            "tema": "Construir uma estratégia de dados robusta.",
+            "objetivos": [
+              "Entender a cadeia de valor dos dados: coleta à governança.",
+              "Compreender data lakes, mesh e lakehouse.",
+              "Avaliar maturidade de dados e identificar gaps.",
+              "Entender governança, LGPD/GDPR e ética de dados."
+            ],
+            "resultados_esperados": [
+              "Diagnóstico da maturidade de dados finalizado.",
+              "Mapa de fontes de dados internas e externas.",
+              "Plano de ação inicial para governança de dados."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: What Great Data Strategies Look Like - HBR", "url": "https://hbr.org/2017/05/what-great-data-strategies-look-like" },
+              { "item": "Vídeo: Data Strategy for AI - MIT Sloan", "url": "https://mitsloan.mit.edu/ideas-made-to-matter/21-mit-sloan-stories-to-boost-your-data-analytics-strategy" },
+              { "item": "Exercício: Auditoria simplificada de dados", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Data Strategy - Bernard Marr", "url": "https://bernardmarr.com/books/data-strategy/" },
+              { "item": "Template: Matriz de avaliação de qualidade de dados", "url": "N/A - Material Interno" },
+              { "item": "Checklist: Conformidade LGPD para IA", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 4,
+            "titulo": "Agentes, Ecossistemas e IA Multimodal",
+            "subtitulo": "De ChatGPT a Automação Agêntica",
+            "tema": "Dominar IA Generativa, Agentes e Multimodalidade (texto, vídeo, imagem).",
+            "objetivos": [
+              "Entender Large Language Models (LLMs).",
+              "Dominar orquestração de Agentes Inteligentes e RAG.",
+              "Avaliar plataformas (GPT, Claude, Gemini, Llama) e IA Multimodal.",
+              "Entender o impacto de vídeo e áudio sintético no marketing e P&D."
+            ],
+            "resultados_esperados": [
+              "Uso de IA para resolver problema real do dia a dia.",
+              "Guia pessoal de prompts eficazes.",
+              "Avaliação de plataformas para o contexto da organização."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: What Every CEO Needs to Know About Generative AI - BCG", "url": "https://www.bcg.com/publications/2023/what-every-ceo-needs-to-know-about-generative-ai" },
+              { "item": "Vídeo: How LLMs Work - Andrej Karpathy", "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g" },
+              { "item": "Exercício: Workshop de prompt engineering executivo", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Co-Intelligence - Ethan Mollick", "url": "https://www.ethanmollick.com/p/co-intelligence" },
+              { "item": "Template: Matriz de avaliação de plataformas GenAI", "url": "N/A - Material Interno" },
+              { "item": "Lab: Criar assistente personalizado (GPT/Claude)", "url": "N/A - Exercício Prático" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 3,
+        "tema_central": "ESTRATÉGIA E ARQUITETURA ORGANIZACIONAL",
+        "encontros": [
+          {
+            "id": 5,
+            "titulo": "Estratégia de IA e Roadmap de Implementação",
+            "subtitulo": "Do Conceito ao Plano de Ação",
+            "tema": "Construir estratégia alinhada ao negócio com roadmap executável.",
+            "objetivos": [
+              "Dominar o AI Strategy Canvas.",
+              "Priorizar casos por viabilidade, impacto e risco.",
+              "Definir modelos de governança: comitês e processos.",
+              "Construir roadmap de 12-18 meses."
+            ],
+            "resultados_esperados": [
+              "AI Strategy Canvas preenchido.",
+              "Lista priorizada de casos de uso (scoring).",
+              "Esboço do roadmap de IA de longo prazo."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Building the AI-Powered Organization - HBR", "url": "https://hbr.org/2019/07/building-the-ai-powered-organization" },
+              { "item": "Caso: AI Transformation at Ping An - HBS", "url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=57837" },
+              { "item": "Vídeo: AI Strategy - MIT Sloan", "url": "https://executive.mit.edu/course/artificial-intelligence/a056g00000URaa3AAD.html" },
+              { "item": "Exercício: Preenchimento do AI Strategy Canvas", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Applied Artificial Intelligence - Mariya Yao", "url": "http://www.appliedaibook.com/" },
+              { "item": "Template: Roadmap visual e Matriz de priorização", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 6,
+            "titulo": "Gestão de Projetos e Modelo Hub-and-Spoke",
+            "subtitulo": "Escalando IA com Sucesso",
+            "tema": "Dominar gestão de projetos de IA e arquitetura organizacional Hub-and-Spoke.",
+            "objetivos": [
+              "Compreender ciclo de vida (CRISP-DM, MLOps).",
+              "Definir KPIs e métricas de sucesso específicas.",
+              "Implementar modelo Hub-and-Spoke para evitar silos e garantir escala.",
+              "Mitigar motivos de falha em projetos de IA."
+            ],
+            "resultados_esperados": [
+              "Project charter de projeto piloto elaborado.",
+              "Definição de KPIs para o piloto.",
+              "Modelo organizacional de IA definido."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Why AI Projects Fail - MIT Sloan", "url": "https://hbr.org/2020/06/the-dumb-reason-your-ai-project-will-fail" },
+              { "item": "Caso: AI at Scale - Deloitte", "url": "https://www.deloitte.com/ap/en/perspectives/apac-trustworthy-ai-report.html" },
+              { "item": "Vídeo: MLOps Explained - Google Cloud", "url": "https://cloud.google.com/discover/what-is-mlops" },
+              { "item": "Exercício: Elaboração de Project Charter", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Leadership by Algorithm - David De Cremer", "url": "https://www.daviddecremer.com/portfolio-items/the-ai-savvy-leader/" },
+              { "item": "Template: Charter para IA e Checklist Go/No-Go", "url": "N/A - Material Interno" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 4,
+        "tema_central": "GOVERNANÇA, PESSOAS E CIBERSEGURANÇA",
+        "encontros": [
+          {
+            "id": 7,
+            "titulo": "IA Responsável, Regulação e Segurança Ativa",
+            "subtitulo": "Liderando com Responsabilidade e Proteção",
+            "tema": "Implementar IA responsável, cibersegurança e governança de Shadow AI.",
+            "objetivos": [
+              "Compreender IA Responsável: fairness e transparência.",
+              "Mapear cenário regulatório (EU AI Act, PL 2338).",
+              "Governar Shadow AI e proteger contra vazamentos de dados proprietários.",
+              "Definir políticas internas de uso ético."
+            ],
+            "resultados_esperados": [
+              "Assessment de riscos éticos e segurança realizado.",
+              "Esboço de política interna de uso responsável.",
+              "Checklist de compliance regulatório."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Ethics of AI - UNESCO Recommendation", "url": "https://www.unesco.org/en/articles/recommendation-ethics-artificial-intelligence" },
+              { "item": "Caso: Análise de incidentes reais de viés", "url": "N/A - Estudo de Caso" },
+              { "item": "Vídeo: Responsible AI - Microsoft / Google", "url": "https://www.accenture.com/us-en/blogs/security/defending-human-side-ai" },
+              { "item": "Exercício: Ethical Impact Assessment", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Weapons of Math Destruction - Cathy O'Neil", "url": "https://mathbabe.org/" },
+              { "item": "Template: Política de uso de IA Generativa", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 8,
+            "titulo": "Gestão da Mudança e Cultura de IA",
+            "subtitulo": "Transformando Pessoas e Organizações",
+            "tema": "Liderar a mudança cultural e capacitação para IA.",
+            "objetivos": [
+              "Dominar frameworks de mudança (Kotter, ADKAR).",
+              "Desenvolver estratégias de comunicação e engajamento.",
+              "Planejar programas de reskilling e upskilling.",
+              "Construir cultura data-driven e AI-first."
+            ],
+            "resultados_esperados": [
+              "Plano de gestão da mudança elaborado.",
+              "Estratégia de comunicação interna definida.",
+              "Roadmap de capacitação desenhado."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: How to Lead in the Era of AI - HBR", "url": "https://www.harvardbusiness.org/insight/climbing-the-high-summits-why-every-leader-must-master-human-skills-to-get-the-most-out-of-ai/" },
+              { "item": "Caso: Digital Transformation at ING - INSEAD", "url": "https://www.insead.edu/executive-education/digital-transformation-ai/leading-ai-and-digital-transformation" },
+              { "item": "Vídeo: The Human Side of AI - Accenture", "url": "https://www.accenture.com/us-en/blogs/security/defending-human-side-ai" },
+              { "item": "Exercício: Plano de comunicação para IA", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Human + Machine - Daugherty & Wilson", "url": "https://www.accenture.com/us-en/about/leadership/human-machine-ai-work" },
+              { "item": "Template: Plano de mudança e Matriz de stakeholders", "url": "N/A - Material Interno" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 5,
+        "tema_central": "VALOR E DUE DILIGENCE",
+        "encontros": [
+          {
+            "id": 9,
+            "titulo": "ROI, Investimentos e Due Diligence de Fornecedores",
+            "subtitulo": "Justificando e Avaliando o Valor",
+            "tema": "Business cases, ROI e avaliação criteriosa de fornecedores de IA.",
+            "objetivos": [
+              "Dominar cálculo de ROI para IA.",
+              "Realizar Due Diligence técnica em startups e fornecedores para identificar 'wrappers'.",
+              "Entender build vs buy, open source vs proprietário.",
+              "Definir métricas de acompanhamento de valor."
+            ],
+            "resultados_esperados": [
+              "Business case completo para o projeto piloto.",
+              "Modelo financeiro com projeção de ROI.",
+              "Dashboard de KPIs definido."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: The Business Value of AI - Gartner", "url": "https://www.gartner.com/en/articles/ai-value" },
+              { "item": "Caso: Measuring AI ROI - MIT Sloan", "url": "https://mitsloan.mit.edu/ideas-made-to-matter/scaling-ai-results-strategies-mit-sloan-management-review" },
+              { "item": "Vídeo: AI Economics - Stanford HAI", "url": "https://hai.stanford.edu/ai-index" },
+              { "item": "Exercício: Construção de business case com planilha", "url": "N/A - Material Interno" },
+              { "item": "Leitura: Prediction Machines - Agrawal et al.", "url": "https://www.predictionmachines.ai/" },
+              { "item": "Template: Planilha de business case para IA", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 10,
+            "titulo": "Análise de Portfólio e Plano de Ação Executivo",
+            "subtitulo": "Integrando Tudo: Da Estratégia à Execução",
+            "tema": "Análise de portfólio e plano de ação para 90 dias.",
+            "objetivos": [
+              "Receber feedback sobre o portfólio desenvolvido.",
+              "Balancear risco, investimento e retorno no portfólio.",
+              "Definir plano de ação para os próximos 90 dias.",
+              "Criar rede de apoio entre os participantes."
+            ],
+            "resultados_esperados": [
+              "Portfólio de projetos priorizado e validado.",
+              "Plano de ação executivo de 90 dias aprovado.",
+              "Apresentação executiva pronta para o Board."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Managing an AI Portfolio - BCG", "url": "https://hbr.org/2023/10/how-to-manage-your-ai-portfolio" },
+              { "item": "Caso: Revisão cruzada dos projetos", "url": "N/A - Sessão de Mentoria" },
+              { "item": "Vídeo: Leading AI at Scale - AWS Insights", "url": "https://aws.amazon.com/ai/generative-ai/" },
+              { "item": "Exercício: Pitch do portfólio e plano de ação", "url": "N/A - Atividade Capstone" },
+              { "item": "Leitura: The AI-First Company - Ash Fontana", "url": "https://ashfontana.com/" },
+              { "item": "Entregável final: Portfólio + Plano 90 dias + Apresentação", "url": "N/A - Documentação Final" }
+            ]
+          }
+        ]
+      }
+    ],
+    "metodologia_detalhada": {
+      "principios": [
+        "Aprendizagem baseada em problemas reais.",
+        "Construção progressiva e cumulativa.",
+        "Mentoria personalizada.",
+        "Peer learning (executivos de diferentes setores).",
+        "Foco em decisão, não em código."
+      ],
+      "estrutura_encontro": [
+        { "bloco": "Abertura",          "descricao": "Conexão e expectativas.",             "duracao": "10 min" },
+        { "bloco": "Conteúdo Central",  "descricao": "Exposição conceitual e prática.",     "duracao": "40 min" },
+        { "bloco": "Caso / Exercício",  "descricao": "Aplicação ao contexto real.",         "duracao": "25 min" },
+        { "bloco": "Discussão / Q&A",   "descricao": "Troca de experiências.",              "duracao": "15 min" },
+        { "bloco": "Encerramento",       "descricao": "Síntese e tarefas para próxima aula.","duracao": "10 min" }
+      ]
+    },
+    "entregaveis_resumo": [
+      { "item": "Glossário Executivo de IA",                        "origem": "Encontro 1" },
+      { "item": "Mapa de Oportunidades de IA",                      "origem": "Encontro 2" },
+      { "item": "Diagnóstico de Maturidade de Dados",               "origem": "Encontro 3" },
+      { "item": "Guia Prático de IA e Automação Agêntica",          "origem": "Encontro 4" },
+      { "item": "AI Strategy Canvas e Roadmap",                     "origem": "Encontro 5" },
+      { "item": "Project Charter de IA Piloto e Modelo Hub-and-Spoke","origem": "Encontro 6" },
+      { "item": "Política de IA Responsável e Segura",              "origem": "Encontro 7" },
+      { "item": "Plano de Gestão da Mudança",                       "origem": "Encontro 8" },
+      { "item": "Business Case de IA e Due Diligence de Fornecedores","origem": "Encontro 9" },
+      { "item": "Portfólio + Plano 90 Dias",                        "origem": "Encontro 10" }
+    ]
+  }
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     ② ENGINE DE RENDERIZAÇÃO — renderPrograma(json)
+══════════════════════════════════════════════════════ -->
+<script>
+/* ───────────────────────────────────────────
+   ESTADO DO ALUNO
+   Altere aqui para simular progressos diferentes.
+─────────────────────────────────────────── */
+var ESTADO = {
+  concluidos : [1, 2],  // IDs dos encontros já concluídos
+  ativo      : 3,       // ID do encontro em andamento
+  total      : 10
+};
+
+/* ─── Constantes SVG ─── */
+var S = {
+  chev  : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg>',
+  chevR : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>',
+  check : '<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+  dot   : '<svg width="5" height="5" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3" fill="currentColor"/></svg>',
+  lock  : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  ext   : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+  doc   : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  dots  : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></svg>',
+  star  : '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+};
+
+/* ─── Helpers ─── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var ROMANOS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+function romano(n) { return ROMANOS[n - 1] || String(n); }
+
+// Tipo e nome limpo do material a partir do campo "item": "Tipo: Nome"
+function parseMat(item) {
+  var idx = item.indexOf(':');
+  if (idx < 0) return { tipo: 'Material', nome: item.trim() };
+  return {
+    tipo : item.slice(0, idx).trim(),
+    nome : item.slice(idx + 1).trim()
+  };
+}
+
+function isExtUrl(url) {
+  return url && (url.startsWith('http://') || url.startsWith('https://'));
+}
+
+/* ─── Constrói HTML da lista de materiais ─── */
+function htmlMateriais(lista) {
+  var h = '<div class="mat-list">';
+  lista.forEach(function(m) {
+    var p   = parseMat(m.item);
+    var ext = isExtUrl(m.url);
+    var tag = ext ? 'a' : 'div';
+    var cls = ext ? 'mat-row linkable' : 'mat-row internal';
+    var atr = ext
+      ? ' href="' + esc(m.url) + '" target="_blank" rel="noopener"'
+      : '';
+    h += '<' + tag + ' class="' + cls + '"' + atr + '>';
+    h += '<div class="mat-type">' + esc(p.tipo) + '</div>';
+    h += '<div class="mat-vr"></div>';
+    h += '<div class="mat-info">';
+    h += '<div class="mat-name">' + esc(p.nome) + '</div>';
+    h += '<div class="mat-sub">';
+    if (ext) {
+      h += '<span class="mat-badge mb-ext">Externo</span>';
+      h += '<span>' + esc(m.url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0]) + '</span>';
+    } else {
+      h += '<span class="mat-badge mb-int">Interno</span>';
+    }
+    h += '</div></div>';
+    h += '<div class="mat-icon">' + (ext ? S.ext : S.doc) + '</div>';
+    h += '</' + tag + '>';
+  });
+  h += '</div>';
+  return h;
+}
+
+/* ─── Constrói HTML do bloco de metodologia ─── */
+function htmlMetodologia(metod) {
+  var est = metod.estrutura_encontro;
+  var h = '<div class="sec-hd">Estrutura do Encontro</div>';
+  h += '<div class="metod-grid">';
+  est.forEach(function(bloco, i) {
+    h += '<div class="metod-cell">';
+    h += '<div class="metod-n">' + esc(bloco.duracao || '') + '</div>';
+    h += '<div class="metod-hd">' + esc(bloco.bloco) + '</div>';
+    h += '<div class="metod-desc">' + esc(bloco.descricao) + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+/* ─── Constrói HTML de um ENCONTRO ─── */
+function htmlEncontro(enc, semNum, status, entregavel, metod) {
+  var isDone   = status === 'done';
+  var isActive = status === 'active';
+  var isNext   = status === 'next';
+  var isLocked = status === 'locked';
+
+  var tagTxt = isDone ? 'Concluído' : isActive ? 'Em andamento' : isLocked ? 'Bloqueado' : 'Próximo';
+  var tagCls = isDone ? 'tg-done'   : isActive ? 'tg-active'   : isLocked ? 'tg-lock'   : 'tg-todo';
+
+  var modCls = 'mod';
+  if (isActive) modCls += ' active open';
+  if (isLocked) modCls += ' locked';
+
+  // Opacidade progressiva nos bloqueados
+  var opStyle = '';
+  if (isLocked) {
+    var lockOrd = enc.id - ESTADO.ativo - 1; // 1,2,3…
+    var op      = Math.max(0.12, 1 - lockOrd * 0.22).toFixed(2);
+    opStyle     = ' style="opacity:' + op + '"';
+  }
+
+  var hdClick = isLocked ? '' : ' onclick="toggle(this.parentElement)"';
+  var h = '<div class="' + modCls + '" id="enc' + enc.id + '"' + opStyle + '>';
+
+  /* — Cabeçalho — */
+  h += '<div class="mod-hd"' + hdClick + '>';
+  h += '<div class="mod-idx">' + romano(enc.id) + '</div>';
+  h += '<div class="mod-info">';
+  h += '<div class="mod-top">';
+  h += '<span class="mod-title">' + esc(enc.titulo) + '</span>';
+  h += '<span class="mod-tag ' + tagCls + '" id="tag' + enc.id + '">' + tagTxt + '</span>';
+  h += '</div>';
+  if (enc.subtitulo) h += '<div class="mod-sub">' + esc(enc.subtitulo) + '</div>';
+  h += '<div class="mod-meta">';
+  h += '<span>Semana ' + semNum + '</span><span class="mm-sep">·</span>';
+  h += '<span>' + enc.material_suporte.length + ' materiais</span>';
+  if (isActive) h += '<span class="mm-sep">·</span><span class="mm-hi">Em progresso</span>';
+  if (isNext)   h += '<span class="mm-sep">·</span><span class="mm-hi">Próximo encontro</span>';
+  h += '</div></div>';
+
+  /* — Direita — */
+  h += '<div class="mod-right">';
+  if (isDone)   h += '<span class="mod-num">' + enc.id + '</span>';
+  if (isActive) h += '<button class="icon-btn" onclick="event.stopPropagation()">' + S.dots + '</button>';
+  if (!isLocked) h += '<div class="mod-chev">' + S.chev + '</div>';
+  else           h += '<div style="opacity:.2">' + S.chev + '</div>';
+  h += '</div></div>'; // /mod-right /mod-hd
+
+  /* — Corpo (não bloqueados) — */
+  if (!isLocked) {
+    h += '<div class="mod-body"><div class="mod-inner">';
+
+    /* Banner concluído */
+    if (isDone) {
+      h += '<div class="done-row">';
+      h += '<div class="done-acc"></div>';
+      h += '<div class="done-txt">Encontro <strong>' + esc(enc.titulo) + '</strong> concluído com sucesso</div>';
+      h += '</div>';
+    }
+
+    /* Tema do encontro */
+    h += '<div class="sec-hd">Foco do Encontro</div>';
+    h += '<p style="font-size:13px;font-weight:300;color:var(--k3);line-height:1.8;margin-bottom:22px">' + esc(enc.tema) + '</p>';
+
+    /* Objetivos + Resultados */
+    h += '<div class="cols2">';
+    h += '<div class="col"><div class="col-hd">Objetivos</div><ul class="col-ul">';
+    enc.objetivos.forEach(function(o){ h += '<li>' + esc(o) + '</li>'; });
+    h += '</ul></div>';
+    h += '<div class="col"><div class="col-hd">Resultados Esperados</div><ul class="col-ul">';
+    enc.resultados_esperados.forEach(function(r){ h += '<li>' + esc(r) + '</li>'; });
+    h += '</ul></div></div>';
+
+    /* Estrutura do encontro (somente módulo ativo) */
+    if ((isActive || isNext) && metod) h += htmlMetodologia(metod);
+
+    /* Materiais */
+    h += '<div class="sec-hd">Materiais de Apoio</div>';
+    h += htmlMateriais(enc.material_suporte);
+
+    /* Entregável */
+    if (entregavel) {
+      h += '<div class="entregavel">';
+      h += '<div class="entregavel-ico">' + S.star + '</div>';
+      h += '<div class="entregavel-txt">Entregável: <strong>' + esc(entregavel.item) + '</strong></div>';
+      h += '<div class="entregavel-orig">' + esc(entregavel.origem) + '</div>';
+      h += '</div>';
+    }
+
+    h += '</div>'; // /mod-inner
+
+    /* Rodapé */
+    h += '<div class="mod-foot">';
+    if (isDone) {
+      h += '<button class="btn-sec">Revisar materiais</button>';
+    } else if (isActive) {
+      h += '<button class="btn-prime" id="btnConc' + enc.id + '" onclick="concluir(' + enc.id + ')">';
+      h += S.check + ' Concluir Encontro';
+      h += '</button>';
+      h += '<button class="btn-sec">Próximo ' + S.chevR + '</button>';
+      h += '<span class="foot-note">Acesse os materiais antes de concluir</span>';
+    } else {
+      h += '<button class="btn-prime" disabled>Disponível em breve</button>';
+      h += '<span class="foot-note">Conclua o encontro anterior para desbloquear</span>';
+    }
+    h += '</div>';
+    h += '</div>'; // /mod-body
+
+  } else {
+    /* Mensagem de lock (só no primeiro bloqueado de cada semana) */
+    if ((enc.id - ESTADO.ativo) === 2) {
+      h += '<div class="lock-msg">';
+      h += '<div class="lock-ico">' + S.lock + '</div>';
+      h += '<div class="lock-body"><strong>Encontro bloqueado</strong>';
+      h += '<p>Conclua os encontros anteriores para desbloquear esta etapa.</p></div>';
+      h += '</div>';
+    }
+  }
+
+  h += '</div>'; // /mod
+  return h;
+}
+
+/* ─── Constrói o INTRO ─── */
+function htmlIntro(p) {
+  var cab = p.cabecalho;
+  var vg  = p.visao_geral;
+  var tot = ESTADO.total;
+
+  var h = '<div class="intro">';
+  h += '<div class="intro-kicker">' + esc(cab.tema) + '</div>';
+  h += '<h1 class="intro-h1">' + esc(cab.titulo) + '<br><em>' + esc(cab.publico) + '</em></h1>';
+  h += '<div class="intro-sub">' + esc(cab.trilha) + '</div>';
+  h += '<p class="intro-desc">' + esc(vg.objetivo) + '</p>';
+
+  /* KPIs */
+  h += '<div class="kpis">';
+  [
+    [tot,  'Encontros'],
+    ['5',  'Semanas'],
+    [p.entregaveis_resumo.length, 'Entregáveis'],
+    [cab.ano, 'Ano', 'g']
+  ].forEach(function(k) {
+    h += '<div class="kpi">';
+    h += '<div class="kpi-v' + (k[2] ? ' ' + k[2] : '') + '">' + esc(k[0]) + '</div>';
+    h += '<div class="kpi-k">' + esc(k[1]) + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+
+  /* Instrutor */
+  h += '<div class="inst-row">';
+  h += '<div class="inst-sq">PhD</div>';
+  h += '<div><div class="inst-role">Instrutor</div><div class="inst-name">' + esc(vg.instrutor) + '</div></div>';
+  h += '<div class="vr"></div>';
+  h += '<button class="ghost-btn">Logística ' + S.chevR + '</button>';
+  h += '<button class="ghost-btn">Entregáveis ' + S.chevR + '</button>';
+  h += '</div>';
+
+  h += '</div>'; // /intro
+  return h;
+}
+
+/* ─── Constrói TODO o conteúdo principal ─── */
+function htmlMain(p) {
+  var h = htmlIntro(p);
+
+  p.jornada_aprendizagem.forEach(function(sem, sIdx) {
+    /* Separador de semana */
+    h += '<div class="ch-div">';
+    h += '<div class="ch-rule"></div>';
+    h += '<div class="ch-lbl"><span class="ch-num">Semana ' + sem.semana + '</span>' + esc(sem.tema_central) + '</div>';
+    h += '<div class="ch-rule"></div>';
+    h += '</div>';
+
+    var isLastSem = (sIdx === p.jornada_aprendizagem.length - 1);
+    h += '<div class="mpad' + (isLastSem ? ' pb-end' : '') + '">';
+
+    sem.encontros.forEach(function(enc) {
+      /* Determina status */
+      var status;
+      if (ESTADO.concluidos.indexOf(enc.id) > -1) {
+        status = 'done';
+      } else if (enc.id === ESTADO.ativo) {
+        status = 'active';
+      } else if (enc.id === ESTADO.ativo + 1) {
+        status = 'next';
+      } else {
+        status = 'locked';
+      }
+
+      /* Entregável correspondente */
+      var entregavel = null;
+      p.entregaveis_resumo.forEach(function(e) {
+        if (e.origem === 'Encontro ' + enc.id) entregavel = e;
+      });
+
+      h += htmlEncontro(enc, sem.semana, status, entregavel, p.metodologia_detalhada);
+    });
+
+    h += '</div>'; // /mpad
+  });
+
+  return h;
+}
+
+/* ─── Atualiza a SIDEBAR ─── */
+function renderSidebar(p) {
+  var done = ESTADO.concluidos.length;
+  var tot  = ESTADO.total;
+  var pct  = Math.round(done / tot * 100);
+  var cab  = p.cabecalho;
+
+  document.getElementById('tbCur').textContent      = cab.tema;
+  document.getElementById('sbTitle').textContent    = cab.titulo + ' · ' + cab.tema;
+  document.getElementById('progBig').textContent    = done;
+  document.getElementById('progDen').textContent    = 'de ' + tot + ' encontros';
+  document.getElementById('progNote').textContent   = pct + '% concluído · ' + (tot - done) + ' restantes';
+  document.getElementById('progFill').style.width   = pct + '%';
+
+  /* Fatos */
+  document.getElementById('sbFacts').innerHTML = [
+    ['5 sem.',  'Duração',   ''],
+    ['2×/sem.', 'Frequência',''],
+    [done + '/' + tot, 'Progresso', 'g'],
+    [p.entregaveis_resumo.length, 'Entregáveis', '']
+  ].map(function(f) {
+    return '<div class="sb-fact"><span class="sb-fact-v' + (f[2]?' '+f[2]:'') + '">' + esc(f[0]) +
+           '</span><span class="sb-fact-k">' + esc(f[1]) + '</span></div>';
+  }).join('');
+
+  /* Nav por semanas */
+  var navH = '';
+  p.jornada_aprendizagem.forEach(function(sem) {
+    navH += '<div class="nav-ch open">';
+    navH += '<div class="nav-ch-hd" onclick="this.parentElement.classList.toggle(\'open\')">';
+    navH += '<span class="nav-ch-n">S' + sem.semana + '</span>';
+    navH += '<span class="nav-ch-nm">' + esc(sem.tema_central) + '</span>';
+    navH += '<div class="nav-arr">' + S.chevR + '</div>';
+    navH += '</div><div class="nav-ch-items">';
+
+    sem.encontros.forEach(function(enc) {
+      var isDone   = ESTADO.concluidos.indexOf(enc.id) > -1;
+      var isCur    = enc.id === ESTADO.ativo;
+      var isLocked = enc.id > ESTADO.ativo + 1;
+      var entryCls = 'nav-entry' + (isDone?' done':isCur?' current':isLocked?' locked':'');
+      var dot      = isDone
+        ? '<div class="ndot nd-done">' + S.check + '</div>'
+        : isCur
+          ? '<div class="ndot nd-cur">' + S.dot + '</div>'
+          : isLocked
+            ? '<div class="ndot nd-lock"></div>'
+            : '<div class="ndot nd-todo"></div>';
+      var click = (isDone || isCur) ? ' onclick="jumpTo(\'enc' + enc.id + '\')"' : '';
+
+      navH += '<div class="' + entryCls + '"' + click + '>';
+      navH += dot;
+      navH += '<span class="nav-entry-txt">' + esc(enc.titulo) + '</span>';
+      navH += '<span class="nav-entry-num">' + romano(enc.id) + '</span>';
+      navH += '</div>';
+    });
+
+    navH += '</div></div>';
+  });
+  document.getElementById('sbNav').innerHTML = navH;
+
+  /* Próximo encontro */
+  var proxEnc = null;
+  p.jornada_aprendizagem.forEach(function(sem) {
+    sem.encontros.forEach(function(enc) {
+      if (enc.id === ESTADO.ativo && !proxEnc) proxEnc = { enc: enc, sem: sem.semana };
+    });
+  });
+  if (proxEnc) {
+    document.getElementById('sbNextTitle').textContent = proxEnc.enc.titulo;
+    document.getElementById('sbNextMeta').textContent  = 'Semana ' + proxEnc.sem + ' · Encontro ' + romano(proxEnc.enc.id);
+  }
+}
+
+/* ─── Atualiza o CARTÃO DE MÉTRICAS ─── */
+function renderMetrics(p) {
+  var done   = ESTADO.concluidos.length;
+  var tot    = ESTADO.total;
+  var pctAll = Math.round(done / tot * 100);
+  var semAtual = Math.ceil(ESTADO.ativo / 2);
+  var doneNaSem = ESTADO.concluidos.filter(function(id){ return Math.ceil(id/2) === semAtual; }).length;
+  var pctSem = Math.round(doneNaSem / 2 * 100);
+
+  var rows = [
+    { lbl: 'Programa',      pct: pctAll, color: 'var(--gold)' },
+    { lbl: 'Semana ' + semAtual, pct: pctSem, color: 'rgba(255,255,255,.45)' }
+  ];
+
+  document.getElementById('metRows').innerHTML = rows.map(function(r, i) {
+    return '<div>' +
+      '<div class="met-row-hd">' + esc(r.lbl) + ' <span id="mv' + i + '">' + r.pct + '%</span></div>' +
+      '<div class="met-track"><div class="met-fill" id="mf' + i + '" style="background:' + r.color + ';width:' + r.pct + '%"></div></div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ─── Ação: concluir encontro ─── */
+function concluir(id) {
+  if (ESTADO.concluidos.indexOf(id) > -1) return;
+
+  /* Atualiza estado */
+  ESTADO.concluidos.push(id);
+  ESTADO.ativo = id + 1;
+
+  /* Feedback visual no módulo */
+  var btn = document.getElementById('btnConc' + id);
+  if (btn) { btn.disabled = true; btn.innerHTML = S.check + ' Concluído'; }
+
+  var tag = document.getElementById('tag' + id);
+  if (tag) { tag.textContent = 'Concluído'; tag.className = 'mod-tag tg-done'; }
+
+  var mod = document.getElementById('enc' + id);
+  if (mod) {
+    mod.classList.remove('active');
+    setTimeout(function(){ mod.classList.remove('open'); }, 280);
+  }
+
+  /* Ribbon */
+  var encTitulo = '';
+  var data = JSON.parse(document.getElementById('programaData').textContent);
+  var p = data.programa_formacao_executiva;
+  p.jornada_aprendizagem.forEach(function(sem){
+    sem.encontros.forEach(function(e){ if (e.id === id) encTitulo = e.titulo; });
+  });
+
+  document.getElementById('ribbonMsg').innerHTML =
+    'Encontro <strong>' + esc(encTitulo) + '</strong> concluído. Progresso atualizado.';
+  document.getElementById('ribbon').classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  /* Atualiza sidebar + métricas */
+  renderSidebar(p);
+  renderMetrics(p);
+
+  /* Atualiza progresso numérico */
+  var done = ESTADO.concluidos.length;
+  var pct  = Math.round(done / ESTADO.total * 100);
+  document.getElementById('progBig').textContent  = done;
+  document.getElementById('progNote').textContent = pct + '% concluído · ' + (ESTADO.total - done) + ' restantes';
+  document.getElementById('progFill').style.width = pct + '%';
+}
+
+/* ─── Scroll e destaque ─── */
+function jumpTo(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'start' });
+  el.style.outline = '2px solid rgba(14,14,14,.18)';
+  el.style.outlineOffset = '3px';
+  setTimeout(function(){ el.style.outline = ''; el.style.outlineOffset = ''; }, 1600);
+}
+
+/* ─── Toggle módulo ─── */
+function toggle(el) {
+  if (el.classList.contains('locked')) return;
+  el.classList.toggle('open');
+}
+
+/* ─── Animação de entrada ─── */
+function animarEntrada() {
+  document.querySelectorAll('.mod').forEach(function(el, i) {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(7px)';
+    el.style.transition = 'none';
+    setTimeout(function(){
+      el.style.transition = 'opacity .38s ease, transform .38s ease, border-color .18s';
+      el.style.opacity = '';
+      el.style.transform = '';
+    }, 80 + i * 38);
+  });
+}
+
+/* ══════════════════════════════════════════
+   renderPrograma(json)
+   — ponto de entrada público
+   — aceita o JSON bruto do programa
+══════════════════════════════════════════ */
+function renderPrograma(json) {
+  var p = json.programa_formacao_executiva;
+
+  /* Conteúdo principal */
+  document.getElementById('mainContent').innerHTML = htmlMain(p);
+
+  /* Sidebar e métricas */
+  renderSidebar(p);
+  renderMetrics(p);
+
+  /* Animação escalonada */
+  setTimeout(animarEntrada, 30);
+}
+
+/* ─── Inicialização ─────────────────────────
+   Lê o JSON da tag <script type="application/json">
+   e passa para renderPrograma().
+   
+   Para uso com API externa, basta trocar por:
+   fetch('/api/programa').then(r=>r.json()).then(renderPrograma)
+─────────────────────────────────────────── */
+(function init() {
+  var raw  = document.getElementById('programaData').textContent;
+  var json = JSON.parse(raw);
+
+  /* Simula latência de rede (300ms) para demonstrar o spinner */
+  setTimeout(function(){ renderPrograma(json); }, 320);
+})();
+</script>
+</body>
+</html>

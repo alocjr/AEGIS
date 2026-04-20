@@ -1,0 +1,166 @@
+{
+    "_id": {
+      "$oid": "69a06e40dc4c454abe869893"
+    },
+    "assessment_title": "Diagnóstico de Maturidade em IA - Valorian 4 Future",
+    "version": "2.1",
+    "total_questions": 12,
+    "max_score": 60,
+    "answer_scale": [
+      {
+        "value": 1,
+        "label": "Discordo Totalmente",
+        "context": "Inexistente / Não iniciado"
+      },
+      {
+        "value": 2,
+        "label": "Discordo Parcialmente",
+        "context": "Inicial / Processos Manuais"
+      },
+      {
+        "value": 3,
+        "label": "Neutro / Não sei",
+        "context": "Em definição / Planejamento"
+      },
+      {
+        "value": 4,
+        "label": "Concordo Parcialmente",
+        "context": "Implementado / Em escala"
+      },
+      {
+        "value": 5,
+        "label": "Concordo Totalmente",
+        "context": "Otimizado / AI-First"
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "strategy",
+        "name": "Estratégia e Visão",
+        "questions": [
+          {
+            "id": "q1",
+            "text": "Nossa liderança possui uma visão clara de como a IA impacta nossos OKRs e modelo de receita.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q2",
+            "text": "A organização possui um roadmap de IA de 12 a 18 meses aprovado pelo Board.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q3",
+            "text": "As decisões de investimento em IA são baseadas em um framework claro de impacto vs. viabilidade.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          }
+        ]
+      },
+      {
+        "id": "data_infra",
+        "name": "Dados e Infraestrutura",
+        "questions": [
+          {
+            "id": "q4",
+            "text": "Nossos dados proprietários são acessíveis, limpos e centralizados para alimentar modelos de IA.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q5",
+            "text": "Possuímos uma arquitetura de dados moderna (Lakehouse/Mesh) que suporta RAG e IA em tempo real.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q6",
+            "text": "Existe um processo claro de governança de dados e conformidade com a LGPD em todos os projetos.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          }
+        ]
+      },
+      {
+        "id": "people_culture",
+        "name": "Pessoas e Cultura",
+        "questions": [
+          {
+            "id": "q7",
+            "text": "Nossa equipe se sente segura e incentivada a experimentar IA para otimizar suas tarefas diárias.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q8",
+            "text": "Há um programa ativo de upskilling e capacitação em IA para gestores e colaboradores.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q9",
+            "text": "A comunicação interna sobre IA foca no 'aumento humano' e não apenas na substituição de pessoal.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          }
+        ]
+      },
+      {
+        "id": "gov_risk",
+        "name": "Governança e Risco",
+        "questions": [
+          {
+            "id": "q10",
+            "text": "Temos políticas formais de uso ético e responsável de IA Generativa na empresa.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q11",
+            "text": "Monitoramos e auditamos ativamente Shadow AI e possíveis vazamentos de dados proprietários.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          },
+          {
+            "id": "q12",
+            "text": "O Conselho (Board) revisa periodicamente os riscos éticos e o ROI dos projetos de IA.",
+            "weight": 1,
+            "options": "reference:answer_scale"
+          }
+        ]
+      }
+    ],
+    "scoring_logic": {
+      "level_1": {
+        "min": 12,
+        "max": 24,
+        "label": "Iniciação (Ad Hoc)",
+        "description": "Uso individual e isolado. Sem estratégia centralizada."
+      },
+      "level_2": {
+        "min": 25,
+        "max": 36,
+        "label": "Experimentação",
+        "description": "PoCs em departamentos específicos. Dados em silos."
+      },
+      "level_3": {
+        "min": 37,
+        "max": 48,
+        "label": "Prontidão",
+        "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."
+      },
+      "level_4": {
+        "min": 49,
+        "max": 56,
+        "label": "Otimização/Escala",
+        "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."
+      },
+      "level_5": {
+        "min": 57,
+        "max": 60,
+        "label": "Transformação (AI-First)",
+        "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."
+      }
+    }
+  }

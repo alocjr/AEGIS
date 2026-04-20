@@ -1,0 +1,274 @@
+{
+  "programa_formacao_executiva": {
+    "cabecalho": {
+      "titulo": "PROGRAMA DE FORMACAO EXECUTIVA",
+      "tema": "INTELIGENCIA ARTIFICIAL",
+      "publico": "PARA C-LEVEL E GESTORES",
+      "trilha": "Trilha de Aprendizagem Completa",
+      "estrutura_resumo": "10 Encontros | 5 Semanas | Mentoria Personalizada",
+      "status": "DOCUMENTO CONFIDENCIAL",
+      "ano": "2026"
+    },
+    "visao_geral": {
+      "objetivo": "Capacitar lideres de alto nivel a tomar decisoes estrategicas informadas sobre IA, liderar transformacoes digitais e construir vantagem competitiva.",
+      "instrutor": "Conduzido por um PhD em IA com mais de 13 anos de experiencia empresarial."
+    },
+    "jornada_aprendizagem": [
+      {
+        "semana": 1,
+        "tema_central": "FUNDAMENTOS E CONTEXTO",
+        "encontros": [
+          {
+            "id": 1,
+            "titulo": "Fundamentos e Desmistificando a IA",
+            "subtitulo": "Nivelamento Conceitual para Liderancas",
+            "tema": "Alinhar o vocabulario e desmistificar mitos comuns.",
+            "objetivos": [
+              "Compreender IA, Machine Learning, Deep Learning e IA Generativa.",
+              "Diferenciar IA fraca (narrow AI) de IA geral (AGI).",
+              "Mapear ecossistema atual: principais players, plataformas e tendencias.",
+              "Identificar e desconstruir os 10 mitos mais comuns sobre IA."
+            ],
+            "resultados_esperados": [
+              "Glossario executivo de IA dominado.",
+              "Mapa mental individual do ecossistema de IA atualizado.",
+              "Autoavaliacao de maturidade em IA preenchida."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: State of AI Report 2024 - Air Street Capital", "url": "https://www.stateof.ai/" },
+              { "item": "Video: AI for Everyone - Andrew Ng (Modulo 1)", "url": "https://www.coursera.org/learn/ai-for-everyone" },
+              { "item": "Exercicio: Quiz de nivelamento conceitual", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 2,
+            "titulo": "O Cenario Estrategico da IA nos Negocios",
+            "subtitulo": "IA como Vantagem Competitiva",
+            "tema": "Entender como a IA transforma industrias e posicionar a organizacao.",
+            "objetivos": [
+              "Analisar principais casos de uso por setor.",
+              "Compreender modelos de criacao de valor: eficiencia, experiencia, inovacao e receita.",
+              "Identificar fatores criticos de sucesso e barreiras na adocao."
+            ],
+            "resultados_esperados": [
+              "Analise SWOT da organizacao sob a perspectiva de IA.",
+              "Mapeamento de 5 oportunidades concretas para o negocio.",
+              "Benchmarking inicial frente a concorrentes."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: The State of AI in Early 2024 - McKinsey", "url": "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai" },
+              { "item": "Caso: HBR - How Netflix Uses AI / AI at JPMorgan", "url": "https://hbr.org/2020/01/competing-in-the-age-of-ai" },
+              { "item": "Exercicio: Canvas de oportunidades de IA", "url": "N/A - Material Interno" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 2,
+        "tema_central": "DADOS E IA AGENTICA",
+        "encontros": [
+          {
+            "id": 3,
+            "titulo": "Dados como Ativo Estrategico",
+            "subtitulo": "A Fundacao de Qualquer Iniciativa de IA",
+            "tema": "Construir uma estrategia de dados robusta.",
+            "objetivos": [
+              "Entender a cadeia de valor dos dados: coleta a governanca.",
+              "Compreender data lakes, mesh e lakehouse.",
+              "Avaliar maturidade de dados e identificar gaps."
+            ],
+            "resultados_esperados": [
+              "Diagnostico da maturidade de dados finalizado.",
+              "Mapa de fontes de dados internas e externas.",
+              "Plano de acao inicial para governanca de dados."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: What Great Data Strategies Look Like - HBR", "url": "https://hbr.org/2017/05/what-great-data-strategies-look-like" },
+              { "item": "Video: Data Strategy for AI - MIT Sloan", "url": "https://mitsloan.mit.edu/ideas-made-to-matter/21-mit-sloan-stories-to-boost-your-data-analytics-strategy" },
+              { "item": "Exercicio: Auditoria simplificada de dados", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 4,
+            "titulo": "Agentes, Ecossistemas e IA Multimodal",
+            "subtitulo": "De ChatGPT a Automacao Agentica",
+            "tema": "Dominar IA Generativa, Agentes e Multimodalidade.",
+            "objetivos": [
+              "Entender Large Language Models (LLMs).",
+              "Dominar orquestracao de Agentes Inteligentes e RAG.",
+              "Avaliar plataformas (GPT, Claude, Gemini, Llama)."
+            ],
+            "resultados_esperados": [
+              "Uso de IA para resolver problema real do dia a dia.",
+              "Guia pessoal de prompts eficazes.",
+              "Avaliacao de plataformas para o contexto da organizacao."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: What Every CEO Needs to Know About Generative AI - BCG", "url": "https://www.bcg.com/publications/2023/what-every-ceo-needs-to-know-about-generative-ai" },
+              { "item": "Video: How LLMs Work - Andrej Karpathy", "url": "https://www.youtube.com/watch?v=zjkBMFhNj_g" },
+              { "item": "Lab: Criar assistente personalizado", "url": "N/A - Exercicio Pratico" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 3,
+        "tema_central": "ESTRATEGIA E ARQUITETURA ORGANIZACIONAL",
+        "encontros": [
+          {
+            "id": 5,
+            "titulo": "Estrategia de IA e Roadmap de Implementacao",
+            "subtitulo": "Do Conceito ao Plano de Acao",
+            "tema": "Construir estrategia alinhada ao negocio com roadmap executavel.",
+            "objetivos": [
+              "Dominar o AI Strategy Canvas.",
+              "Priorizar casos por viabilidade, impacto e risco.",
+              "Construir roadmap de 12-18 meses."
+            ],
+            "resultados_esperados": [
+              "AI Strategy Canvas preenchido.",
+              "Lista priorizada de casos de uso.",
+              "Esboco do roadmap de IA de longo prazo."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Building the AI-Powered Organization - HBR", "url": "https://hbr.org/2019/07/building-the-ai-powered-organization" },
+              { "item": "Caso: AI Transformation at Ping An - HBS", "url": "https://www.hbs.edu/faculty/Pages/item.aspx?num=57837" }
+            ]
+          },
+          {
+            "id": 6,
+            "titulo": "Gestao de Projetos e Modelo Hub-and-Spoke",
+            "subtitulo": "Escalando IA com Sucesso",
+            "tema": "Dominar gestao de projetos de IA e arquitetura organizacional.",
+            "objetivos": [
+              "Compreender ciclo de vida (CRISP-DM, MLOps).",
+              "Definir KPIs e metricas de sucesso especificas.",
+              "Mitigar motivos de falha em projetos de IA."
+            ],
+            "resultados_esperados": [
+              "Project charter de projeto piloto elaborado.",
+              "Definicao de KPIs para o piloto.",
+              "Modelo organizacional de IA definido."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Why AI Projects Fail - MIT Sloan", "url": "https://hbr.org/2020/06/the-dumb-reason-your-ai-project-will-fail" },
+              { "item": "Video: MLOps Explained - Google Cloud", "url": "https://cloud.google.com/discover/what-is-mlops" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 4,
+        "tema_central": "GOVERNANCA, PESSOAS E CIBERSEGURANCA",
+        "encontros": [
+          {
+            "id": 7,
+            "titulo": "IA Responsavel, Regulacao e Seguranca Ativa",
+            "subtitulo": "Liderando com Responsabilidade e Protecao",
+            "tema": "Implementar IA responsavel, ciberseguranca e governanca de Shadow AI.",
+            "objetivos": [
+              "Compreender IA Responsavel: fairness e transparencia.",
+              "Mapear cenario regulatorio.",
+              "Definir politicas internas de uso etico."
+            ],
+            "resultados_esperados": [
+              "Assessment de riscos eticos e seguranca realizado.",
+              "Esboco de politica interna de uso responsavel."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Ethics of AI - UNESCO Recommendation", "url": "https://www.unesco.org/en/articles/recommendation-ethics-artificial-intelligence" },
+              { "item": "Exercicio: Ethical Impact Assessment", "url": "N/A - Material Interno" }
+            ]
+          },
+          {
+            "id": 8,
+            "titulo": "Gestao da Mudanca e Cultura de IA",
+            "subtitulo": "Transformando Pessoas e Organizacoes",
+            "tema": "Liderar a mudanca cultural e capacitacao para IA.",
+            "objetivos": [
+              "Dominar frameworks de mudanca (Kotter, ADKAR).",
+              "Desenvolver estrategias de comunicacao e engajamento.",
+              "Planejar programas de reskilling e upskilling."
+            ],
+            "resultados_esperados": [
+              "Plano de gestao da mudanca elaborado.",
+              "Estrategia de comunicacao interna definida.",
+              "Roadmap de capacitacao desenhado."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: How to Lead in the Era of AI - HBR", "url": "https://www.harvardbusiness.org/insight/climbing-the-high-summits-why-every-leader-must-master-human-skills-to-get-the-most-out-of-ai/" },
+              { "item": "Leitura: Human + Machine - Daugherty & Wilson", "url": "https://www.accenture.com/us-en/about/leadership/human-machine-ai-work" }
+            ]
+          }
+        ]
+      },
+      {
+        "semana": 5,
+        "tema_central": "VALOR E DUE DILIGENCE",
+        "encontros": [
+          {
+            "id": 9,
+            "titulo": "ROI, Investimentos e Due Diligence de Fornecedores",
+            "subtitulo": "Justificando e Avaliando o Valor",
+            "tema": "Business cases, ROI e avaliacao criteriosa de fornecedores de IA.",
+            "objetivos": [
+              "Dominar calculo de ROI para IA.",
+              "Realizar Due Diligence tecnica em startups e fornecedores.",
+              "Definir metricas de acompanhamento de valor."
+            ],
+            "resultados_esperados": [
+              "Business case completo para o projeto piloto.",
+              "Modelo financeiro com projecao de ROI.",
+              "Dashboard de KPIs definido."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: The Business Value of AI - Gartner", "url": "https://www.gartner.com/en/articles/ai-value" },
+              { "item": "Video: AI Economics - Stanford HAI", "url": "https://hai.stanford.edu/ai-index" }
+            ]
+          },
+          {
+            "id": 10,
+            "titulo": "Analise de Portfolio e Plano de Acao Executivo",
+            "subtitulo": "Integrando Tudo: Da Estrategia a Execucao",
+            "tema": "Analise de portfolio e plano de acao para 90 dias.",
+            "objetivos": [
+              "Receber feedback sobre o portfolio desenvolvido.",
+              "Balancear risco, investimento e retorno no portfolio.",
+              "Definir plano de acao para os proximos 90 dias."
+            ],
+            "resultados_esperados": [
+              "Portfolio de projetos priorizado e validado.",
+              "Plano de acao executivo de 90 dias aprovado.",
+              "Apresentacao executiva pronta para o Board."
+            ],
+            "material_suporte": [
+              { "item": "Artigo: Managing an AI Portfolio - BCG", "url": "https://hbr.org/2023/10/how-to-manage-your-ai-portfolio" },
+              { "item": "Exercicio: Pitch do portfolio e plano de acao", "url": "N/A - Atividade Capstone" }
+            ]
+          }
+        ]
+      }
+    ],
+    "metodologia_detalhada": {
+      "estrutura_encontro": [
+        { "bloco": "Abertura", "descricao": "Conexao e expectativas.", "duracao": "10 min" },
+        { "bloco": "Conteudo Central", "descricao": "Exposicao conceitual e pratica.", "duracao": "40 min" },
+        { "bloco": "Caso / Exercicio", "descricao": "Aplicacao ao contexto real.", "duracao": "25 min" },
+        { "bloco": "Discussao / Q&A", "descricao": "Troca de experiencias.", "duracao": "15 min" },
+        { "bloco": "Encerramento", "descricao": "Sintese e tarefas para proxima aula.", "duracao": "10 min" }
+      ]
+    },
+    "entregaveis_resumo": [
+      { "item": "Glossario Executivo de IA", "origem": "Encontro 1" },
+      { "item": "Mapa de Oportunidades de IA", "origem": "Encontro 2" },
+      { "item": "Diagnostico de Maturidade de Dados", "origem": "Encontro 3" },
+      { "item": "Guia Pratico de IA e Automacao Agentica", "origem": "Encontro 4" },
+      { "item": "AI Strategy Canvas e Roadmap", "origem": "Encontro 5" },
+      { "item": "Project Charter de IA Piloto", "origem": "Encontro 6" },
+      { "item": "Politica de IA Responsavel e Segura", "origem": "Encontro 7" },
+      { "item": "Plano de Gestao da Mudanca", "origem": "Encontro 8" },
+      { "item": "Business Case de IA e Due Diligence", "origem": "Encontro 9" },
+      { "item": "Portfolio + Plano 90 Dias", "origem": "Encontro 10" }
+    ]
+  }
+}

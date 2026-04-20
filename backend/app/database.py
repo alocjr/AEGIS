@@ -1,0 +1,29 @@
+import certifi
+from pymongo import MongoClient
+from pymongo.database import Database
+
+from app.config import settings
+
+
+# tlsCAFile com certifi evita SSL: CERTIFICATE_VERIFY_FAILED no macOS
+client = MongoClient(settings.mongodb_uri, tlsCAFile=certifi.where())
+db: Database = client[settings.mongodb_db_name]
+
+
+def get_db() -> Database:
+    return db
+
+
+def init_indexes() -> None:
+    db.users.create_index("email", unique=True)
+    db.progress.create_index([("user_id", 1), ("course_slug", 1)], unique=True)
+    db.courses.create_index("slug", unique=True)
+    # Múltiplas respostas por aluno: remover índice único antigo (1 resposta por user) se existir
+    try:
+        db.maturity_responses.drop_index("user_id_1_model_version_1")
+    except Exception:
+        pass  # índice já não existe ou nome diferente
+    db.maturity_responses.create_index([("user_id", 1), ("submitted_at", -1)])
+    db.quiz.create_index("encontro", unique=True)
+    db.quiz_responses.create_index([("user_id", 1), ("encontro", 1)], unique=True)
+    db.leads.create_index("created_at")

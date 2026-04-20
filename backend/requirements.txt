@@ -1,0 +1,9 @@
+# Dependências fixadas para builds reproduzíveis e auditoria de segurança (pip audit / npm audit).
+fastapi>=0.115.0,<0.116
+uvicorn[standard]>=0.32.0,<0.33
+pymongo>=4.10.0,<5
+certifi>=2024.0.0
+pydantic-settings>=2.6.0,<3
+email-validator>=2.2.0,<3
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4,<2

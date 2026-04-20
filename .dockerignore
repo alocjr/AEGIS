@@ -1,0 +1,36 @@
+# Git e IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!backend/data/*.json
+
+# Backend: venv e caches
+backend/.venv
+backend/__pycache__
+backend/**/__pycache__
+backend/*.pyc
+backend/.env
+backend/.pytest_cache
+backend/.coverage
+backend/htmlcov
+
+# Frontend: deps e build local (build é feito no Docker)
+frontend-vue/node_modules
+frontend-vue/dist
+frontend-vue/.env
+frontend-vue/.env.*
+frontend-vue/*.local
+frontend-vue/npm-debug.log*
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+.env
+.env.*
+
+# Outros
+*.log
+.DS_Store

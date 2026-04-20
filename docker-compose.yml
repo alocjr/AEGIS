@@ -1,0 +1,14 @@
+# Aegis — front + back no mesmo container. Banco permanece na nuvem (MongoDB Atlas etc).
+# Uso: cp .env.docker.example .env && preencha MONGODB_URI e JWT_SECRET_KEY; depois:
+#   docker compose up --build
+
+services:
+  app:
+    build: .
+    ports:
+      - "80:8000"
+    env_file:
+      - backend/.env
+    environment:
+      - PORT=8000
+    restart: unless-stopped
