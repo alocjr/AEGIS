@@ -20,6 +20,20 @@ class AuthResponse(BaseModel):
     user: dict
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=512)
+    new_password: str = Field(min_length=6, max_length=128)
+
+
+class GenericMessageResponse(BaseModel):
+    message: str
+    reset_token: str | None = None
+
+
 class CompleteProgressResponse(BaseModel):
     concluidos: list[int]
     ativo: int

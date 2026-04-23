@@ -34,6 +34,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 - `GET /api/health`: retorna `{"status": "ok", "mongodb": "connected"}` se o app e o MongoDB estiverem ok. Retorna 503 se o MongoDB estiver inacessível (útil para load balancer e monitoramento).
 
+## Reset de senha
+
+- `POST /api/auth/forgot-password` com `{ "email": "..." }`: cria token de reset (resposta sempre genérica para não expor se o email existe).
+- `POST /api/auth/reset-password` com `{ "token": "...", "new_password": "..." }`: valida token e atualiza a senha.
+- Em desenvolvimento, opcionalmente habilite `PASSWORD_RESET_RETURN_TOKEN=true` para a API devolver `reset_token` na resposta do `forgot-password`.
+
 ## Variáveis de ambiente
 
 Ver `.env.example`. Nunca commite `.env` com credenciais reais.

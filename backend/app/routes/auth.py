@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
@@ -6,8 +6,21 @@ from pymongo.database import Database
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
-from app.schemas import AuthResponse, LoginRequest, RegisterRequest
-from app.security import create_access_token, hash_password, verify_password
+from app.schemas import (
+    AuthResponse,
+    ForgotPasswordRequest,
+    GenericMessageResponse,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+)
+from app.security import (
+    create_access_token,
+    create_password_reset_token,
+    hash_password,
+    hash_password_reset_token,
+    verify_password,
+)
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -66,3 +79,66 @@ def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
         "is_admin": is_admin,
         "course_slugs": course_slugs,
     }
+
+
+@router.post("/forgot-password", response_model=GenericMessageResponse)
+def forgot_password(payload: ForgotPasswordRequest, db: Database = Depends(get_db)):
+    """Inicia reset de senha sem revelar se o email existe."""
+    now = datetime.now(timezone.utc)
+    message = "Se o email existir, enviaremos instruções para reset de senha."
+    user = db.users.find_one({"email": payload.email.lower()})
+    if not user:
+        return {"message": message}
+
+    token = create_password_reset_token()
+    token_hash = hash_password_reset_token(token)
+    expires_at = now.replace(microsecond=0) + timedelta(minutes=settings.password_reset_expire_minutes)
+
+    # invalida tokens anteriores ainda ativos para o mesmo usuário
+    db.password_resets.update_many(
+        {"user_id": user["_id"], "used_at": None},
+        {"$set": {"used_at": now, "invalidated_reason": "replaced_by_new_request"}},
+    )
+    db.password_resets.insert_one(
+        {
+            "user_id": user["_id"],
+            "token_hash": token_hash,
+            "created_at": now,
+            "expires_at": expires_at,
+            "used_at": None,
+        }
+    )
+
+    if settings.password_reset_return_token:
+        return {"message": message, "reset_token": token}
+    return {"message": message}
+
+
+@router.post("/reset-password", response_model=GenericMessageResponse)
+def reset_password(payload: ResetPasswordRequest, db: Database = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    token_hash = hash_password_reset_token(payload.token)
+    reset_doc = db.password_resets.find_one(
+        {
+            "token_hash": token_hash,
+            "used_at": None,
+            "expires_at": {"$gt": now},
+        }
+    )
+    if not reset_doc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido ou expirado")
+
+    db.users.update_one(
+        {"_id": reset_doc["user_id"]},
+        {
+            "$set": {
+                "password_hash": hash_password(payload.new_password),
+                "updated_at": now,
+            }
+        },
+    )
+    db.password_resets.update_one(
+        {"_id": reset_doc["_id"]},
+        {"$set": {"used_at": now}},
+    )
+    return {"message": "Senha atualizada com sucesso."}

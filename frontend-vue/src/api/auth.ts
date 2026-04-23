@@ -5,6 +5,15 @@ export interface LoginPayload {
   password: string
 }
 
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export interface ResetPasswordPayload {
+  token: string
+  new_password: string
+}
+
 export interface AuthUser {
   id: string
   name: string
@@ -18,6 +27,11 @@ export interface AuthResponse {
   access_token: string
   token_type: string
   user: AuthUser
+}
+
+export interface GenericMessageResponse {
+  message: string
+  reset_token?: string
 }
 
 const TOKEN_KEY = 'valorian4future_token'
@@ -44,4 +58,12 @@ export function fetchMe(): Promise<AuthUser> {
   return apiRequest<AuthUser>('/api/auth/me', {
     headers: { Authorization: `Bearer ${token}` },
   })
+}
+
+export function forgotPassword(payload: ForgotPasswordPayload): Promise<GenericMessageResponse> {
+  return post<GenericMessageResponse>('/api/auth/forgot-password', payload)
+}
+
+export function resetPassword(payload: ResetPasswordPayload): Promise<GenericMessageResponse> {
+  return post<GenericMessageResponse>('/api/auth/reset-password', payload)
 }

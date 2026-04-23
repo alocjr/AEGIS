@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
+import secrets
 from typing import Any
 
 import bcrypt
@@ -48,3 +49,13 @@ def create_access_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     payload: dict[str, Any] = {"sub": subject, "exp": int(expire.timestamp())}
     return jwt.encode(payload, _jwt_key_bytes(), algorithm=settings.jwt_algorithm)
+
+
+def create_password_reset_token() -> str:
+    """Gera token aleatório URL-safe para reset de senha."""
+    return secrets.token_urlsafe(48)
+
+
+def hash_password_reset_token(token: str) -> str:
+    """Armazena apenas hash do token para reduzir impacto em caso de vazamento de banco."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

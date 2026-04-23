@@ -36,11 +36,11 @@ COPY backend/ ./backend/
 
 COPY --from=frontend-builder /build/dist ./frontend-vue/dist/
 
-EXPOSE 80
+EXPOSE 8000
 
 # Falha se a API não responder (inclui 503 se MongoDB estiver inacessível)
 HEALTHCHECK --interval=30s --timeout=8s --start-period=70s --retries=3 \
-  CMD python -c "import os, urllib.request; p=os.environ.get('PORT','80'); urllib.request.urlopen('http://127.0.0.1:%s/api/health'%p, timeout=5)" || exit 1
+  CMD python -c "import os, urllib.request; p=os.environ.get('PORT','8000'); urllib.request.urlopen('http://127.0.0.1:%s/api/health'%p, timeout=5)" || exit 1
 
 WORKDIR /app/backend
 
