@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { login, setStoredToken, forgotPassword, resetPassword } from '@/api/auth'
+import { login, setStoredToken, forgotPassword, resetPassword, verifyEmail, resendVerification } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
@@ -74,18 +74,47 @@ function goToReset() {
   view.value = 'reset'
 }
 
-function stripResetTokenQuery() {
-  if (!route.query.reset_token) return
+function stripQueryParam(key: string) {
+  if (!route.query[key]) return
   const query = { ...route.query }
-  delete query.reset_token
+  delete query[key]
   router.replace({ path: route.path, query })
 }
 
-function readResetTokenFromQuery(): string {
-  const raw = route.query.reset_token
+function stripResetTokenQuery() {
+  stripQueryParam('reset_token')
+}
+
+function readQueryToken(key: string): string {
+  const raw = route.query[key]
   if (typeof raw === 'string') return raw.trim()
   if (Array.isArray(raw) && raw[0]) return raw[0].trim()
   return ''
+}
+
+function readResetTokenFromQuery(): string {
+  return readQueryToken('reset_token')
+}
+
+async function handleVerifyTokenFromQuery() {
+  const tokenFromQuery = readQueryToken('verify_token')
+  if (!tokenFromQuery) return
+  stripQueryParam('verify_token')
+  loading.value = true
+  clearFeedback()
+  try {
+    const data = await verifyEmail(tokenFromQuery)
+    success.value = data.message
+    view.value = 'login'
+    if (authStore.user) {
+      authStore.setUser({ ...authStore.user, email_verified: true })
+    }
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Token inválido ou expirado.'
+    view.value = 'login'
+  } finally {
+    loading.value = false
+  }
 }
 
 function handleOverlayOpen() {
@@ -95,7 +124,9 @@ function handleOverlayOpen() {
     resetToken.value = tokenFromQuery
     view.value = 'reset'
     stripResetTokenQuery()
+    return
   }
+  void handleVerifyTokenFromQuery()
 }
 
 watch(
@@ -114,6 +145,10 @@ async function redirectAfterLogin(user: AuthUser) {
     } catch {
       window.location.replace('/admin')
     }
+    return
+  }
+  if (user.email_verified === false) {
+    success.value = 'Confirme seu email para acessar o programa. Verifique sua caixa de entrada.'
     return
   }
   window.location.replace('/programa')
@@ -199,6 +234,19 @@ async function submitReset() {
   }
 }
 
+async function submitResendVerification() {
+  clearFeedback()
+  loading.value = true
+  try {
+    const data = await resendVerification()
+    success.value = data.message
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Erro de conexão. Tente novamente.'
+  } finally {
+    loading.value = false
+  }
+}
+
 function onClose() {
   emit('close')
 }
@@ -256,6 +304,12 @@ function onResetKeydown(e: KeyboardEvent) {
         />
         <button type="button" class="auth-link" @click="goToForgot">Esqueci minha senha</button>
         <div class="auth-error">{{ error }}</div>
+        <div v-if="success" class="auth-success">{{ success }}</div>
+        <div v-if="authStore.user?.email_verified === false" class="auth-actions">
+          <button type="button" class="auth-btn alt" :disabled="loading" @click="submitResendVerification">
+            {{ loading ? 'Enviando…' : 'Reenviar email de confirmação' }}
+          </button>
+        </div>
         <div>
           <button type="button" class="auth-btn" :disabled="loading" @click="doLogin">
             {{ loading ? 'Entrando…' : 'Entrar' }}

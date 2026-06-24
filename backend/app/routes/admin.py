@@ -235,6 +235,7 @@ def create_user(
         "course_slugs": course_slugs,
         "created_at": now,
         "updated_at": now,
+        "email_verified": True,
     }
     if payload.phone is not None and payload.phone.strip():
         user_doc["phone"] = payload.phone.strip()

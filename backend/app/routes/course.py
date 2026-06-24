@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_verified_user
 from app.utils.course_payload import payload_for_json
 from app.utils.progress_liberados import recompute_liberados
 
@@ -85,7 +85,7 @@ def _user_has_course(user: dict, slug: str, db: Database) -> bool:
 
 @router.get("/current")
 def get_current_course(
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     course_slug: str | None = Query(None, description="Trilha a exibir (slug). Se omitido, usa a trilha principal do usuário."),
 ):

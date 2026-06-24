@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     # Reset de senha
     password_reset_expire_minutes: int = 30
+    email_verification_expire_minutes: int = 1440
     # URL pública do frontend (link no email de reset)
     app_base_url: str = "http://localhost:5173"
     # SMTP genérico (email de reset de senha)

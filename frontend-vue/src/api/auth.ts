@@ -19,6 +19,7 @@ export interface AuthUser {
   name: string
   email: string
   is_admin: boolean
+  email_verified?: boolean
   /** Trilhas (course_slug) em que o aluno tem progresso. Só presente quando carregado por /me. */
   course_slugs?: string[]
 }
@@ -65,4 +66,17 @@ export function forgotPassword(payload: ForgotPasswordPayload): Promise<GenericM
 
 export function resetPassword(payload: ResetPasswordPayload): Promise<GenericMessageResponse> {
   return post<GenericMessageResponse>('/api/auth/reset-password', payload)
+}
+
+export function verifyEmail(token: string): Promise<GenericMessageResponse> {
+  return post<GenericMessageResponse>('/api/auth/verify-email', { token })
+}
+
+export function resendVerification(): Promise<GenericMessageResponse> {
+  const token = getStoredToken()
+  if (!token) return Promise.reject(new Error('No token'))
+  return apiRequest<GenericMessageResponse>('/api/auth/resend-verification', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
 }

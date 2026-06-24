@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_verified_user
 from app.routes.progress import _resolve_course_slug
 from app.schemas import QuizSubmitRequest
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/quiz", tags=["quiz"])
 
 @router.get("")
 def list_my_quiz_responses(
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     course_slug: str | None = Query(None, description="Trilha (slug). Se omitido, usa a trilha principal."),
 ):
@@ -131,7 +131,7 @@ def _get_quiz_impl(
 @router.get("/by-id/{quiz_id}")
 def get_quiz_by_id(
     quiz_id: str,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     batch: int | None = Query(None),
     review: bool = Query(False),
@@ -152,7 +152,7 @@ def get_quiz_by_id(
 @router.get("/{encontro_id}")
 def get_quiz(
     encontro_id: int,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     batch: int | None = Query(None, description="Devolver apenas as N primeiras perguntas ainda nao respondidas"),
     review: bool = Query(False, description="Devolver quiz com racionais (todas ou só as já respondidas)"),
@@ -165,7 +165,7 @@ def get_quiz(
 @router.get("/{encontro_id}/my-response")
 def get_my_quiz_response(
     encontro_id: int,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     course_slug: str | None = Query(None),
 ):
@@ -216,7 +216,7 @@ def _compute_feedback_for_answers(quiz: dict, answers: dict[str, int]) -> tuple[
 def submit_quiz(
     encontro_id: int,
     payload: QuizSubmitRequest,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     course_slug: str | None = Query(None),
 ):

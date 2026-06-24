@@ -68,9 +68,13 @@ router.beforeEach(async (to, _from, next) => {
     next('/')
     return
   }
+  if (isProtected && auth.user?.email_verified === false) {
+    next('/login')
+    return
+  }
 
   if (to.path === '/') {
-    if (auth.isLoggedIn && !auth.isAdmin) {
+    if (auth.isLoggedIn && !auth.isAdmin && auth.user?.email_verified !== false) {
       next('/programa')
       return
     }

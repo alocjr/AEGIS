@@ -12,6 +12,11 @@ from app.security import _jwt_key_bytes
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def is_email_verified(user: dict) -> bool:
+    """Usuários legados sem o campo são tratados como verificados."""
+    return user.get("email_verified") is not False
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Database = Depends(get_db),
@@ -39,7 +44,16 @@ def get_current_user(
     return user
 
 
-def get_current_admin(user=Depends(get_current_user)):
+def get_verified_user(user=Depends(get_current_user)):
+    if not is_email_verified(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Confirme seu email antes de acessar este recurso.",
+        )
+    return user
+
+
+def get_current_admin(user=Depends(get_verified_user)):
     if not user.get("is_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a administradores")
     return {**user, "is_admin": True}

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_verified_user
 from app.routes.course import COURSE_SLUG, _user_has_course
 from app.schemas import CompleteProgressResponse, MaterialCheckRequest
 from app.utils.progress_liberados import find_encontro, recompute_liberados
@@ -72,7 +72,7 @@ def _serialize_progress(progress: dict):
 
 
 @router.post("/material")
-def update_material_check(payload: MaterialCheckRequest, user=Depends(get_current_user), db: Database = Depends(get_db)):
+def update_material_check(payload: MaterialCheckRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
     course_slug = _resolve_course_slug(user, db, payload.course_slug)
     course = db.courses.find_one({"slug": course_slug})
     if not course:
@@ -131,7 +131,7 @@ def update_material_check(payload: MaterialCheckRequest, user=Depends(get_curren
 @router.post("/complete/{encontro_id}", response_model=CompleteProgressResponse)
 def complete_encontro(
     encontro_id: int,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
     db: Database = Depends(get_db),
     course_slug: str | None = Query(None, description="Trilha (slug). Se omitido, usa a trilha principal do usuário."),
 ):

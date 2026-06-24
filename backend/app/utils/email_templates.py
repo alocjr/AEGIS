@@ -183,3 +183,70 @@ def render_password_reset_text(reset_link: str, token: str, expire_minutes: int)
         "Se você não solicitou esta alteração, ignore este email.\n"
         "— Valorian 4 Future · AI Executive Mentoring\n"
     )
+
+
+def render_email_verification_html(verify_link: str, expire_minutes: int) -> str:
+    safe_link = html.escape(verify_link, quote=True)
+    safe_expire = html.escape(str(expire_minutes))
+
+    return f"""\
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirme seu email</title>
+</head>
+<body style="margin:0;padding:0;background-color:{_NAVY_DEEP};font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:{_NAVY_DEEP};">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:{_IVORY};border:1px solid {_BORDER};border-radius:2px;">
+          <tr>
+            <td style="background:linear-gradient(135deg,{_NAVY_DEEP} 0%,{_NAVY_MID} 100%);padding:28px 32px;border-bottom:1px solid {_BORDER};">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:{_GOLD};">Valorian</div>
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:300;color:{_IVORY};margin-top:4px;">4 <span style="color:{_GOLD_LIGHT};">Future</span></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:{_TEXT};">Confirme seu email</h1>
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:{_TEXT};">
+                Obrigado por se cadastrar na plataforma <strong>Valorian 4 Future</strong>.
+                Clique no botão abaixo para confirmar seu endereço de email.
+              </p>
+              <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:{_MUTED};">
+                O link é válido por <strong style="color:{_TEXT};">{safe_expire} minutos</strong>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="center" style="border-radius:2px;background-color:{_GOLD};">
+                    <a href="{safe_link}" target="_blank" style="display:inline-block;padding:14px 32px;font-size:13px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:{_NAVY_DEEP};text-decoration:none;">
+                      Confirmar email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:{_MUTED};word-break:break-all;">
+                Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+                <a href="{safe_link}" style="color:{_NAVY};">{safe_link}</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def render_email_verification_text(verify_link: str, expire_minutes: int) -> str:
+    return (
+        "VALORIAN 4 FUTURE — Confirmação de email\n"
+        "========================================\n\n"
+        "Obrigado por se cadastrar. Confirme seu email acessando o link abaixo:\n\n"
+        f"{verify_link}\n\n"
+        f"O link é válido por {expire_minutes} minutos.\n\n"
+        "— Valorian 4 Future · AI Executive Mentoring\n"
+    )

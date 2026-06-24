@@ -6,7 +6,7 @@ from pymongo.database import Database
 
 from app.config import settings
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, is_email_verified
 from app.schemas import (
     AuthResponse,
     ForgotPasswordRequest,
@@ -14,6 +14,7 @@ from app.schemas import (
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    VerifyEmailRequest,
 )
 from app.security import (
     create_access_token,
@@ -23,6 +24,7 @@ from app.security import (
 )
 from app.utils.email import send_password_reset_email
 from app.limiter import limiter
+from app.utils.email_verification import issue_and_send_verification, verify_email_token
 from app.utils.login_lockout import authenticate_login
 from app.utils.rate_limit import enforce_email_rate_limit
 
@@ -31,6 +33,16 @@ logger = logging.getLogger("aegis")
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _user_payload(user: dict) -> dict:
+    return {
+        "id": str(user["_id"]),
+        "name": user["name"],
+        "email": user["email"],
+        "is_admin": bool(user.get("is_admin", False)),
+        "email_verified": is_email_verified(user),
+    }
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -43,15 +55,18 @@ def register(payload: RegisterRequest, db: Database = Depends(get_db)):
         "name": payload.name.strip(),
         "email": payload.email.lower(),
         "password_hash": hash_password(payload.password),
+        "email_verified": False,
         "created_at": datetime.now(timezone.utc),
     }
     result = db.users.insert_one(user_doc)
+    user_doc["_id"] = result.inserted_id
+    issue_and_send_verification(db, user_doc)
     token = create_access_token(str(result.inserted_id))
 
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": str(result.inserted_id), "name": user_doc["name"], "email": user_doc["email"], "is_admin": False},
+        "user": _user_payload(user_doc),
     }
 
 
@@ -62,27 +77,43 @@ def login(request: Request, payload: LoginRequest, db: Database = Depends(get_db
     user = authenticate_login(db, payload.email, payload.password)
 
     token = create_access_token(str(user["_id"]))
-    is_admin = bool(user.get("is_admin", False))
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": {"id": str(user["_id"]), "name": user["name"], "email": user["email"], "is_admin": is_admin},
+        "user": _user_payload(user),
     }
 
 
 @router.get("/me")
 def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
-    is_admin = bool(user.get("is_admin", False))
     from_progress = db.progress.distinct("course_slug", {"user_id": user["_id"]})
     from_user = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
-    course_slugs = list(dict.fromkeys(from_progress + from_user))  # união, ordem progress depois user
+    course_slugs = list(dict.fromkeys(from_progress + from_user))
     return {
-        "id": str(user["_id"]),
-        "name": user["name"],
-        "email": user["email"],
-        "is_admin": is_admin,
+        **_user_payload(user),
         "course_slugs": course_slugs,
     }
+
+
+@router.post("/verify-email", response_model=GenericMessageResponse)
+def verify_email(payload: VerifyEmailRequest, db: Database = Depends(get_db)):
+    if not verify_email_token(db, payload.token):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido ou expirado")
+    return {"message": "Email confirmado com sucesso."}
+
+
+@router.post("/resend-verification", response_model=GenericMessageResponse)
+@limiter.limit("5/minute")
+def resend_verification(
+    request: Request,
+    user=Depends(get_current_user),
+    db: Database = Depends(get_db),
+):
+    enforce_email_rate_limit(db, user["email"], "resend_verification")
+    if is_email_verified(user):
+        return {"message": "Seu email já está confirmado."}
+    issue_and_send_verification(db, user)
+    return {"message": "Enviamos um novo link de confirmação para o seu email."}
 
 
 @router.post("/forgot-password", response_model=GenericMessageResponse)
@@ -100,7 +131,6 @@ def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Databa
     token_hash = hash_password_reset_token(token)
     expires_at = now.replace(microsecond=0) + timedelta(minutes=settings.password_reset_expire_minutes)
 
-    # invalida tokens anteriores ainda ativos para o mesmo usuário
     db.password_resets.update_many(
         {"user_id": user["_id"], "used_at": None},
         {"$set": {"used_at": now, "invalidated_reason": "replaced_by_new_request"}},

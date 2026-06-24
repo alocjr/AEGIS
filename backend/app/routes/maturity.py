@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_user
+from app.deps import get_verified_user
 from app.schemas import MaturityAnswersRequest
 
 
@@ -71,12 +71,12 @@ def _score_submission(model: dict, answers: dict[str, int]) -> dict:
 
 
 @router.get("/model")
-def get_model(user=Depends(get_current_user), db: Database = Depends(get_db)):
+def get_model(user=Depends(get_verified_user), db: Database = Depends(get_db)):
     return _load_model(db)
 
 
 @router.get("/my-responses")
-def list_my_responses(user=Depends(get_current_user), db: Database = Depends(get_db)):
+def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(get_db)):
     """Lista todas as autoavaliações do aluno (mais recentes primeiro)."""
     model = _load_model(db)
     version = model.get("version", "1.0")
@@ -104,7 +104,7 @@ def list_my_responses(user=Depends(get_current_user), db: Database = Depends(get
 
 @router.get("/my-responses/{response_id}")
 def get_my_response_by_id(
-    response_id: str, user=Depends(get_current_user), db: Database = Depends(get_db)
+    response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
 ):
     """Retorna uma resposta específica (para visualizar detalhes)."""
     from bson import ObjectId
@@ -124,7 +124,7 @@ def get_my_response_by_id(
 
 
 @router.post("/my-response")
-def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_current_user), db: Database = Depends(get_db)):
+def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
     """Cria uma nova autoavaliação (múltiplas respostas por aluno)."""
     from bson import ObjectId
     model = _load_model(db)
