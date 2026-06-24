@@ -31,7 +31,6 @@ class ResetPasswordRequest(BaseModel):
 
 class GenericMessageResponse(BaseModel):
     message: str
-    reset_token: str | None = None
 
 
 class CompleteProgressResponse(BaseModel):

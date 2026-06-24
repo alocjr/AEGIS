@@ -116,8 +116,6 @@ def forgot_password(payload: ForgotPasswordRequest, db: Database = Depends(get_d
 
     send_password_reset_email(user["email"], token)
 
-    if settings.password_reset_return_token:
-        return {"message": message, "reset_token": token}
     return {"message": message}
 
 

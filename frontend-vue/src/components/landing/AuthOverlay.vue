@@ -26,11 +26,9 @@ const forgotEmail = ref('')
 const resetToken = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
-const devResetToken = ref('')
 const error = ref('')
 const success = ref('')
 const loading = ref(false)
-const copyHint = ref('')
 
 const viewTitle = computed(() => {
   if (view.value === 'forgot') return 'Recuperar senha'
@@ -48,17 +46,14 @@ function resetOverlayState() {
   resetToken.value = ''
   newPassword.value = ''
   confirmPassword.value = ''
-  devResetToken.value = ''
   error.value = ''
   success.value = ''
-  copyHint.value = ''
   loading.value = false
 }
 
 function clearFeedback() {
   error.value = ''
   success.value = ''
-  copyHint.value = ''
 }
 
 function goToLogin() {
@@ -74,11 +69,8 @@ function goToForgot() {
   view.value = 'forgot'
 }
 
-function goToReset(prefillToken = false) {
+function goToReset() {
   clearFeedback()
-  if (prefillToken && devResetToken.value) {
-    resetToken.value = devResetToken.value
-  }
   view.value = 'reset'
 }
 
@@ -167,7 +159,6 @@ async function submitForgot() {
   try {
     const data = await forgotPassword({ email: e })
     success.value = data.message
-    devResetToken.value = data.reset_token ?? ''
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Erro de conexão. Tente novamente.'
   } finally {
@@ -205,16 +196,6 @@ async function submitReset() {
     }
   } finally {
     loading.value = false
-  }
-}
-
-async function copyDevToken() {
-  if (!devResetToken.value) return
-  try {
-    await navigator.clipboard.writeText(devResetToken.value)
-    copyHint.value = 'Token copiado.'
-  } catch {
-    copyHint.value = 'Não foi possível copiar automaticamente.'
   }
 }
 
@@ -296,12 +277,6 @@ function onResetKeydown(e: KeyboardEvent) {
         />
         <div class="auth-error">{{ error }}</div>
         <div v-if="success" class="auth-success">{{ success }}</div>
-        <div v-if="devResetToken" class="auth-hint">
-          <span class="auth-hint-label">Token (ambiente de desenvolvimento):</span>
-          <code class="auth-hint-token">{{ devResetToken }}</code>
-          <button type="button" class="auth-link inline" @click="copyDevToken">Copiar token</button>
-          <span v-if="copyHint" class="auth-hint-copy">{{ copyHint }}</span>
-        </div>
         <div class="auth-actions">
           <button type="button" class="auth-btn" :disabled="loading" @click="submitForgot">
             {{ loading ? 'Enviando…' : 'Enviar instruções' }}
@@ -310,10 +285,10 @@ function onResetKeydown(e: KeyboardEvent) {
         <div class="auth-nav">
           <button type="button" class="auth-link" @click="goToLogin">Voltar ao login</button>
           <button
-            v-if="success || devResetToken"
+            v-if="success"
             type="button"
             class="auth-link"
-            @click="goToReset(true)"
+            @click="goToReset"
           >
             Já tenho o token
           </button>

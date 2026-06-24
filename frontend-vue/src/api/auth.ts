@@ -31,7 +31,6 @@ export interface AuthResponse {
 
 export interface GenericMessageResponse {
   message: string
-  reset_token?: string
 }
 
 const TOKEN_KEY = 'valorian4future_token'

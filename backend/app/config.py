@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     initial_admin_email: str = ""
     # Reset de senha
     password_reset_expire_minutes: int = 30
-    password_reset_return_token: bool = False
     # URL pública do frontend (link no email de reset)
     app_base_url: str = "http://localhost:5173"
     # SMTP genérico (email de reset de senha)
