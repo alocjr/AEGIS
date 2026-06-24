@@ -36,6 +36,11 @@ COPY backend/ ./backend/
 
 COPY --from=frontend-builder /build/dist ./frontend-vue/dist/
 
+RUN adduser --disabled-password --gecos '' appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8000
 
 # Falha se a API não responder (inclui 503 se MongoDB estiver inacessível)

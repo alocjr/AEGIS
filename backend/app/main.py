@@ -83,7 +83,13 @@ _cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip(
 if not _cors_origins:
     _cors_origins = ["http://localhost:5173"]
 
-app = FastAPI(title="Valorian 4 Future API", version="1.0.0")
+app = FastAPI(
+    title="Valorian 4 Future API",
+    version="1.0.0",
+    docs_url=None if settings.environment.lower() == "production" else "/docs",
+    redoc_url=None if settings.environment.lower() == "production" else "/redoc",
+    openapi_url=None if settings.environment.lower() == "production" else "/openapi.json",
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
