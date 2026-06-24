@@ -21,6 +21,7 @@ def init_indexes() -> None:
     db.password_resets.create_index([("user_id", 1), ("created_at", -1)])
     db.progress.create_index([("user_id", 1), ("course_slug", 1)], unique=True)
     db.courses.create_index("slug", unique=True)
+    db.ai_maturity_model.create_index("version")
     # Múltiplas respostas por aluno: remover índice único antigo (1 resposta por user) se existir
     try:
         db.maturity_responses.drop_index("user_id_1_model_version_1")

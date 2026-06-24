@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     """Configuração via variáveis de ambiente. NUNCA use valores reais como default em produção."""
 
     mongodb_uri: str = ""
-    mongodb_db_name: str = "valorian4future"
+    mongodb_db_name: str = "aegis"
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 480
@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     # Email do primeiro admin (acesso à área admin mesmo sem is_admin no banco). Deixe vazio em prod após criar o admin.
     initial_admin_email: str = ""
+    # Reset de senha
+    password_reset_expire_minutes: int = 30
+    password_reset_return_token: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
 
 settings = Settings()

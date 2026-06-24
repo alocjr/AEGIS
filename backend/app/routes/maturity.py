@@ -1,8 +1,6 @@
-import json
 from datetime import datetime, timezone
-from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from app.database import get_db
@@ -12,11 +10,21 @@ from app.schemas import MaturityAnswersRequest
 
 router = APIRouter(prefix="/api/maturity", tags=["maturity"])
 
-MODEL_FILE = Path(__file__).resolve().parents[3] / "prototype" / "ai_maturity_model.json"
 
-
-def _load_model() -> dict:
-    return json.loads(MODEL_FILE.read_text(encoding="utf-8"))
+def _load_model(db: Database) -> dict:
+    doc = db.ai_maturity_model.find_one(sort=[("_id", -1)])
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Modelo de maturidade nao configurado",
+        )
+    model = {k: v for k, v in doc.items() if k != "_id"}
+    if not model.get("dimensions"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Modelo de maturidade invalido",
+        )
+    return model
 
 
 def _score_submission(model: dict, answers: dict[str, int]) -> dict:
@@ -63,15 +71,14 @@ def _score_submission(model: dict, answers: dict[str, int]) -> dict:
 
 
 @router.get("/model")
-def get_model(user=Depends(get_current_user)):
-    model = _load_model()
-    return model
+def get_model(user=Depends(get_current_user), db: Database = Depends(get_db)):
+    return _load_model(db)
 
 
 @router.get("/my-responses")
 def list_my_responses(user=Depends(get_current_user), db: Database = Depends(get_db)):
     """Lista todas as autoavaliações do aluno (mais recentes primeiro)."""
-    model = _load_model()
+    model = _load_model(db)
     version = model.get("version", "1.0")
     cursor = db.maturity_responses.find(
         {"user_id": user["_id"], "model_version": version}
@@ -120,7 +127,7 @@ def get_my_response_by_id(
 def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_current_user), db: Database = Depends(get_db)):
     """Cria uma nova autoavaliação (múltiplas respostas por aluno)."""
     from bson import ObjectId
-    model = _load_model()
+    model = _load_model(db)
     all_questions = {q["id"] for d in model.get("dimensions", []) for q in d.get("questions", [])}
     if not all_questions:
         raise HTTPException(status_code=500, detail="Modelo de maturidade invalido")
