@@ -40,10 +40,6 @@ def get_current_user(
 
 
 def get_current_admin(user=Depends(get_current_user)):
-    is_admin = bool(user.get("is_admin"))
-    if not is_admin and settings.initial_admin_email:
-        if (user.get("email") or "").strip().lower() == settings.initial_admin_email.strip().lower():
-            is_admin = True
-    if not is_admin:
+    if not user.get("is_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a administradores")
     return {**user, "is_admin": True}

@@ -71,9 +71,6 @@ def login(payload: LoginRequest, db: Database = Depends(get_db)):
 @router.get("/me")
 def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
     is_admin = bool(user.get("is_admin", False))
-    if not is_admin and settings.initial_admin_email:
-        if (user.get("email") or "").strip().lower() == settings.initial_admin_email.strip().lower():
-            is_admin = True
     from_progress = db.progress.distinct("course_slug", {"user_id": user["_id"]})
     from_user = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
     course_slugs = list(dict.fromkeys(from_progress + from_user))  # união, ordem progress depois user

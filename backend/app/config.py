@@ -11,8 +11,6 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 480
     # Origens permitidas para CORS (separadas por vírgula). Ex: http://localhost:5173,https://app.exemplo.com
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
-    # Email do primeiro admin (acesso à área admin mesmo sem is_admin no banco). Deixe vazio em prod após criar o admin.
-    initial_admin_email: str = ""
     # Reset de senha
     password_reset_expire_minutes: int = 30
     # URL pública do frontend (link no email de reset)
