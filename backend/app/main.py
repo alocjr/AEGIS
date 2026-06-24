@@ -31,7 +31,7 @@ NO_CACHE_HEADERS = {
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self'; "
         "font-src 'self' https://fonts.gstatic.com; "
@@ -142,6 +142,11 @@ def startup() -> None:
     init_indexes()
     seed_course_if_needed()
     logger.info("Application started")
+
+
+@app.get("/lp.js")
+def lp_js():
+    return _public_static_file("lp.js", "application/javascript; charset=utf-8")
 
 
 @app.get("/robots.txt")
