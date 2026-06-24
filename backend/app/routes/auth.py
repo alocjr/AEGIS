@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pymongo.database import Database
 
 from app.config import settings
@@ -27,6 +27,7 @@ from app.limiter import limiter
 from app.utils.email_verification import issue_and_send_verification, verify_email_token
 from app.utils.login_lockout import authenticate_login
 from app.utils.rate_limit import enforce_email_rate_limit
+from app.utils.auth_cookie import clear_auth_cookie, set_auth_cookie
 
 
 logger = logging.getLogger("aegis")
@@ -46,7 +47,7 @@ def _user_payload(user: dict) -> dict:
 
 
 @router.post("/register", response_model=AuthResponse)
-def register(payload: RegisterRequest, db: Database = Depends(get_db)):
+def register(payload: RegisterRequest, response: Response, db: Database = Depends(get_db)):
     existing = db.users.find_one({"email": payload.email.lower()})
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ja cadastrado")
@@ -62,6 +63,7 @@ def register(payload: RegisterRequest, db: Database = Depends(get_db)):
     user_doc["_id"] = result.inserted_id
     issue_and_send_verification(db, user_doc)
     token = create_access_token(str(result.inserted_id))
+    set_auth_cookie(response, token)
 
     return {
         "access_token": token,
@@ -72,16 +74,23 @@ def register(payload: RegisterRequest, db: Database = Depends(get_db)):
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit("5/minute")
-def login(request: Request, payload: LoginRequest, db: Database = Depends(get_db)):
+def login(request: Request, payload: LoginRequest, response: Response, db: Database = Depends(get_db)):
     enforce_email_rate_limit(db, payload.email, "login")
     user = authenticate_login(db, payload.email, payload.password)
 
     token = create_access_token(str(user["_id"]))
+    set_auth_cookie(response, token)
     return {
         "access_token": token,
         "token_type": "bearer",
         "user": _user_payload(user),
     }
+
+
+@router.post("/logout", response_model=GenericMessageResponse)
+def logout(response: Response):
+    clear_auth_cookie(response)
+    return {"message": "Logout realizado."}
 
 
 @router.get("/me")

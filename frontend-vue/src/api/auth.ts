@@ -1,4 +1,4 @@
-import { post, apiRequest } from './client'
+import { post, get } from './client'
 
 export interface LoginPayload {
   email: string
@@ -34,30 +34,16 @@ export interface GenericMessageResponse {
   message: string
 }
 
-const TOKEN_KEY = 'valorian4future_token'
-
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-export function clearStoredToken(): void {
-  localStorage.removeItem(TOKEN_KEY)
-}
-
 export function login(payload: LoginPayload): Promise<AuthResponse> {
   return post<AuthResponse>('/api/auth/login', payload)
 }
 
+export function logoutApi(): Promise<GenericMessageResponse> {
+  return post<GenericMessageResponse>('/api/auth/logout')
+}
+
 export function fetchMe(): Promise<AuthUser> {
-  const token = getStoredToken()
-  if (!token) return Promise.reject(new Error('No token'))
-  return apiRequest<AuthUser>('/api/auth/me', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return get<AuthUser>('/api/auth/me')
 }
 
 export function forgotPassword(payload: ForgotPasswordPayload): Promise<GenericMessageResponse> {
@@ -73,10 +59,5 @@ export function verifyEmail(token: string): Promise<GenericMessageResponse> {
 }
 
 export function resendVerification(): Promise<GenericMessageResponse> {
-  const token = getStoredToken()
-  if (!token) return Promise.reject(new Error('No token'))
-  return apiRequest<GenericMessageResponse>('/api/auth/resend-verification', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  return post<GenericMessageResponse>('/api/auth/resend-verification')
 }

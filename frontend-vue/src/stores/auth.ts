@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchMe, getStoredToken, clearStoredToken } from '@/api/auth'
+import { fetchMe, logoutApi } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -9,14 +9,10 @@ export const useAuthStore = defineStore('auth', () => {
   /** Trilha atualmente selecionada (para usuários com mais de uma). Usado em /programa e nas APIs de progresso. */
   const currentCourseSlug = ref<string | null>(null)
 
-  const isLoggedIn = computed(() => !!getStoredToken())
+  const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.is_admin ?? false)
 
   async function loadUser() {
-    if (!getStoredToken()) {
-      loaded.value = true
-      return
-    }
     try {
       user.value = await fetchMe()
       const slugs = user.value?.course_slugs
@@ -26,8 +22,6 @@ export const useAuthStore = defineStore('auth', () => {
     } catch {
       user.value = null
       currentCourseSlug.value = null
-      // Token inválido ou expirado: limpa para não ficar logado sem usuário (ex.: admin travado)
-      clearStoredToken()
     } finally {
       loaded.value = true
     }
@@ -42,8 +36,12 @@ export const useAuthStore = defineStore('auth', () => {
     currentCourseSlug.value = slug
   }
 
-  function logout() {
-    clearStoredToken()
+  async function logout() {
+    try {
+      await logoutApi()
+    } catch {
+      // Cookie pode já estar ausente; limpa estado local mesmo assim.
+    }
     user.value = null
     currentCourseSlug.value = null
   }

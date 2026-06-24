@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { login, setStoredToken, forgotPassword, resetPassword, verifyEmail, resendVerification } from '@/api/auth'
+import { login, forgotPassword, resetPassword, verifyEmail, resendVerification } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
@@ -165,8 +165,7 @@ async function doLogin() {
   loading.value = true
   try {
     const data = await login({ email: e, password: p })
-    if (data.access_token && data.user) {
-      setStoredToken(data.access_token)
+    if (data.user) {
       authStore.setUser(data.user)
       await redirectAfterLogin(data.user)
       return

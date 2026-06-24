@@ -16,8 +16,9 @@ watch(() => route.path, () => {
 })
 
 function onLogout() {
-  auth.logout()
-  window.location.replace('/')
+  void auth.logout().then(() => {
+    window.location.replace('/')
+  })
 }
 
 function toggleMenu() {

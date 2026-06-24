@@ -5,8 +5,9 @@ import { useAuthStore } from '@/stores/auth'
 const auth = useAuthStore()
 
 function onLogout() {
-  auth.logout()
-  window.location.replace('/')
+  void auth.logout().then(() => {
+    window.location.replace('/')
+  })
 }
 </script>
 

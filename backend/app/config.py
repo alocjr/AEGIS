@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     mongodb_uri: str = ""
     mongodb_db_name: str = "aegis"
+    environment: str = "development"
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 480

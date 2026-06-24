@@ -1,17 +1,10 @@
 /**
  * Cliente HTTP base para chamadas à API.
  * Base URL vazia = mesmo origem; em dev o Vite faz proxy de /api.
- * Requisições autenticadas: inclui Bearer token quando disponível.
+ * Autenticação via cookie HttpOnly (credentials: include).
  */
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
-const TOKEN_KEY = 'valorian4future_token'
-
-function authHeaders(): Record<string, string> {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
-  if (!token) return {}
-  return { Authorization: `Bearer ${token}` }
-}
 
 export async function apiRequest<T>(
   path: string,
@@ -22,7 +15,6 @@ export async function apiRequest<T>(
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...authHeaders(),
       ...options.headers,
     },
     credentials: 'include',
