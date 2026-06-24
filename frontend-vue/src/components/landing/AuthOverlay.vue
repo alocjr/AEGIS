@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { login, setStoredToken, forgotPassword, resetPassword } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
@@ -16,6 +16,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const view = ref<AuthView>('login')
@@ -81,23 +82,36 @@ function goToReset(prefillToken = false) {
   view.value = 'reset'
 }
 
+function stripResetTokenQuery() {
+  if (!route.query.reset_token) return
+  const query = { ...route.query }
+  delete query.reset_token
+  router.replace({ path: route.path, query })
+}
+
+function readResetTokenFromQuery(): string {
+  const raw = route.query.reset_token
+  if (typeof raw === 'string') return raw.trim()
+  if (Array.isArray(raw) && raw[0]) return raw[0].trim()
+  return ''
+}
+
+function handleOverlayOpen() {
+  const tokenFromQuery = readResetTokenFromQuery()
+  resetOverlayState()
+  if (tokenFromQuery) {
+    resetToken.value = tokenFromQuery
+    view.value = 'reset'
+    stripResetTokenQuery()
+  }
+}
+
 watch(
   () => props.show,
   (visible) => {
-    if (visible) {
-      const params = new URLSearchParams(window.location.search)
-      const tokenFromUrl = params.get('reset_token')?.trim() || ''
-      resetOverlayState()
-      if (tokenFromUrl) {
-        resetToken.value = tokenFromUrl
-        view.value = 'reset'
-        const url = new URL(window.location.href)
-        url.searchParams.delete('reset_token')
-        const qs = url.searchParams.toString()
-        window.history.replaceState({}, '', qs ? `${url.pathname}?${qs}` : url.pathname)
-      }
-    }
-  }
+    if (visible) handleOverlayOpen()
+  },
+  { immediate: true }
 )
 
 async function redirectAfterLogin(user: AuthUser) {
@@ -308,8 +322,11 @@ function onResetKeydown(e: KeyboardEvent) {
 
       <!-- reset -->
       <template v-else>
-        <p class="auth-desc">Informe o token recebido e sua nova senha.</p>
+        <p class="auth-desc">
+          Defina sua nova senha abaixo. O token do email já foi preenchido quando você clicou no link.
+        </p>
         <input
+          v-if="!resetToken"
           v-model="resetToken"
           type="text"
           class="auth-input"
