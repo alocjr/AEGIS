@@ -1,0 +1,37 @@
+---
+alwaysApply: true
+---
+
+<!-- SPECKIT START -->
+# AEGIS — contexto para Spec Kit
+
+Projeto **Valorian 4 Future (AEGIS)**: plataforma de mentoria executiva.
+
+## Stack
+- Backend: FastAPI, MongoDB (PyMongo), JWT — `backend/app/`
+- Frontend: Vue 3 + TypeScript + Vite — `frontend-vue/src/`
+- Deploy: Docker (API + SPA no mesmo container), MongoDB externo (Atlas)
+
+## Convenções
+- API em `/api/*`; schemas em `backend/app/schemas.py`
+- Clientes HTTP em `frontend-vue/src/api/*`
+- Constitution: `.specify/memory/constitution.md`
+- Spec ativa: ler `.specify/feature.json` → diretório em `specs/`
+- **Plano ativo**: `specs/002-reset-senha-ui/plan.md` (reset de senha UI)
+- Baseline brownfield: `specs/001-aegis-baseline/spec.md`
+
+## Coleções MongoDB
+`users`, `courses`, `progress`, `quiz`, `quiz_responses`, `ai_maturity_model`, `maturity_responses`, `password_resets`, `leads`
+
+## Comandos úteis
+```bash
+# Backend dev
+cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Frontend dev
+cd frontend-vue && npm run dev
+# Admin
+ADMIN_EMAIL=... ADMIN_PASSWORD=... python util/create_user.py
+```
+
+Leia o plano técnico da feature ativa (`plan.md`) antes de implementar.
+<!-- SPECKIT END -->

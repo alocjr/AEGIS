@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     # Reset de senha
     password_reset_expire_minutes: int = 30
     password_reset_return_token: bool = False
+    # URL pública do frontend (link no email de reset)
+    app_base_url: str = "http://localhost:5173"
+    # SMTP genérico (email de reset de senha)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

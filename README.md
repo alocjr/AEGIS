@@ -1,24 +1,69 @@
 # Valorian 4 Future (Aegis)
 
-Plataforma de mentoria com backend FastAPI + MongoDB e frontend Vue 3.
+Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 
-- **Backend:** FastAPI, autenticação JWT, progresso por usuário, trilhas, quiz, modelo de maturidade
-- **Frontend:** Vue 3 + TypeScript em `frontend-vue/` (SPA)
-- **Persistência:** MongoDB
+- **Backend:** FastAPI, autenticação JWT, reset de senha, progresso por aluno, trilhas, quiz e diagnóstico de maturidade em IA
+- **Frontend:** Vue 3 + TypeScript em `frontend-vue/` (SPA + landing)
+- **Persistência:** MongoDB (local via Docker Compose ou Atlas em produção)
 
-## Estrutura
+## Funcionalidades principais
 
-- `backend/` – API (ver `backend/README.md`)
-- `frontend-vue/` – SPA Vue (login, programa, trilhas, admin, quiz, maturidade)
-- `backend/data/course.json` – seed do curso (importado para o MongoDB na primeira subida)
+### Aluno
+- Login e cadastro com JWT
+- Reset de senha (`forgot-password` / `reset-password`)
+- Trilhas de formação com encontros, materiais e progresso
+- Marcação de materiais e conclusão de encontros
+- Quiz por encontro (múltiplas tentativas conforme regras da trilha)
+- **AI Maturity Model:** autoavaliação de maturidade em IA com múltiplas respostas por aluno e histórico de resultados
+- Agenda e visualização de progresso
+
+### Admin
+- Dashboard com visão geral dos alunos
+- CRUD de usuários e trilhas (`courses`)
+- Gestão de progresso por aluno (liberação de encontros, agendas)
+- CRUD de quiz e sincronização de `quiz_id` nas trilhas
+
+### Público
+- Listagem e vitrine de trilhas (`/api/public/courses`)
+- Captura de leads
+
+## Estrutura do repositório
+
+| Caminho | Descrição |
+|---------|-----------|
+| `backend/` | API FastAPI (ver `backend/README.md`) |
+| `frontend-vue/` | SPA Vue (programa, trilhas, admin, quiz, maturidade) |
+| `backend/data/course.json` | Seed da trilha padrão (importado na primeira subida se o Mongo estiver vazio) |
+| `util/create_user.py` | Script para criar ou atualizar usuário admin |
+| `Dockerfile` | Build de produção: frontend + backend no mesmo container |
+| `docker-compose.yml` | Deploy do app (MongoDB externo, ex.: Atlas) |
+
+## Coleções MongoDB
+
+| Coleção | Uso |
+|---------|-----|
+| `users` | Usuários e admins |
+| `courses` | Trilhas e conteúdo (`programa_formacao_executiva`) |
+| `progress` | Progresso por usuário e trilha |
+| `quiz` / `quiz_responses` | Questionários e respostas |
+| `ai_maturity_model` | Modelo de diagnóstico de maturidade em IA |
+| `maturity_responses` | Autoavaliações dos alunos |
+| `password_resets` | Tokens de reset de senha |
+| `leads` | Leads da landing |
+
+O modelo de maturidade é carregado da coleção `ai_maturity_model` (documento mais recente). Garanta que exista pelo menos um documento com `dimensions`, `answer_scale` e `scoring_logic`.
 
 ## Desenvolvimento
 
-### 1. Subir MongoDB
+### 1. MongoDB
+
+Use MongoDB Atlas ou suba um Mongo local:
 
 ```bash
 docker compose up -d
 ```
+
+> O `docker-compose.yml` atual sobe apenas o app. O banco costuma ficar na nuvem (`MONGODB_URI` no `.env`).
 
 ### 2. Backend
 
@@ -32,6 +77,8 @@ cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Documentação interativa: `http://127.0.0.1:8000/docs`
+
 ### 3. Frontend
 
 ```bash
@@ -40,21 +87,93 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:5173` (proxy para a API em 8000).
+Acesse `http://localhost:5173` (proxy para a API em `8000`).
 
-## Produção
+### 4. Criar admin
 
-1. **Backend:** Configure `MONGODB_URI`, `JWT_SECRET_KEY` e `CORS_ORIGINS` (origem real do frontend). Rode **sem** `--reload`:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
-   ```
-2. **Frontend:** Em `frontend-vue/`: `npm ci && npm run build`. Opcional: defina `VITE_API_BASE_URL` se a API estiver em outro host.
-3. O backend serve a SPA em `frontend-vue/dist` quando existir (rotas `/`, `/programa`, `/admin`, etc.).
+Na raiz do projeto, com `MONGODB_URI` configurado:
 
-Ver `backend/README.md` para health check e variáveis de ambiente.
+```bash
+ADMIN_EMAIL=admin@exemplo.com ADMIN_PASSWORD=sua_senha_segura python util/create_user.py
+```
+
+Opcional: defina `INITIAL_ADMIN_EMAIL` no `.env` para conceder acesso admin a um email sem `is_admin` no banco.
+
+## Produção (Docker)
+
+Front e back no mesmo container; MongoDB permanece externo (Atlas).
+
+```bash
+cp .env.docker.example .env   # ou use backend/.env
+# Preencha MONGODB_URI e JWT_SECRET_KEY
+docker compose up --build
+```
+
+O app fica em `http://localhost:8000`. O health check interno usa `GET /api/health`.
+
+Alternativa sem Compose:
+
+```bash
+docker build -t aegis .
+docker run --env-file backend/.env -p 8000:8000 aegis
+```
+
+Para deploy manual sem Docker: configure as variáveis de ambiente, rode `npm ci && npm run build` em `frontend-vue/` e inicie o uvicorn **sem** `--reload`. O backend serve o SPA em `frontend-vue/dist` quando existir.
 
 ## Endpoints principais
 
-- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
-- `GET /api/course/current`, `POST /api/progress/complete/{encontro_id}`
-- `GET /api/health` – health check (inclui MongoDB)
+### Autenticação (`/api/auth`)
+- `POST /register`, `POST /login`, `GET /me`
+- `POST /forgot-password`, `POST /reset-password`
+
+### Curso e progresso
+- `GET /api/course/current`
+- `POST /api/progress/material`, `POST /api/progress/complete/{encontro_id}`
+
+### Quiz (`/api/quiz`)
+- Listagem, detalhe por encontro ou ID, envio e consulta de respostas
+
+### Maturidade IA (`/api/maturity`)
+- `GET /model` — modelo da coleção `ai_maturity_model`
+- `GET /my-responses`, `GET /my-responses/{id}`, `POST /my-response`
+
+### Público (`/api/public`)
+- `GET /courses`, `GET /courses/{slug}`, `POST /leads`
+
+### Admin (`/api/admin`)
+- Dashboard, usuários, trilhas, progresso, quiz
+
+### Infra
+- `GET /api/health` — health check (inclui MongoDB)
+
+## Variáveis de ambiente
+
+Ver `backend/.env.example`. Obrigatórias: `MONGODB_URI`, `JWT_SECRET_KEY`.
+
+Principais opcionais: `MONGODB_DB_NAME`, `CORS_ORIGINS`, `JWT_EXPIRE_MINUTES`, `INITIAL_ADMIN_EMAIL`, `PASSWORD_RESET_EXPIRE_MINUTES`, `PASSWORD_RESET_RETURN_TOKEN` (apenas dev).
+
+Detalhes de reset de senha e health check: `backend/README.md`.
+
+## Desenvolvimento com Spec Kit
+
+O projeto usa [GitHub Spec Kit](https://github.github.com/spec-kit/) (Spec-Driven Development) com integração **Cursor**.
+
+### Setup (já inicializado)
+
+- CLI: `specify` (via `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.11.6`)
+- Templates e scripts: `.specify/`
+- Skills Cursor: `.cursor/skills/speckit-*`
+- Constitution: `.specify/memory/constitution.md`
+- Baseline brownfield: `specs/001-aegis-baseline/spec.md`
+
+### Fluxo por feature
+
+1. `/speckit-specify` — definir o quê/por quê (cria branch `NNN-nome` e `specs/NNN-nome/`)
+2. `/speckit-clarify` — esclarecer ambiguidades (opcional)
+3. `/speckit-plan` — plano técnico com stack AEGIS
+4. `/speckit-tasks` — tarefas acionáveis
+5. `/speckit-analyze` — validar consistência antes de codar
+6. `/speckit-implement` — executar implementação
+
+Extensão **git** habilitada: commits e branches automáticos entre fases (config em `.specify/extensions.yml`).
+

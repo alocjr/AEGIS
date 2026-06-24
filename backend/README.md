@@ -36,9 +36,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## Reset de senha
 
-- `POST /api/auth/forgot-password` com `{ "email": "..." }`: cria token de reset (resposta sempre genérica para não expor se o email existe).
+- `POST /api/auth/forgot-password` com `{ "email": "..." }`: cria token de reset e envia email (se SMTP configurado). Resposta sempre genérica.
 - `POST /api/auth/reset-password` com `{ "token": "...", "new_password": "..." }`: valida token e atualiza a senha.
-- Em desenvolvimento, opcionalmente habilite `PASSWORD_RESET_RETURN_TOKEN=true` para a API devolver `reset_token` na resposta do `forgot-password`.
+- Configure `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` e `APP_BASE_URL` para o link no email (`/login?reset_token=...`).
+- Em desenvolvimento, opcionalmente `PASSWORD_RESET_RETURN_TOKEN=true` para a API devolver `reset_token` na resposta.
 
 ## Variáveis de ambiente
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
@@ -21,6 +22,10 @@ from app.security import (
     hash_password_reset_token,
     verify_password,
 )
+from app.utils.email import send_password_reset_email
+
+
+logger = logging.getLogger("aegis")
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -108,6 +113,8 @@ def forgot_password(payload: ForgotPasswordRequest, db: Database = Depends(get_d
             "used_at": None,
         }
     )
+
+    send_password_reset_email(user["email"], token)
 
     if settings.password_reset_return_token:
         return {"message": message, "reset_token": token}
