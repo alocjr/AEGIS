@@ -562,6 +562,13 @@
       margin-bottom: 0.75rem;
     }
 
+    .block-desc {
+      font-size: 0.85rem;
+      color: var(--silver);
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+
     .block-deliverable {
       font-size: 0.82rem;
       color: var(--gold);
@@ -790,11 +797,16 @@
       aspect-ratio: 3/4;
       background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy-mid) 100%);
       border: 1px solid rgba(184,150,46,0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
       position: relative;
       overflow: hidden;
+    }
+
+    .mentor-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
     }
 
     .mentor-photo-placeholder::before {
@@ -802,14 +814,8 @@
       position: absolute;
       inset: 0;
       background: radial-gradient(circle at center, rgba(184,150,46,0.1) 0%, transparent 70%);
-    }
-
-    .mentor-initials {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 5rem;
-      font-weight: 300;
-      color: rgba(184,150,46,0.4);
-      letter-spacing: 0.1em;
+      pointer-events: none;
+      z-index: 1;
     }
 
     .mentor-photo-label {
@@ -826,6 +832,7 @@
       text-transform: uppercase;
       color: var(--navy-deep);
       text-align: center;
+      z-index: 2;
     }
 
     .mentor-name {
@@ -1156,7 +1163,7 @@
       Inteligência Artificial como <span class="gold">Vantagem Competitiva</span>
     </h1>
     <p class="hero-subtitle">
-      Uma intervenção estratégica para CEOs e líderes que decidem sobre IA hoje — não amanhã. 12 encontros. 8 entregáveis. 1 roadmap que você pode apresentar ao Conselho.
+      Uma intervenção estratégica para CEOs e líderes que decidem sobre IA hoje — não amanhã. 9 encontros. 9 entregáveis. 1 roadmap de 12 meses que você pode apresentar ao Conselho.
     </p>
     <div class="hero-cta-group">
       <a href="#aplicar" class="btn-primary">Solicitar Aplicação</a>
@@ -1244,32 +1251,32 @@
       <div class="valor-item" data-reveal>
         <div class="valor-letter">V</div>
         <div class="valor-word">Vision</div>
-        <div class="valor-desc">Diagnóstico real de maturidade. Não o que a empresa acredita que tem, mas o que os dados mostram.</div>
-        <div class="valor-deliverable">Mapa de Prontidão</div>
+        <div class="valor-desc">Autoavaliação de maturidade organizacional em IA — onde a empresa está e o que precisa mudar para avançar.</div>
+        <div class="valor-deliverable">Scorecards de Maturidade</div>
       </div>
       <div class="valor-item" data-reveal style="transition-delay:0.1s">
         <div class="valor-letter">A</div>
         <div class="valor-word">Alignment</div>
-        <div class="valor-desc">Arquitetura de governança calibrada para o seu setor, LGPD e Lei Brasileira de IA.</div>
-        <div class="valor-deliverable">Framework de Governança</div>
+        <div class="valor-desc">Framework de governança calibrado para o seu setor, LGPD e Lei Brasileira de IA.</div>
+        <div class="valor-deliverable">Framework LGPD + Lei Brasileira de IA</div>
       </div>
       <div class="valor-item" data-reveal style="transition-delay:0.2s">
         <div class="valor-letter">L</div>
         <div class="valor-word">Leverage</div>
-        <div class="valor-desc">Identificação dos casos de uso de maior impacto — diferenciação estrutural, não apenas eficiência.</div>
-        <div class="valor-deliverable">Portfólio por ROI</div>
+        <div class="valor-desc">Construção da visão estratégica de IA e critérios para priorizar investimentos e fornecedores.</div>
+        <div class="valor-deliverable">AI Strategy Canvas + Análise de Fornecedores</div>
       </div>
       <div class="valor-item" data-reveal style="transition-delay:0.3s">
         <div class="valor-letter">O</div>
         <div class="valor-word">Operations</div>
-        <div class="valor-desc">Tradução da estratégia em execução: roadmap com responsáveis, recursos e critérios de sucesso.</div>
-        <div class="valor-deliverable">Roadmap 36 Meses</div>
+        <div class="valor-desc">Tradução da estratégia em execução: roadmap de 12 meses com responsáveis, recursos e critérios de sucesso.</div>
+        <div class="valor-deliverable">Roadmap de 12 Meses</div>
       </div>
       <div class="valor-item" data-reveal style="transition-delay:0.4s">
         <div class="valor-letter">R</div>
         <div class="valor-word">Results</div>
-        <div class="valor-desc">Business case financeiro de cada iniciativa prioritária — aprovável pelo CFO ou pelo Conselho.</div>
-        <div class="valor-deliverable">Business Case</div>
+        <div class="valor-desc">Consolidação de todos os artefatos em um dossiê único, coerente e apresentável ao Conselho.</div>
+        <div class="valor-deliverable">Dossiê Estratégico de IA</div>
       </div>
     </div>
   </div>
@@ -1280,59 +1287,61 @@
   <div class="section-inner">
     <div class="section-header">
       <span class="label">A Estrutura do Programa</span>
-      <h2 class="section-title display">10 Encontros. 8 Entregáveis. <span class="gold">1 Roadmap.</span></h2>
+      <h2 class="section-title display">9 Encontros. 9 Entregáveis. <span class="gold">1 Roadmap.</span></h2>
       <p style="color:var(--silver); font-size:0.92rem; margin-top:1.5rem; font-style:italic;">C-level não compra tempo — compra resultado tangível.</p>
     </div>
     <div class="blocks-grid">
       <div class="block-item" data-reveal>
         <div class="block-num">01</div>
-        <div class="block-title">Entendendo o Mentorado</div>
-        <div class="block-deliverable">Entrevista para conhecer mais sobre o mentorado e sua atuação para customização da trilha.</div>
+        <div class="block-title">Contextualização</div>
+        <div class="block-desc">Entrevista para conhecer mais sobre o mentorado e sua atuação para customização da trilha.</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.08s">
         <div class="block-num">02</div>
-        <div class="block-title">Nivelamento</div>
-        <div class="block-deliverable">Glossário + Biblioteca de Prompts Executivos</div>
+        <div class="block-title">Fundamentos</div>
+        <div class="block-desc">Nivelamento conceitual para lideranças.</div>
+        <div class="block-deliverable">Artefato: Mapa global da IA e Glossário</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.16s">
         <div class="block-num">03</div>
-        <div class="block-title">Diagnóstico</div>
-        <div class="block-deliverable">Scorecard de Maturidade Organizacional</div>
+        <div class="block-title">Cenário Estratégico da IA nos Negócios</div>
+        <div class="block-desc">Enxergando a IA como vantagem competitiva.</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.24s">
         <div class="block-num">04</div>
-        <div class="block-title">Qualidade de Dados</div>
-        <div class="block-deliverable">Inventário e Gaps Identificados</div>
+        <div class="block-title">Gen AI, Agentic AI e Lab de Prompts Executivos</div>
+        <div class="block-desc">Dominando IA Generativa e Agentic AI na prática da liderança.</div>
+        <div class="block-deliverable">Artefato: Biblioteca de Prompts Executivos</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.32s">
         <div class="block-num">05</div>
-        <div class="block-title">Governança e Compliance</div>
-        <div class="block-deliverable">Framework LGPD + Lei Brasileira de IA</div>
+        <div class="block-title">Maturidade Organizacional em IA</div>
+        <div class="block-desc">Onde sua organização está — e o que precisa mudar para avançar.</div>
+        <div class="block-deliverable">Artefato: Scorecards da autoavaliação em maturidade em IA</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.40s">
         <div class="block-num">06</div>
-        <div class="block-title">Estratégia e Riscos</div>
-        <div class="block-deliverable">AI Strategy Canvas Personalizado</div>
+        <div class="block-title">Sua Estratégia de IA</div>
+        <div class="block-desc">Construindo a visão estratégica de IA da organização.</div>
+        <div class="block-deliverable">Artefato: AI Strategy Canvas Personalizado</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.48s">
         <div class="block-num">07</div>
-        <div class="block-title">ROI & Due Diligence</div>
-        <div class="block-deliverable">Análise de Fornecedores e Critérios</div>
+        <div class="block-title">Governança, Riscos e Compliance em IA</div>
+        <div class="block-desc">Construindo o framework de governança que protege e viabiliza sua estratégia.</div>
+        <div class="block-deliverable">Artefato: Framework LGPD + Lei Brasileira de IA</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.56s">
         <div class="block-num">08</div>
-        <div class="block-title">Casos de Uso</div>
-        <div class="block-deliverable">Business Case de Iniciativas Priorizadas</div>
+        <div class="block-title">ROI &amp; Due Diligence de Fornecedores de IA</div>
+        <div class="block-desc">Decidindo com critério onde investir e em quem confiar.</div>
+        <div class="block-deliverable">Artefato: Análise de Fornecedores e Critérios</div>
       </div>
       <div class="block-item" data-reveal style="transition-delay:0.64s">
         <div class="block-num">09</div>
-        <div class="block-title">Cultura e Liderança</div>
-        <div class="block-deliverable">Plano de Mudança e Capacitação</div>
-      </div>
-      <div class="block-item" data-reveal style="transition-delay:0.72s">
-        <div class="block-num">10</div>
-        <div class="block-title">Portfólio Final</div>
-        <div class="block-deliverable">Dossiê Estratégico Completo + AI Roadmap 36 meses</div>
+        <div class="block-title">Portfólio &amp; Roadmap Final</div>
+        <div class="block-desc">Consolidando a estratégia de IA em um plano executável e apresentável.</div>
+        <div class="block-deliverable">Artefato: Dossiê estratégico e roadmap de 12 meses</div>
       </div>
     </div>
 
@@ -1340,15 +1349,15 @@
       <div class="dossie-label">Entregável Final</div>
       <div>
         <h3 class="dossie-title display">Dossiê Estratégico de IA — o artefato que integra tudo</h3>
-        <p style="color:var(--silver); font-size:0.9rem; line-height:1.7; max-width:600px;">O documento que reúne todos os artefatos construídos ao longo dos 12 encontros em uma visão única, coerente e acionável da IA na sua empresa.</p>
+        <p style="color:var(--silver); font-size:0.9rem; line-height:1.7; max-width:600px;">O documento que reúne todos os artefatos construídos ao longo dos 9 encontros em uma visão única, coerente e apresentável ao Conselho.</p>
         <div class="dossie-items">
-          <div class="dossie-item">Diagnóstico de Maturidade com lacunas</div>
-          <div class="dossie-item">Prontidão e Inventário de Dados</div>
+          <div class="dossie-item">Mapa global da IA e Glossário</div>
+          <div class="dossie-item">Biblioteca de Prompts Executivos</div>
+          <div class="dossie-item">Scorecards de maturidade em IA</div>
           <div class="dossie-item">AI Strategy Canvas personalizado</div>
-          <div class="dossie-item">Casos de Uso por ROI e complexidade</div>
-          <div class="dossie-item">Business Case aprovável pelo CFO</div>
-          <div class="dossie-item">Framework de Governança + LGPD</div>
-          <div class="dossie-item">AI Roadmap 36 meses em 3 horizontes</div>
+          <div class="dossie-item">Framework LGPD + Lei Brasileira de IA</div>
+          <div class="dossie-item">Análise de Fornecedores e Critérios</div>
+          <div class="dossie-item">Roadmap de IA — 12 meses</div>
           <div class="dossie-item">Ações imediatas dos primeiros 90 dias</div>
         </div>
       </div>
@@ -1369,9 +1378,9 @@
         <h3 class="format-title display">Turma Exclusiva</h3>
         <ul class="format-features">
           <li>Até 5 executivos por turma</li>
-          <li>12 encontros em 3 meses</li>
+          <li>9 encontros ao longo do programa</li>
           <li>Metodologia V.A.L.O.R. AI completa</li>
-          <li>Acesso a todos os entregáveis</li>
+          <li>9 entregáveis — do glossário ao dossiê final</li>
           <li>Comunidade de pares C-level</li>
           <li>Suporte assíncrono entre encontros</li>
           <li>Início trimestral — vagas limitadas</li>
@@ -1381,11 +1390,11 @@
         <div class="format-tag">Individual</div>
         <h3 class="format-title display">Mentoria Intensiva</h3>
         <ul class="format-features">
-          <li>Acompanhamento direto 1:1</li>
+          <li>9 encontros 1:1 com o mentor</li>
           <li>Aplicação 100% ao seu modelo de negócio</li>
           <li>Agenda adaptada ao tempo executivo</li>
-          <li>Revisão e iteração contínua</li>
-          <li>Trilha e Business Case personalizado</li>
+          <li>Revisão e iteração contínua dos artefatos</li>
+          <li>Trilha customizada e dossiê estratégico personalizado</li>
           <li>Acesso com lideranças sob demanda</li>
         </ul>
       </div>
@@ -1394,11 +1403,11 @@
         <h3 class="format-title display">Corporate Custom</h3>
         <ul class="format-features">
           <li>Customização para a empresa</li>
-          <li>20 horas de imersão</li>
-          <li>Diagnóstico, Roadmap e capacitação</li>
+          <li>9 encontros + imersão corporativa</li>
+          <li>Contextualização, trilha executiva e capacitação</li>
           <li>Integração simultânea da liderança</li>
-          <li>Workshop de Dossiê Corporativo</li>
-          <li>Entrega dedicada ao time executivo</li>
+          <li>Workshop de Dossiê Estratégico de IA</li>
+          <li>Roadmap de 12 meses para o time executivo</li>
         </ul>
       </div>
     </div>
@@ -1476,7 +1485,7 @@
     <div class="mentor-inner">
       <div class="mentor-photo-block">
         <div class="mentor-photo-placeholder">
-          <span class="mentor-initials">AC</span>
+          <img src="/assets/antonio.jpeg" alt="Antonio Cavalcanti" class="mentor-photo" width="600" height="800" loading="lazy" decoding="async">
           <div class="mentor-photo-label">Antonio Cavalcanti</div>
         </div>
       </div>
@@ -1552,7 +1561,7 @@
             <div class="step-num">4</div>
             <div class="step-content">
               <div class="step-title">Proposta & Início</div>
-              <div class="step-text">Escopo formal e data de início na turma trimestral seguinte. Turmas abertas por semestre com vagas limitadas a 5 executivos.</div>
+              <div class="step-text">Escopo formal e data de início na turma seguinte. Programa de 9 encontros com vagas limitadas a 5 executivos por turma.</div>
             </div>
           </div>
         </div>
