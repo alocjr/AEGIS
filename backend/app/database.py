@@ -31,3 +31,5 @@ def init_indexes() -> None:
     db.quiz.create_index("encontro", unique=True)
     db.quiz_responses.create_index([("user_id", 1), ("encontro", 1)], unique=True)
     db.leads.create_index("created_at")
+    db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)
+    db.auth_rate_limits.create_index([("email", 1), ("scope", 1), ("at", -1)])

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo.database import Database
 
 from app.config import settings
@@ -20,9 +20,11 @@ from app.security import (
     create_password_reset_token,
     hash_password,
     hash_password_reset_token,
-    verify_password,
 )
 from app.utils.email import send_password_reset_email
+from app.limiter import limiter
+from app.utils.login_lockout import authenticate_login
+from app.utils.rate_limit import enforce_email_rate_limit
 
 
 logger = logging.getLogger("aegis")
@@ -54,10 +56,10 @@ def register(payload: RegisterRequest, db: Database = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, db: Database = Depends(get_db)):
-    user = db.users.find_one({"email": payload.email.lower()})
-    if not user or not verify_password(payload.password, user["password_hash"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais invalidas")
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, db: Database = Depends(get_db)):
+    enforce_email_rate_limit(db, payload.email, "login")
+    user = authenticate_login(db, payload.email, payload.password)
 
     token = create_access_token(str(user["_id"]))
     is_admin = bool(user.get("is_admin", False))
@@ -84,8 +86,10 @@ def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
 
 
 @router.post("/forgot-password", response_model=GenericMessageResponse)
-def forgot_password(payload: ForgotPasswordRequest, db: Database = Depends(get_db)):
+@limiter.limit("5/minute")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Database = Depends(get_db)):
     """Inicia reset de senha sem revelar se o email existe."""
+    enforce_email_rate_limit(db, payload.email, "forgot_password")
     now = datetime.now(timezone.utc)
     message = "Se o email existir, enviaremos instruções para reset de senha."
     user = db.users.find_one({"email": payload.email.lower()})
