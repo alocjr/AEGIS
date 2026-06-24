@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,6 +22,33 @@ NO_CACHE_HEADERS = {
     "Pragma": "no-cache",
     "Expires": "0",
 }
+
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self'; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    ),
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+}
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        for key, value in SECURITY_HEADERS.items():
+            response.headers[key] = value
+        return response
 
 from app.config import settings
 from app.database import db, init_indexes
@@ -72,6 +100,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+def _public_static_file(filename: str, media_type: str) -> FileResponse:
+    for base in (FRONTEND_VUE_DIST, FRONTEND_VUE_PUBLIC):
+        path = base / filename
+        if path.is_file():
+            return FileResponse(path, media_type=media_type)
+    raise StarletteHTTPException(status_code=404, detail="Not Found")
 
 
 def seed_course_if_needed() -> None:
@@ -91,6 +128,16 @@ def startup() -> None:
     init_indexes()
     seed_course_if_needed()
     logger.info("Application started")
+
+
+@app.get("/robots.txt")
+def robots_txt():
+    return _public_static_file("robots.txt", "text/plain; charset=utf-8")
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    return _public_static_file("sitemap.xml", "application/xml; charset=utf-8")
 
 
 @app.get("/api/health")
