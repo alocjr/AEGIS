@@ -253,9 +253,8 @@
       "estrutura_encontro": [
         { "bloco": "Abertura", "descricao": "Conexao e expectativas.", "duracao": "10 min" },
         { "bloco": "Conteudo Central", "descricao": "Exposicao conceitual e pratica.", "duracao": "40 min" },
-        { "bloco": "Caso / Exercicio", "descricao": "Aplicacao ao contexto real.", "duracao": "25 min" },
-        { "bloco": "Discussao / Q&A", "descricao": "Troca de experiencias.", "duracao": "15 min" },
-        { "bloco": "Encerramento", "descricao": "Sintese e tarefas para proxima aula.", "duracao": "10 min" }
+        { "bloco": "Caso / Exercicio", "descricao": "Aplicacao ao contexto real.", "duracao": "30 min" },
+        { "bloco": "Discussao e Encerramento", "descricao": "Troca de experiencias, sintese e tarefas.", "duracao": "20 min" }
       ]
     },
     "entregaveis_resumo": [
