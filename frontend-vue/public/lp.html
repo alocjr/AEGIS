@@ -166,12 +166,69 @@
       position: relative;
       z-index: 1;
       animation: fadeInUp 1s ease both;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
     }
 
     .hero-logo-img {
       width: 280px;
       height: auto;
       filter: drop-shadow(0 20px 60px rgba(184,150,46,0.3));
+    }
+
+    .hero-downloads {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      width: min(100%, 280px);
+      animation: fadeInUp 1s 0.35s ease both;
+    }
+
+    .hero-downloads-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 0.15rem;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      padding: 0.7rem 1rem;
+      border: 1px solid rgba(184,150,46,0.55);
+      color: var(--ivory);
+      background: rgba(184,150,46,0.08);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      text-decoration: none;
+      text-align: center;
+      line-height: 1.25;
+      transition: all 0.3s ease;
+    }
+
+    .btn-download:hover {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--navy-deep);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(184,150,46,0.28);
+    }
+
+    .btn-download svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     .hero-right {
@@ -1124,8 +1181,16 @@
     @media (max-width: 900px) {
       nav { padding: 1.25rem 1.5rem; }
       .hero { grid-template-columns: 1fr; }
-      .hero-left { display: none; }
-      .hero-right { padding: 6rem 2rem 5rem; }
+      .hero-left {
+        display: flex;
+        padding: 6rem 1.5rem 1.5rem;
+        border-right: none;
+        min-height: auto;
+      }
+      .hero-logo-img { width: 160px; }
+      .hero-logo-container { gap: 1.25rem; }
+      .hero-downloads { width: min(100%, 300px); }
+      .hero-right { padding: 1.5rem 2rem 5rem; }
       .section-inner { padding: 5rem 1.5rem; }
       .diagnostic-grid, .qual-grid, .mentor-inner, .cta-inner { grid-template-columns: 1fr; gap: 3rem; }
       .valor-letters { grid-template-columns: 1fr 1fr; }
@@ -1156,6 +1221,29 @@
   <div class="hero-left">
     <div class="hero-logo-container">
       <img src="/assets/valorian-logo.jpg" alt="Valorian 4 Future — AI Executive Mentoring" width="1550" height="1439" class="hero-logo-img" decoding="async" fetchpriority="high">
+      <div class="hero-downloads">
+        <span class="hero-downloads-label">Material gratuito</span>
+        <a
+          class="btn-download"
+          href="/material_gratuito/Valorian-Glossario-Executivo-IA-2026.pdf"
+          download="Valorian-Glossario-Executivo-IA-2026.pdf"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
+          </svg>
+          <span>Glossário Executivo de IA</span>
+        </a>
+        <a
+          class="btn-download"
+          href="/material_gratuito/Valorian-White-Paper-Mapa-Global-da-IA.pdf"
+          download="Valorian-White-Paper-Mapa-Global-da-IA.pdf"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
+          </svg>
+          <span>White Paper — Mapa Global da IA</span>
+        </a>
+      </div>
     </div>
   </div>
   <div class="hero-right">

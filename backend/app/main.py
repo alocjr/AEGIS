@@ -184,6 +184,16 @@ app.include_router(public_router)
 if USE_VUE_UI:
     app.mount("/assets", StaticFiles(directory=FRONTEND_VUE_DIST / "assets"), name="vue_assets")
 
+    _material_dir = FRONTEND_VUE_DIST / "material_gratuito"
+    if not _material_dir.is_dir():
+        _material_dir = FRONTEND_VUE_PUBLIC / "material_gratuito"
+    if _material_dir.is_dir():
+        app.mount(
+            "/material_gratuito",
+            StaticFiles(directory=_material_dir),
+            name="material_gratuito",
+        )
+
     def _vue_index():
         return FileResponse(FRONTEND_VUE_DIST / "index.html", headers=NO_CACHE_HEADERS)
 
@@ -256,6 +266,14 @@ if USE_VUE_UI:
 
 else:
     # Sem dist da Vue (ex.: só backend em dev): servir landing lp.html em / se existir
+    _material_dir_dev = FRONTEND_VUE_PUBLIC / "material_gratuito"
+    if _material_dir_dev.is_dir():
+        app.mount(
+            "/material_gratuito",
+            StaticFiles(directory=_material_dir_dev),
+            name="material_gratuito",
+        )
+
     if LANDING_HTML_DEV.exists():
 
         @app.get("/")
