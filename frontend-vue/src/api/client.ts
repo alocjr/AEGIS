@@ -40,6 +40,31 @@ export function get<T>(path: string): Promise<T> {
   return apiRequest<T>(path, { method: 'GET' })
 }
 
+/** Upload multipart; não define Content-Type (o browser define o boundary). */
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const url = path.startsWith('http') ? path : `${baseURL}${path}`
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    let detail: string
+    try {
+      const json = JSON.parse(text) as { detail?: string | unknown[] }
+      detail = Array.isArray(json.detail)
+        ? json.detail.map((d: unknown) => (d as { msg?: string }).msg ?? String(d)).join(', ')
+        : (json.detail as string) ?? text
+    } catch {
+      detail = text || res.statusText
+    }
+    throw new Error(detail)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
+}
+
 export function post<T>(path: string, body?: unknown): Promise<T> {
   return apiRequest<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined })
 }

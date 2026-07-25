@@ -5,8 +5,11 @@ import {
   createLandingMaterial,
   updateLandingMaterial,
   deleteLandingMaterial,
+  uploadLandingMaterialFile,
 } from '@/api/admin'
 import type { LandingMaterial } from '@/api/admin'
+
+type UrlField = 'material_url' | 'summary_url' | 'audio_url'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -17,6 +20,11 @@ const modalMode = ref<'create' | 'edit'>('create')
 const editingId = ref<string | null>(null)
 const modalSaving = ref(false)
 const modalError = ref<string | null>(null)
+const uploading = ref<Record<UrlField, boolean>>({
+  material_url: false,
+  summary_url: false,
+  audio_url: false,
+})
 
 const form = ref({
   title: '',
@@ -74,6 +82,24 @@ function closeModal() {
   modalError.value = null
 }
 
+async function onUpload(field: UrlField, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  modalError.value = null
+  uploading.value[field] = true
+  try {
+    const result = await uploadLandingMaterialFile(file)
+    form.value[field] = result.url
+  } catch (e: unknown) {
+    modalError.value =
+      e instanceof Error ? e.message : 'Erro ao enviar arquivo.'
+  } finally {
+    uploading.value[field] = false
+    input.value = ''
+  }
+}
+
 async function saveModal() {
   modalError.value = null
   const title = form.value.title.trim()
@@ -82,7 +108,7 @@ async function saveModal() {
   const summary_url = form.value.summary_url.trim()
   const audio_url = form.value.audio_url.trim() || null
   if (!title || !description || !material_url || !summary_url) {
-    modalError.value = 'Preencha título, descrição e os dois links.'
+    modalError.value = 'Preencha título, descrição e os dois links (URL ou upload).'
     return
   }
   modalSaving.value = true
@@ -154,6 +180,7 @@ onMounted(async () => {
       <h1 class="page-title">Materiais da Landing</h1>
       <p class="page-sub">
         Cards da vitrine no hero da landing: título, descrição, links e áudio narrado.
+        Você pode colar uma URL ou fazer upload (salva em <code>/material_gratuito</code>).
       </p>
       <div class="page-actions">
         <button type="button" class="btn-primary" @click="openCreate">Novo material</button>
@@ -221,18 +248,73 @@ onMounted(async () => {
               <span>Descrição</span>
               <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
             </label>
-            <label class="field field-full">
-              <span>Link do material</span>
-              <input v-model="form.material_url" type="text" class="input" placeholder="/material_gratuito/arquivo.pdf ou https://..." />
-            </label>
-            <label class="field field-full">
-              <span>Link do resumo executivo</span>
-              <input v-model="form.summary_url" type="text" class="input" placeholder="/material_gratuito/resumo.pdf ou https://..." />
-            </label>
-            <label class="field field-full">
-              <span>URL do áudio (narrativa)</span>
-              <input v-model="form.audio_url" type="text" class="input" placeholder="/material_gratuito/narracao.mp3 ou https://... (opcional)" />
-            </label>
+
+            <div class="field field-full">
+              <span>Material (PDF ou link)</span>
+              <div class="url-upload-row">
+                <input
+                  v-model="form.material_url"
+                  type="text"
+                  class="input"
+                  placeholder="/material_gratuito/arquivo.pdf ou https://..."
+                />
+                <label class="btn-upload" :class="{ disabled: uploading.material_url }">
+                  {{ uploading.material_url ? 'Enviando…' : 'Upload' }}
+                  <input
+                    type="file"
+                    class="file-input"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf"
+                    :disabled="uploading.material_url"
+                    @change="onUpload('material_url', $event)"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div class="field field-full">
+              <span>Resumo executivo (PDF ou link)</span>
+              <div class="url-upload-row">
+                <input
+                  v-model="form.summary_url"
+                  type="text"
+                  class="input"
+                  placeholder="/material_gratuito/resumo.pdf ou https://..."
+                />
+                <label class="btn-upload" :class="{ disabled: uploading.summary_url }">
+                  {{ uploading.summary_url ? 'Enviando…' : 'Upload' }}
+                  <input
+                    type="file"
+                    class="file-input"
+                    accept=".pdf,.doc,.docx,application/pdf"
+                    :disabled="uploading.summary_url"
+                    @change="onUpload('summary_url', $event)"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div class="field field-full">
+              <span>Áudio narrado (opcional)</span>
+              <div class="url-upload-row">
+                <input
+                  v-model="form.audio_url"
+                  type="text"
+                  class="input"
+                  placeholder="/material_gratuito/narracao.mp3 ou https://..."
+                />
+                <label class="btn-upload" :class="{ disabled: uploading.audio_url }">
+                  {{ uploading.audio_url ? 'Enviando…' : 'Upload' }}
+                  <input
+                    type="file"
+                    class="file-input"
+                    accept=".mp3,.m4a,.wav,.ogg,.aac,audio/*"
+                    :disabled="uploading.audio_url"
+                    @change="onUpload('audio_url', $event)"
+                  />
+                </label>
+              </div>
+            </div>
+
             <label class="field checkbox-field">
               <input v-model="form.active" type="checkbox" />
               <span>Ativo na landing</span>
@@ -285,6 +367,12 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--k5);
   margin-bottom: 16px;
+}
+.page-sub code {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 .page-actions {
   display: flex;
@@ -439,10 +527,44 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--k0);
   background: var(--wh);
+  flex: 1;
+  min-width: 0;
 }
 .textarea {
   resize: vertical;
   min-height: 72px;
+}
+.url-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.btn-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 14px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg, #f7f5f0);
+  color: var(--k0);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-upload.disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
 }
 .modal-actions {
   display: flex;

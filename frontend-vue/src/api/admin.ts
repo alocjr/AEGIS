@@ -1,4 +1,4 @@
-import { del, get, patch, post, put } from './client'
+import { del, get, patch, post, postFormData, put } from './client'
 
 // ——— Usuários ———
 
@@ -263,4 +263,17 @@ export function updateLandingMaterial(
 
 export function deleteLandingMaterial(id: string): Promise<{ message: string; id: string }> {
   return del<{ message: string; id: string }>(`/api/admin/landing-materials/${encodeURIComponent(id)}`)
+}
+
+export interface LandingMaterialUploadResult {
+  url: string
+  filename: string
+  size: number
+}
+
+/** Envia arquivo para material_gratuito/ e retorna a URL pública. */
+export function uploadLandingMaterialFile(file: File): Promise<LandingMaterialUploadResult> {
+  const fd = new FormData()
+  fd.append('file', file)
+  return postFormData<LandingMaterialUploadResult>('/api/admin/landing-materials/upload', fd)
 }

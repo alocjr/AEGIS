@@ -37,11 +37,11 @@ SECURITY_HEADERS = {
         "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self'; "
         "media-src 'self' https:; "
-        "frame-ancestors 'none'; "
+        "frame-ancestors 'self'; "
         "base-uri 'self'; "
         "form-action 'self'"
     ),
-    "X-Frame-Options": "DENY",
+    "X-Frame-Options": "SAMEORIGIN",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
@@ -65,6 +65,7 @@ from app.routes.maturity import router as maturity_router
 from app.routes.progress import router as progress_router
 from app.routes.quiz import router as quiz_router
 from app.routes.public import router as public_router
+from app.utils.material_gratuito import material_gratuito_dir
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -124,7 +125,9 @@ def _public_static_file(filename: str, media_type: str) -> FileResponse:
     for base in (FRONTEND_VUE_PUBLIC, FRONTEND_VUE_DIST):
         path = base / filename
         if path.is_file():
-            return FileResponse(path, media_type=media_type)
+            # lp.js/html não podem ficar cacheados no CDN: HTML novo + JS velho
+            # deixa a landing presa em "Carregando materiais…".
+            return FileResponse(path, media_type=media_type, headers=NO_CACHE_HEADERS)
     raise StarletteHTTPException(status_code=404, detail="Not Found")
 
 
@@ -195,15 +198,12 @@ app.include_router(public_router)
 if USE_VUE_UI:
     app.mount("/assets", StaticFiles(directory=FRONTEND_VUE_DIST / "assets"), name="vue_assets")
 
-    _material_dir = FRONTEND_VUE_DIST / "material_gratuito"
-    if not _material_dir.is_dir():
-        _material_dir = FRONTEND_VUE_PUBLIC / "material_gratuito"
-    if _material_dir.is_dir():
-        app.mount(
-            "/material_gratuito",
-            StaticFiles(directory=_material_dir),
-            name="material_gratuito",
-        )
+    _material_dir = material_gratuito_dir(create=True)
+    app.mount(
+        "/material_gratuito",
+        StaticFiles(directory=_material_dir),
+        name="material_gratuito",
+    )
 
     def _vue_index():
         return FileResponse(FRONTEND_VUE_DIST / "index.html", headers=NO_CACHE_HEADERS)
@@ -277,13 +277,12 @@ if USE_VUE_UI:
 
 else:
     # Sem dist da Vue (ex.: só backend em dev): servir landing lp.html em / se existir
-    _material_dir_dev = FRONTEND_VUE_PUBLIC / "material_gratuito"
-    if _material_dir_dev.is_dir():
-        app.mount(
-            "/material_gratuito",
-            StaticFiles(directory=_material_dir_dev),
-            name="material_gratuito",
-        )
+    _material_dir_dev = material_gratuito_dir(create=True)
+    app.mount(
+        "/material_gratuito",
+        StaticFiles(directory=_material_dir_dev),
+        name="material_gratuito",
+    )
 
     if LANDING_HTML_DEV.exists():
 

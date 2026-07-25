@@ -1,14 +1,23 @@
 import copy
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_admin
 from app.routes.course import COURSE_SLUG, _progress_with_quiz_effect
 from app.utils.course_payload import payload_for_json
+from app.utils.material_gratuito import (
+    ALLOWED_EXTENSIONS,
+    MAX_UPLOAD_BYTES,
+    material_gratuito_dir,
+    public_url_for,
+    sanitize_filename,
+)
 from app.utils.progress_liberados import ordered_encontro_ids
 from app.schemas import (
     AdminCreateCourseRequest,
@@ -770,6 +779,57 @@ def list_landing_materials(admin=Depends(get_current_admin), db: Database = Depe
     """Lista cards de materiais da landing. Apenas admin."""
     docs = list(db.landing_materials.find({}).sort([("order", 1), ("created_at", 1)]))
     return [_landing_material_to_item(d) for d in docs]
+
+
+@router.post("/landing-materials/upload")
+async def upload_landing_material_file(
+    file: UploadFile = File(...),
+    admin=Depends(get_current_admin),
+):
+    """Salva arquivo em material_gratuito/ e retorna a URL pública. Apenas admin."""
+    original = file.filename or "arquivo"
+    ext = Path(original).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de arquivo não permitido ({ext or 'sem extensão'}). "
+            f"Use: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+    safe_name = sanitize_filename(original)
+    # Evitar colisão com arquivos existentes
+    dest_dir = material_gratuito_dir(create=True)
+    stem = Path(safe_name).stem
+    candidate = safe_name
+    if (dest_dir / candidate).exists():
+        candidate = f"{stem}-{uuid.uuid4().hex[:8]}{ext}"
+
+    dest_path = dest_dir / candidate
+    size = 0
+    try:
+        with dest_path.open("wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_UPLOAD_BYTES:
+                    out.close()
+                    dest_path.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Arquivo acima do limite de {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                out.write(chunk)
+    finally:
+        await file.close()
+
+    if size == 0:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+    url = public_url_for(candidate)
+    return {"url": url, "filename": candidate, "size": size}
 
 
 @router.post("/landing-materials")
