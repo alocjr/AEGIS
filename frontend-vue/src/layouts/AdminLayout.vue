@@ -17,7 +17,7 @@ function onLogout() {
       <RouterLink to="/" class="admin-sidebar-link">← Início</RouterLink>
       <RouterLink to="/admin" class="admin-sidebar-link" exact-active-class="active">Dashboard</RouterLink>
       <RouterLink to="/admin/trilhas" class="admin-sidebar-link" active-class="active">Trilhas</RouterLink>
-      <RouterLink to="/admin/materiais-landing" class="admin-sidebar-link" active-class="active">Materiais Landing</RouterLink>
+      <RouterLink to="/admin/materiais-landing" class="admin-sidebar-link" active-class="active">Materiais da Landing</RouterLink>
       <RouterLink to="/admin/usuarios" class="admin-sidebar-link" active-class="active">Usuários</RouterLink>
       <RouterLink to="/admin/quiz" class="admin-sidebar-link" active-class="active">Quiz</RouterLink>
       <button type="button" class="admin-sidebar-link admin-sidebar-logout" @click="onLogout">Sair</button>
