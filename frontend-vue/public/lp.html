@@ -148,11 +148,13 @@
       background: var(--navy-mid);
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 8rem 4rem;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 7rem 1.5rem 2.5rem;
       position: relative;
       border-right: 1px solid rgba(184,150,46,0.25);
+      overflow: hidden;
+      min-height: 100vh;
     }
 
     .hero-left::before {
@@ -160,75 +162,141 @@
       position: absolute;
       inset: 0;
       background: radial-gradient(ellipse at center, rgba(184,150,46,0.08) 0%, transparent 70%);
+      pointer-events: none;
     }
 
-    .hero-logo-container {
+    .hero-logo-top {
       position: relative;
       z-index: 1;
-      animation: fadeInUp 1s ease both;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2rem;
+      justify-content: center;
+      padding: 0 1rem 1.25rem;
+      animation: fadeInUp 1s ease both;
+      flex-shrink: 0;
     }
 
     .hero-logo-img {
-      width: 280px;
+      width: 160px;
       height: auto;
-      filter: drop-shadow(0 20px 60px rgba(184,150,46,0.3));
+      filter: drop-shadow(0 12px 40px rgba(184,150,46,0.3));
     }
 
-    .hero-downloads {
+    .hero-materials {
+      position: relative;
+      z-index: 1;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-      width: min(100%, 280px);
-      animation: fadeInUp 1s 0.35s ease both;
+      min-height: 0;
+      animation: fadeInUp 1s 0.25s ease both;
     }
 
-    .hero-downloads-label {
+    .hero-materials-label {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
       color: var(--gold);
-      text-align: center;
-      margin-bottom: 0.15rem;
+      padding: 0 0.5rem 0.85rem;
     }
 
-    .btn-download {
+    .materials-track {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding: 0.25rem 0.5rem 1rem;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(184,150,46,0.45) transparent;
+    }
+
+    .materials-track::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .materials-track::-webkit-scrollbar-thumb {
+      background: rgba(184,150,46,0.45);
+      border-radius: 3px;
+    }
+
+    .material-card {
+      flex: 0 0 min(260px, 78vw);
+      scroll-snap-align: start;
+      background: rgba(244,241,235,0.04);
+      border: 1px solid rgba(184,150,46,0.28);
+      padding: 1.15rem 1.1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      min-height: 280px;
+    }
+
+    .material-card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--ivory);
+      line-height: 1.25;
+    }
+
+    .material-card-desc {
+      font-size: 0.82rem;
+      color: var(--silver);
+      line-height: 1.55;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .material-card-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .material-link {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.55rem;
-      padding: 0.7rem 1rem;
-      border: 1px solid rgba(184,150,46,0.55);
-      color: var(--ivory);
-      background: rgba(184,150,46,0.08);
+      gap: 0.4rem;
+      color: var(--gold);
       font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
       font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
       text-decoration: none;
-      text-align: center;
-      line-height: 1.25;
-      transition: all 0.3s ease;
+      border-bottom: 1px solid transparent;
+      width: fit-content;
+      transition: border-color 0.2s ease, color 0.2s ease;
     }
 
-    .btn-download:hover {
-      background: var(--gold);
-      border-color: var(--gold);
-      color: var(--navy-deep);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 28px rgba(184,150,46,0.28);
+    .material-link:hover {
+      color: var(--gold-light);
+      border-bottom-color: rgba(184,150,46,0.5);
     }
 
-    .btn-download svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
+    .material-audio {
+      margin-top: 0.25rem;
+      width: 100%;
+      height: 32px;
+      border-radius: 0;
+      accent-color: var(--gold);
+    }
+
+    .material-audio:not([src]),
+    .material-audio[src=""] {
+      display: none;
+    }
+
+    .materials-empty {
+      color: var(--silver);
+      font-size: 0.85rem;
+      padding: 1rem 0.5rem;
+      opacity: 0.7;
     }
 
     .hero-right {
@@ -1183,13 +1251,13 @@
       .hero { grid-template-columns: 1fr; }
       .hero-left {
         display: flex;
-        padding: 6rem 1.5rem 1.5rem;
+        padding: 5.5rem 0 1.25rem;
         border-right: none;
         min-height: auto;
       }
-      .hero-logo-img { width: 160px; }
-      .hero-logo-container { gap: 1.25rem; }
-      .hero-downloads { width: min(100%, 300px); }
+      .hero-logo-img { width: 120px; }
+      .hero-logo-top { padding-bottom: 1rem; }
+      .material-card { flex-basis: min(240px, 82vw); min-height: 250px; }
       .hero-right { padding: 1.5rem 2rem 5rem; }
       .section-inner { padding: 5rem 1.5rem; }
       .diagnostic-grid, .qual-grid, .mentor-inner, .cta-inner { grid-template-columns: 1fr; gap: 3rem; }
@@ -1219,30 +1287,13 @@
 <!-- HERO -->
 <section class="hero">
   <div class="hero-left">
-    <div class="hero-logo-container">
+    <div class="hero-logo-top">
       <img src="/assets/valorian-logo.jpg" alt="Valorian 4 Future — AI Executive Mentoring" width="1550" height="1439" class="hero-logo-img" decoding="async" fetchpriority="high">
-      <div class="hero-downloads">
-        <span class="hero-downloads-label">Material gratuito</span>
-        <a
-          class="btn-download"
-          href="/material_gratuito/Valorian-Glossario-Executivo-IA-2026.pdf"
-          download="Valorian-Glossario-Executivo-IA-2026.pdf"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
-          </svg>
-          <span>Glossário Executivo de IA</span>
-        </a>
-        <a
-          class="btn-download"
-          href="/material_gratuito/Valorian-White-Paper-Mapa-Global-da-IA.pdf"
-          download="Valorian-White-Paper-Mapa-Global-da-IA.pdf"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>
-          </svg>
-          <span>White Paper — Mapa Global da IA</span>
-        </a>
+    </div>
+    <div class="hero-materials">
+      <div class="hero-materials-label">Materiais gratuitos</div>
+      <div id="materials-track" class="materials-track" aria-label="Galeria de materiais">
+        <p class="materials-empty">Carregando materiais…</p>
       </div>
     </div>
   </div>

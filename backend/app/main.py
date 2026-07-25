@@ -36,6 +36,7 @@ SECURITY_HEADERS = {
         "img-src 'self'; "
         "font-src 'self' https://fonts.gstatic.com; "
         "connect-src 'self'; "
+        "media-src 'self' https:; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'"
@@ -118,11 +119,21 @@ app.add_middleware(SlowAPIMiddleware)
 
 
 def _public_static_file(filename: str, media_type: str) -> FileResponse:
-    for base in (FRONTEND_VUE_DIST, FRONTEND_VUE_PUBLIC):
+    # Preferir public/ (fonte) sobre dist/ (build pode estar stale em dev local).
+    # Em produção Docker só existe dist/, então o fallback cobre o deploy.
+    for base in (FRONTEND_VUE_PUBLIC, FRONTEND_VUE_DIST):
         path = base / filename
         if path.is_file():
             return FileResponse(path, media_type=media_type)
     raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+
+def _landing_html_path() -> Path | None:
+    """Resolve lp.html: public/ primeiro (dev), depois dist/ (produção)."""
+    for path in (LANDING_HTML_DEV, LANDING_HTML):
+        if path.is_file():
+            return path
+    return None
 
 
 def seed_course_if_needed() -> None:
@@ -199,10 +210,9 @@ if USE_VUE_UI:
 
     def _landing():
         """Landing page: lp.html (aparência exata). Fallback para SPA se arquivo não existir."""
-        if LANDING_HTML.exists():
-            return FileResponse(LANDING_HTML, headers=NO_CACHE_HEADERS)
-        if LANDING_HTML_DEV.exists():
-            return FileResponse(LANDING_HTML_DEV, headers=NO_CACHE_HEADERS)
+        landing_path = _landing_html_path()
+        if landing_path is not None:
+            return FileResponse(landing_path, headers=NO_CACHE_HEADERS)
         return _vue_index()
 
     @app.get("/favicon.svg")
@@ -232,6 +242,7 @@ if USE_VUE_UI:
     @app.get("/admin/alunos")
     @app.get("/admin/progresso")
     @app.get("/admin/quiz")
+    @app.get("/admin/materiais-landing")
     def admin_pages():
         return _vue_index()
 

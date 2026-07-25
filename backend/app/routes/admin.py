@@ -13,6 +13,8 @@ from app.utils.progress_liberados import ordered_encontro_ids
 from app.schemas import (
     AdminCreateCourseRequest,
     AdminCreateUserRequest,
+    AdminLandingMaterialCreateRequest,
+    AdminLandingMaterialUpdateRequest,
     AdminQuizCreateUpdateRequest,
     AdminUpdateCourseRequest,
     AdminUpdateProgressRequest,
@@ -746,3 +748,100 @@ def sync_quiz_ids(
         )
         updated += 1
     return {"message": "Sincronização concluída", "courses_updated": updated}
+
+
+def _landing_material_to_item(doc: dict) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "title": doc.get("title", ""),
+        "description": doc.get("description", ""),
+        "material_url": doc.get("material_url", ""),
+        "summary_url": doc.get("summary_url", ""),
+        "audio_url": doc.get("audio_url") or None,
+        "order": int(doc.get("order") or 0),
+        "active": bool(doc.get("active", True)),
+        "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
+        "updated_at": doc["updated_at"].isoformat() if doc.get("updated_at") else None,
+    }
+
+
+@router.get("/landing-materials")
+def list_landing_materials(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
+    """Lista cards de materiais da landing. Apenas admin."""
+    docs = list(db.landing_materials.find({}).sort([("order", 1), ("created_at", 1)]))
+    return [_landing_material_to_item(d) for d in docs]
+
+
+@router.post("/landing-materials")
+def create_landing_material(
+    body: AdminLandingMaterialCreateRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Cria card de material da landing. Apenas admin."""
+    now = datetime.now(timezone.utc)
+    doc = {
+        "title": body.title.strip(),
+        "description": body.description.strip(),
+        "material_url": body.material_url.strip(),
+        "summary_url": body.summary_url.strip(),
+        "audio_url": (body.audio_url or "").strip() or None,
+        "order": body.order,
+        "active": body.active,
+        "created_at": now,
+        "updated_at": now,
+    }
+    result = db.landing_materials.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return _landing_material_to_item(doc)
+
+
+@router.put("/landing-materials/{material_id}")
+def update_landing_material(
+    material_id: str,
+    body: AdminLandingMaterialUpdateRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Atualiza card de material da landing. Apenas admin."""
+    if not ObjectId.is_valid(material_id):
+        raise HTTPException(status_code=400, detail="ID invalido")
+    oid = ObjectId(material_id)
+    existing = db.landing_materials.find_one({"_id": oid})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Material nao encontrado")
+
+    updates: dict = {"updated_at": datetime.now(timezone.utc)}
+    if body.title is not None:
+        updates["title"] = body.title.strip()
+    if body.description is not None:
+        updates["description"] = body.description.strip()
+    if body.material_url is not None:
+        updates["material_url"] = body.material_url.strip()
+    if body.summary_url is not None:
+        updates["summary_url"] = body.summary_url.strip()
+    if body.audio_url is not None:
+        updates["audio_url"] = body.audio_url.strip() or None
+    if body.order is not None:
+        updates["order"] = body.order
+    if body.active is not None:
+        updates["active"] = body.active
+
+    db.landing_materials.update_one({"_id": oid}, {"$set": updates})
+    doc = db.landing_materials.find_one({"_id": oid})
+    return _landing_material_to_item(doc)
+
+
+@router.delete("/landing-materials/{material_id}")
+def delete_landing_material(
+    material_id: str,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Remove card de material da landing. Apenas admin."""
+    if not ObjectId.is_valid(material_id):
+        raise HTTPException(status_code=400, detail="ID invalido")
+    result = db.landing_materials.delete_one({"_id": ObjectId(material_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Material nao encontrado")
+    return {"message": "Material removido", "id": material_id}

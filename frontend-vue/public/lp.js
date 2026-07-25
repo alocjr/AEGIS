@@ -10,15 +10,28 @@ const observer = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
     }
   });
-}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+}, { threshold: 0.05, rootMargin: '0px 0px -5% 0px' });
 
 revealItems.forEach(item => observer.observe(item));
 
 // Also observe valor-item, block-item, format-card, process-step
 const animItems = document.querySelectorAll('.valor-item, .block-item, .format-card, .process-step');
 animItems.forEach(item => observer.observe(item));
+
+// Itens já no viewport (iframe / reload) às vezes não disparam o observer
+function revealIfInView(el) {
+  var rect = el.getBoundingClientRect();
+  var vh = window.innerHeight || document.documentElement.clientHeight;
+  if (rect.top < vh * 0.95 && rect.bottom > 0) {
+    el.classList.add('visible');
+    observer.unobserve(el);
+  }
+}
+revealItems.forEach(revealIfInView);
+animItems.forEach(revealIfInView);
 
 // Form submission: envia dados para a API e exibe mensagem de sucesso
 var successHtml = '<div style="text-align:center; padding:3rem 1rem;">' +
@@ -150,3 +163,64 @@ function handleSubmit() {
     a.setAttribute('target', '_top');
   }
 })();
+
+function materialsApiUrl() {
+  var params = new URLSearchParams(window.location.search);
+  var fromQuery = params.get('apiBase');
+  if (fromQuery && fromQuery.length) {
+    return fromQuery.replace(/\/$/, '') + '/api/public/landing-materials';
+  }
+  return '/api/public/landing-materials';
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderMaterialCard(item) {
+  var audio = item.audio_url
+    ? '<audio class="material-audio" controls preload="none" src="' + escapeHtml(item.audio_url) + '">Seu navegador não suporta áudio.</audio>'
+    : '';
+  return (
+    '<article class="material-card">' +
+      '<h3 class="material-card-title">' + escapeHtml(item.title) + '</h3>' +
+      '<p class="material-card-desc">' + escapeHtml(item.description) + '</p>' +
+      '<div class="material-card-links">' +
+        '<a class="material-link" href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Baixar material →</a>' +
+        '<a class="material-link" href="' + escapeHtml(item.summary_url) + '" target="_blank" rel="noopener noreferrer">Resumo executivo →</a>' +
+      '</div>' +
+      audio +
+    '</article>'
+  );
+}
+
+function loadLandingMaterials() {
+  var track = document.getElementById('materials-track');
+  if (!track) return;
+  fetch(materialsApiUrl())
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        track.innerHTML = '<p class="materials-empty">Em breve: materiais gratuitos para download.</p>';
+        return;
+      }
+      track.innerHTML = items.map(renderMaterialCard).join('');
+    })
+    .catch(function () {
+      track.innerHTML = '<p class="materials-empty">Não foi possível carregar os materiais agora.</p>';
+    });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadLandingMaterials);
+} else {
+  loadLandingMaterials();
+}

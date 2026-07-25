@@ -220,3 +220,47 @@ export function createOrUpdateQuiz(payload: AdminQuizCreateUpdatePayload): Promi
 export function deleteQuiz(encontroId: number): Promise<{ message: string; encontro: number }> {
   return del<{ message: string; encontro: number }>(`/api/admin/quiz/${encontroId}`)
 }
+
+// ——— Materiais da landing ———
+
+export interface LandingMaterial {
+  id: string
+  title: string
+  description: string
+  material_url: string
+  summary_url: string
+  audio_url: string | null
+  order: number
+  active: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface LandingMaterialPayload {
+  title: string
+  description: string
+  material_url: string
+  summary_url: string
+  audio_url?: string | null
+  order?: number
+  active?: boolean
+}
+
+export function listLandingMaterials(): Promise<LandingMaterial[]> {
+  return get<LandingMaterial[]>('/api/admin/landing-materials')
+}
+
+export function createLandingMaterial(body: LandingMaterialPayload): Promise<LandingMaterial> {
+  return post<LandingMaterial>('/api/admin/landing-materials', body)
+}
+
+export function updateLandingMaterial(
+  id: string,
+  body: Partial<LandingMaterialPayload>
+): Promise<LandingMaterial> {
+  return put<LandingMaterial>(`/api/admin/landing-materials/${encodeURIComponent(id)}`, body)
+}
+
+export function deleteLandingMaterial(id: string): Promise<{ message: string; id: string }> {
+  return del<{ message: string; id: string }>(`/api/admin/landing-materials/${encodeURIComponent(id)}`)
+}

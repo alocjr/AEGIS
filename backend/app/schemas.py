@@ -124,3 +124,24 @@ class AdminQuizCreateUpdateRequest(BaseModel):
     encontro: int
     titulo: str | None = Field(None, max_length=300)
     questoes: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+
+
+class AdminLandingMaterialCreateRequest(BaseModel):
+    """Card de material gratuito exibido na landing."""
+    title: str = Field(min_length=2, max_length=200)
+    description: str = Field(min_length=1, max_length=2000)
+    material_url: str = Field(min_length=1, max_length=2000)
+    summary_url: str = Field(min_length=1, max_length=2000)
+    audio_url: str | None = Field(None, max_length=2000)
+    order: int = Field(default=0, ge=0, le=9999)
+    active: bool = True
+
+
+class AdminLandingMaterialUpdateRequest(BaseModel):
+    title: str | None = Field(None, min_length=2, max_length=200)
+    description: str | None = Field(None, min_length=1, max_length=2000)
+    material_url: str | None = Field(None, min_length=1, max_length=2000)
+    summary_url: str | None = Field(None, min_length=1, max_length=2000)
+    audio_url: str | None = Field(None, max_length=2000)
+    order: int | None = Field(None, ge=0, le=9999)
+    active: bool | None = None

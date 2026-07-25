@@ -34,6 +34,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'AdminDashboard', component: () => import('@/views/admin/AdminDashboardView.vue'), meta: { title: 'Admin' } },
       { path: 'trilhas', name: 'AdminTrilhas', component: () => import('@/views/admin/AdminTrilhasView.vue'), meta: { title: 'Admin · Trilhas' } },
+      { path: 'materiais-landing', name: 'AdminMateriaisLanding', component: () => import('@/views/admin/AdminMateriaisLandingView.vue'), meta: { title: 'Admin · Materiais Landing' } },
       { path: 'usuarios', name: 'AdminUsuarios', component: () => import('@/views/admin/AdminUsuariosView.vue'), meta: { title: 'Admin · Usuários' } },
       { path: 'alunos', name: 'AdminAlunos', component: () => import('@/views/admin/AdminAlunosView.vue'), meta: { title: 'Admin · Alunos' } },
       { path: 'progresso', name: 'AdminProgresso', component: () => import('@/views/admin/AdminProgressoView.vue'), meta: { title: 'Admin · Progresso' } },

@@ -58,6 +58,26 @@ def get_course_public(slug: str, db: Database = Depends(get_db)):
     return {"slug": course["slug"], "programa_formacao_executiva": payload}
 
 
+@router.get("/landing-materials")
+def list_landing_materials_public(db: Database = Depends(get_db)):
+    """Lista cards ativos de materiais gratuitos para a landing. Público."""
+    docs = list(
+        db.landing_materials.find({"active": True}).sort([("order", 1), ("created_at", 1)])
+    )
+    return [
+        {
+            "id": str(d["_id"]),
+            "title": d.get("title", ""),
+            "description": d.get("description", ""),
+            "material_url": d.get("material_url", ""),
+            "summary_url": d.get("summary_url", ""),
+            "audio_url": d.get("audio_url") or None,
+            "order": int(d.get("order") or 0),
+        }
+        for d in docs
+    ]
+
+
 @router.post("/leads")
 def create_lead(payload: LeadCreate, db: Database = Depends(get_db)):
     """Recebe os dados do formulário de aplicação da landing e persiste como lead."""

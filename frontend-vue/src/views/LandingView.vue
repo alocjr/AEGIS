@@ -6,11 +6,12 @@
  */
 const base = import.meta.env.VITE_API_BASE_URL ?? ''
 const origin = typeof window !== 'undefined' ? window.location.origin : ''
+/** Em dev: servir public/lp.html via Vite (sempre atual). Em prod: backend em /. */
 const landingBase =
   base
     ? base.replace(/\/$/, '') + '/'
     : import.meta.env.DEV
-      ? 'http://127.0.0.1:8000/'
+      ? origin + '/lp.html'
       : origin + '/'
 /** Mesma base que o cliente Vue (`client.ts`): necessária para o POST de leads quando a API está em outro host. */
 const apiBaseForLeads = base.trim().replace(/\/$/, '')
@@ -18,10 +19,12 @@ const landingParams = new URLSearchParams()
 if (origin) landingParams.set('loginBase', origin)
 if (apiBaseForLeads) landingParams.set('apiBase', apiBaseForLeads)
 const q = landingParams.toString()
-const landingUrl =
-  q && landingBase
-    ? landingBase.replace(/\/?$/, '/') + (landingBase.includes('?') ? '&' : '?') + q
-    : landingBase
+const landingUrl = (() => {
+  if (!landingBase) return landingBase
+  if (!q) return landingBase
+  const sep = landingBase.includes('?') ? '&' : '?'
+  return landingBase + sep + q
+})()
 </script>
 
 <template>
