@@ -56,6 +56,39 @@ class MaturityAnswersRequest(BaseModel):
     answers: dict[str, int]
 
 
+OPPORTUNITY_TYPE_OPTIONS = (
+    "Automação",
+    "Classificação/Previsão",
+    "Extração/Busca",
+    "Geração",
+    "Copiloto",
+    "Agente autônomo",
+)
+
+
+class CanvasProjectCreateRequest(BaseModel):
+    title: str = Field(default="Novo projeto", min_length=1, max_length=200)
+
+
+class CanvasProjectUpdateRequest(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=200)
+    area_negocio: str | None = Field(None, max_length=200)
+    responsavel: str | None = Field(None, max_length=200)
+    data: str | None = Field(None, max_length=40)
+    objetivo_estrategico: str | None = Field(None, max_length=2000)
+    contexto: str | None = Field(None, max_length=8000)
+    dores: str | None = Field(None, max_length=8000)
+    oportunidade: str | None = Field(None, max_length=8000)
+    oportunidade_tipos: list[str] | None = Field(None, max_length=12)
+    dados: str | None = Field(None, max_length=8000)
+    valor: str | None = Field(None, max_length=8000)
+    custo: str | None = Field(None, max_length=8000)
+    riscos: str | None = Field(None, max_length=8000)
+    score_valor: int | None = Field(None, ge=1, le=5)
+    score_viabilidade: int | None = Field(None, ge=1, le=5)
+    proximo_passo: str | None = Field(None, max_length=4000)
+
+
 class QuizSubmitRequest(BaseModel):
     answers: dict[str, int]
 

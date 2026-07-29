@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas de Oportunidades de IA por Área de Negócio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root{
+    --ink:#12232E;--ink-soft:#3C525F;--paper:#F7F5EF;--line:#D8D2C6;
+    --amber:#C48A26;--amber-tint:#F3E7CC;--slate:#5B7A86;--slate-tint:#E4ECEE;
+    --teal:#2F6E6A;--teal-tint:#E1EBE9;--danger:#9C3B2E;--ok:#2F6E4A;
+  }
+  *{box-sizing:border-box}html,body{margin:0}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:#EDEAE1;padding:28px;line-height:1.4}
+  .sheet{max-width:1180px;margin:0 auto;background:var(--paper);border:1px solid var(--line);box-shadow:0 18px 50px -28px rgba(18,35,46,.5)}
+  header{padding:26px 30px 22px;border-bottom:3px solid var(--ink);display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;justify-content:space-between}
+  .brand{font-family:'Space Grotesk';font-weight:700;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+  h1{font-family:'Space Grotesk';font-weight:700;font-size:27px;line-height:1.08;margin:0;max-width:22ch}
+  h1 span{color:var(--slate)}
+  .subtitle{font-size:12.5px;color:var(--ink-soft);margin-top:8px;max-width:46ch}
+  .meta{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:10px 20px;min-width:320px}
+  .meta label{display:block;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:2px}
+  .fill{border:none;border-bottom:1.5px dotted var(--slate);min-height:19px;font-size:13px;color:var(--ink);padding:1px 2px;font-family:'Inter';outline:none}
+  .fill:empty:before{content:attr(data-ph);color:#A9A296;font-style:italic}
+  .fill:focus{border-bottom-color:var(--amber);background:#fffef9}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:0}
+  .cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 16px 16px;min-height:132px;position:relative;background:var(--paper)}
+  .cell:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--stage,var(--slate))}
+  .band-diag{--stage:var(--slate)}.band-eval{--stage:var(--teal)}.band-dec{--stage:var(--amber)}
+  .num{font-family:'Space Grotesk';font-weight:700;font-size:12px;color:var(--stage,var(--slate))}
+  .title{font-family:'Space Grotesk';font-weight:600;font-size:13.5px;text-transform:uppercase;letter-spacing:.04em;margin:2px 0 5px}
+  .hint{font-size:11px;color:var(--ink-soft);line-height:1.35}
+  .write{margin-top:9px;min-height:44px;border:none;outline:none;font-size:12.5px;color:var(--ink);font-family:'Inter';width:100%;resize:none;background:transparent}
+  .write:empty:before{content:attr(data-ph);color:#B6AFA2;font-style:italic}
+  .write:focus{background:#fffef9;border-radius:4px}
+  .c4{grid-column:span 4}.c-eval{grid-column:span 3}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .chip{font-size:10px;border:1px solid var(--line);border-radius:20px;padding:3px 9px;color:var(--ink-soft);user-select:none;background:#fff}
+  .decision{display:grid;grid-template-columns:1.15fr 1fr;gap:0}
+  .dec-left{padding:16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);position:relative}
+  .dec-left:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--amber)}
+  .scores{display:flex;gap:26px;margin:12px 0 6px}
+  .score b{font-family:'Space Grotesk';font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:5px}
+  .dots{display:flex;gap:6px}
+  .dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--slate);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-soft);font-family:'Space Grotesk';font-weight:600}
+  .next{margin-top:12px}
+  .next label{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .matrix-wrap{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
+  .matrix-cap{font-family:'Space Grotesk';font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:9px}
+  .matrix{display:grid;grid-template-columns:16px 1fr 1fr;grid-template-rows:1fr 1fr 16px;gap:5px;flex:1;min-height:150px}
+  .qy{writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:center;grid-row:span 2;align-self:center}
+  .qx{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:center;grid-column:2/4}
+  .q{border-radius:6px;padding:8px 9px;font-size:10.5px;line-height:1.25;border:1px solid var(--line)}
+  .q b{display:block;font-family:'Space Grotesk';font-size:11px;margin-bottom:2px}
+  .q-go{background:#E8F0E7;border-color:#BBD3B7}.q-go b{color:var(--ok)}
+  .q-bet{background:var(--amber-tint);border-color:#E3CE9C}.q-bet b{color:var(--amber)}
+  .q-inc{background:var(--slate-tint);border-color:#CBD8DB}.q-inc b{color:var(--slate)}
+  .q-avoid{background:#F1E1DD;border-color:#DDBCB4}.q-avoid b{color:var(--danger)}
+  footer{padding:12px 30px 18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:10.5px;color:var(--ink-soft)}
+  footer b{color:var(--amber);font-family:'Space Grotesk'}
+  @media (max-width:820px){body{padding:12px}.c4,.c-eval{grid-column:span 12}.decision{grid-template-columns:1fr}.meta{grid-template-columns:1fr 1fr}h1{font-size:22px}}
+  @media print{body{background:#fff;padding:0}.sheet{box-shadow:none;border:none;max-width:none}.write:empty:before,.fill:empty:before{color:#c9c9c9}@page{size:A4 landscape;margin:10mm}}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div>
+      <div class="brand">Valorian · Instrumento estratégico</div>
+      <h1>Canvas de Oportunidades de IA <span>por área de negócio</span></h1>
+      <div class="subtitle">Um canvas por área. Preencha na ordem 01 → 08: da dor real à decisão de investir.</div>
+    </div>
+    <div class="meta">
+      <div><label>Área de negócio</label><div class="fill" contenteditable data-ph="Ex.: Comercial"></div></div>
+      <div><label>Responsável</label><div class="fill" contenteditable data-ph="Nome"></div></div>
+      <div><label>Data</label><div class="fill" contenteditable data-ph="__/__/____"></div></div>
+      <div><label>Objetivo estratégico da área</label><div class="fill" contenteditable data-ph="O que essa área precisa entregar"></div></div>
+    </div>
+  </header>
+  <div class="grid">
+    <div class="cell c4 band-diag">
+      <span class="num">01</span><div class="title">Contexto da área</div>
+      <div class="hint">KPIs e processos-chave. Onde essa área cria ou destrói valor hoje?</div>
+      <div class="write" contenteditable data-ph="Processos, indicadores, volume de trabalho…"></div>
+    </div>
+    <div class="cell c4 band-diag">
+      <span class="num">02</span><div class="title">Dores &amp; gargalos</div>
+      <div class="hint">Atrito, retrabalho, erro, custo, lentidão. <strong>Descreva a dor — não a solução.</strong></div>
+      <div class="write" contenteditable data-ph="O que trava, custa ou falha hoje…"></div>
+    </div>
+    <div class="cell c4 band-diag" style="border-right:none">
+      <span class="num">03</span><div class="title">Oportunidade de IA</div>
+      <div class="hint">Em uma frase: o que a IA faria e qual dor do bloco 02 ela ataca.</div>
+      <div class="write" contenteditable data-ph="A IA faria…" style="min-height:26px"></div>
+      <div class="chips">
+        <span class="chip">Automação</span><span class="chip">Classificação/Previsão</span>
+        <span class="chip">Extração/Busca</span><span class="chip">Geração</span>
+        <span class="chip">Copiloto</span><span class="chip">Agente autônomo</span>
+      </div>
+    </div>
+    <div class="cell c-eval band-eval">
+      <span class="num">04</span><div class="title">Dados &amp; insumos</div>
+      <div class="hint">Combustível: volume, qualidade, acesso, formato. Sem dado, não sai do papel.</div>
+      <div class="write" contenteditable data-ph="Que dados existem? Onde? Em que estado?"></div>
+    </div>
+    <div class="cell c-eval band-eval">
+      <span class="num">05</span><div class="title">Valor esperado</div>
+      <div class="hint">Ganho direto (tempo/custo/receita) + indireto (qualidade/risco). Como medir?</div>
+      <div class="write" contenteditable data-ph="Ganho + métrica de sucesso"></div>
+    </div>
+    <div class="cell c-eval band-eval">
+      <span class="num">06</span><div class="title">Custo &amp; complexidade</div>
+      <div class="hint">CapEx (construir) × OpEx (operar: inferência/tokens + manutenção) + integração.</div>
+      <div class="write" contenteditable data-ph="Construir, operar e integrar custa…"></div>
+    </div>
+    <div class="cell c-eval band-eval" style="border-right:none">
+      <span class="num">07</span><div class="title">Riscos &amp; governança</div>
+      <div class="hint">LGPD e regras do setor, alucinação, dependência. Que supervisão humana é obrigatória?</div>
+      <div class="write" contenteditable data-ph="Riscos e nível de human-in-the-loop"></div>
+    </div>
+  </div>
+  <div class="decision">
+    <div class="dec-left">
+      <span class="num" style="color:var(--amber)">08</span>
+      <div class="title" style="color:var(--ink)">Decisão</div>
+      <div class="hint">Pontue de 1 a 5. O cruzamento define o quadrante e o próximo passo.</div>
+      <div class="scores">
+        <div class="score"><b>Valor</b><div class="dots"><span class="dot">1</span><span class="dot">2</span><span class="dot">3</span><span class="dot">4</span><span class="dot">5</span></div></div>
+        <div class="score"><b>Viabilidade</b><div class="dots"><span class="dot">1</span><span class="dot">2</span><span class="dot">3</span><span class="dot">4</span><span class="dot">5</span></div></div>
+      </div>
+      <div class="next">
+        <label>Próximo passo concreto</label>
+        <div class="write" contenteditable data-ph="Ex.: PoC de 3 semanas com dados de faturamento…" style="min-height:30px"></div>
+      </div>
+    </div>
+    <div class="matrix-wrap">
+      <div class="matrix-cap">Onde essa oportunidade cai</div>
+      <div class="matrix">
+        <div class="qy">Valor →</div>
+        <div class="q q-bet"><b>Aposta estratégica</b>Alto valor, baixa viab. — planeje e destrave.</div>
+        <div class="q q-go"><b>Ganho rápido</b>Alto valor, alta viab. — faça já.</div>
+        <div class="q q-avoid"><b>Evitar · vaidade</b>Baixo valor, baixa viab. — só hype.</div>
+        <div class="q q-inc"><b>Incremental</b>Baixo valor, alta viab. — encaixe quando sobrar.</div>
+        <div></div><div class="qx">Viabilidade →</div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <span>Complementar à <b>SWOT de IA</b> — a SWOT olha a organização; este canvas desce à área.</span>
+    <span>Consolide um canvas por área numa <b>matriz de portfólio</b> para priorizar o roadmap.</span>
+  </footer>
+</div>
+</body>
+</html>
