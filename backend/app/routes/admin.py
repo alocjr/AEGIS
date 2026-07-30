@@ -141,7 +141,6 @@ def _get_total_materiais(course_payload: dict) -> int:
     return total
 
 
-@router.get("/dashboard")
 def _swot_is_filled(doc: dict | None) -> bool:
     """SWOT preenchido = ao menos um item em qualquer quadrante."""
     if not doc:
@@ -153,6 +152,7 @@ def _swot_is_filled(doc: dict | None) -> bool:
     return False
 
 
+@router.get("/dashboard")
 def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
     """Lista alunos com progresso (encontros, material, quiz) e data do próximo encontro. Ordenado pela data do próximo encontro (mais próximo primeiro). Apenas admin."""
     users = list(
