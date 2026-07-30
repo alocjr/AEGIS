@@ -14,6 +14,7 @@ from app.utils.course_payload import payload_for_json
 from app.utils.material_gratuito import (
     ALLOWED_EXTENSIONS,
     MAX_UPLOAD_BYTES,
+    PROMPT_ALLOWED_EXTENSIONS,
     material_gratuito_dir,
     public_url_for,
     sanitize_filename,
@@ -24,6 +25,8 @@ from app.schemas import (
     AdminCreateUserRequest,
     AdminLandingMaterialCreateRequest,
     AdminLandingMaterialUpdateRequest,
+    AdminLandingPromptCreateRequest,
+    AdminLandingPromptUpdateRequest,
     AdminQuizCreateUpdateRequest,
     AdminUpdateCourseRequest,
     AdminUpdateProgressRequest,
@@ -905,3 +908,146 @@ def delete_landing_material(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Material nao encontrado")
     return {"message": "Material removido", "id": material_id}
+
+
+def _landing_prompt_to_item(doc: dict) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "title": doc.get("title", ""),
+        "description": doc.get("description", ""),
+        "meta_label": doc.get("meta_label") or "",
+        "prompt_url": doc.get("prompt_url", ""),
+        "order": int(doc.get("order") or 0),
+        "active": bool(doc.get("active", True)),
+        "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
+        "updated_at": doc["updated_at"].isoformat() if doc.get("updated_at") else None,
+    }
+
+
+@router.get("/landing-prompts")
+def list_landing_prompts(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
+    """Lista prompts MD da landing. Apenas admin."""
+    docs = list(db.landing_prompts.find({}).sort([("order", 1), ("created_at", 1)]))
+    return [_landing_prompt_to_item(d) for d in docs]
+
+
+@router.post("/landing-prompts/upload")
+async def upload_landing_prompt_file(
+    file: UploadFile = File(...),
+    admin=Depends(get_current_admin),
+):
+    """Salva arquivo MD/TXT em material_gratuito/ e retorna a URL pública. Apenas admin."""
+    original = file.filename or "prompt.md"
+    ext = Path(original).suffix.lower()
+    if ext not in PROMPT_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de arquivo não permitido ({ext or 'sem extensão'}). "
+            f"Use: {', '.join(sorted(PROMPT_ALLOWED_EXTENSIONS))}",
+        )
+
+    safe_name = sanitize_filename(original)
+    dest_dir = material_gratuito_dir(create=True)
+    stem = Path(safe_name).stem
+    candidate = safe_name
+    if (dest_dir / candidate).exists():
+        candidate = f"{stem}-{uuid.uuid4().hex[:8]}{ext}"
+
+    dest_path = dest_dir / candidate
+    size = 0
+    try:
+        with dest_path.open("wb") as out:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_UPLOAD_BYTES:
+                    out.close()
+                    dest_path.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Arquivo acima do limite de {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                out.write(chunk)
+    finally:
+        await file.close()
+
+    if size == 0:
+        dest_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+    url = public_url_for(candidate)
+    return {"url": url, "filename": candidate, "size": size}
+
+
+@router.post("/landing-prompts")
+def create_landing_prompt(
+    body: AdminLandingPromptCreateRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Cria prompt MD da landing. Apenas admin."""
+    now = datetime.now(timezone.utc)
+    doc = {
+        "title": body.title.strip(),
+        "description": body.description.strip(),
+        "meta_label": (body.meta_label or "").strip(),
+        "prompt_url": body.prompt_url.strip(),
+        "order": body.order,
+        "active": body.active,
+        "created_at": now,
+        "updated_at": now,
+    }
+    result = db.landing_prompts.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return _landing_prompt_to_item(doc)
+
+
+@router.put("/landing-prompts/{prompt_id}")
+def update_landing_prompt(
+    prompt_id: str,
+    body: AdminLandingPromptUpdateRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Atualiza prompt MD da landing. Apenas admin."""
+    if not ObjectId.is_valid(prompt_id):
+        raise HTTPException(status_code=400, detail="ID invalido")
+    oid = ObjectId(prompt_id)
+    existing = db.landing_prompts.find_one({"_id": oid})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Prompt nao encontrado")
+
+    updates: dict = {"updated_at": datetime.now(timezone.utc)}
+    if body.title is not None:
+        updates["title"] = body.title.strip()
+    if body.description is not None:
+        updates["description"] = body.description.strip()
+    if body.meta_label is not None:
+        updates["meta_label"] = body.meta_label.strip()
+    if body.prompt_url is not None:
+        updates["prompt_url"] = body.prompt_url.strip()
+    if body.order is not None:
+        updates["order"] = body.order
+    if body.active is not None:
+        updates["active"] = body.active
+
+    db.landing_prompts.update_one({"_id": oid}, {"$set": updates})
+    doc = db.landing_prompts.find_one({"_id": oid})
+    return _landing_prompt_to_item(doc)
+
+
+@router.delete("/landing-prompts/{prompt_id}")
+def delete_landing_prompt(
+    prompt_id: str,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Remove prompt MD da landing. Apenas admin."""
+    if not ObjectId.is_valid(prompt_id):
+        raise HTTPException(status_code=400, detail="ID invalido")
+    result = db.landing_prompts.delete_one({"_id": ObjectId(prompt_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Prompt nao encontrado")
+    return {"message": "Prompt removido", "id": prompt_id}

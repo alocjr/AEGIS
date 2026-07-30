@@ -271,8 +271,16 @@ function removeItem(field: CanvasListField, index: number) {
   void persist()
 }
 
+function autosizeItem(el: HTMLTextAreaElement | null | Event) {
+  const ta =
+    el instanceof Event ? (el.target as HTMLTextAreaElement | null) : el
+  if (!ta) return
+  ta.style.height = 'auto'
+  ta.style.height = `${ta.scrollHeight}px`
+}
+
 function onItemBlur(field: CanvasListField, index: number, ev: Event) {
-  const input = ev.target as HTMLInputElement
+  const input = ev.target as HTMLTextAreaElement
   const next = input.value.trim()
   const list = [...form.value[field]]
   if (!next) {
@@ -508,10 +516,13 @@ onUnmounted(() => {
           <div class="hint">KPIs e processos-chave. Onde essa área cria ou destrói valor hoje?</div>
           <ul class="item-list">
             <li v-for="(item, idx) in form.contexto" :key="'c' + idx" class="item-row">
-              <input
+              <textarea
                 :value="item"
                 class="item-input"
+                rows="1"
                 maxlength="500"
+                :ref="(el) => autosizeItem(el as HTMLTextAreaElement | null)"
+                @input="autosizeItem"
                 @blur="onItemBlur('contexto', idx, $event)"
               />
               <button type="button" class="item-remove" title="Remover" @click="removeItem('contexto', idx)">×</button>
@@ -534,10 +545,13 @@ onUnmounted(() => {
           <div class="hint">Atrito, retrabalho, erro, custo, lentidão. <strong>Descreva a dor — não a solução.</strong></div>
           <ul class="item-list">
             <li v-for="(item, idx) in form.dores" :key="'d' + idx" class="item-row">
-              <input
+              <textarea
                 :value="item"
                 class="item-input"
+                rows="1"
                 maxlength="500"
+                :ref="(el) => autosizeItem(el as HTMLTextAreaElement | null)"
+                @input="autosizeItem"
                 @blur="onItemBlur('dores', idx, $event)"
               />
               <button type="button" class="item-remove" title="Remover" @click="removeItem('dores', idx)">×</button>
@@ -560,10 +574,13 @@ onUnmounted(() => {
           <div class="hint">Em uma frase: o que a IA faria e qual dor do bloco 02 ela ataca.</div>
           <ul class="item-list">
             <li v-for="(item, idx) in form.oportunidade" :key="'o' + idx" class="item-row">
-              <input
+              <textarea
                 :value="item"
                 class="item-input"
+                rows="1"
                 maxlength="500"
+                :ref="(el) => autosizeItem(el as HTMLTextAreaElement | null)"
+                @input="autosizeItem"
                 @blur="onItemBlur('oportunidade', idx, $event)"
               />
               <button type="button" class="item-remove" title="Remover" @click="removeItem('oportunidade', idx)">×</button>
@@ -641,10 +658,13 @@ onUnmounted(() => {
           <div class="hint">{{ cell.hint }}</div>
           <ul class="item-list">
             <li v-for="(item, idx) in form[cell.field]" :key="cell.field + idx" class="item-row">
-              <input
+              <textarea
                 :value="item"
                 class="item-input"
+                rows="1"
                 maxlength="500"
+                :ref="(el) => autosizeItem(el as HTMLTextAreaElement | null)"
+                @input="autosizeItem"
                 @blur="onItemBlur(cell.field, idx, $event)"
               />
               <button type="button" class="item-remove" title="Remover" @click="removeItem(cell.field, idx)">×</button>
@@ -1140,7 +1160,7 @@ h1 span {
 .item-row {
   display: flex;
   gap: 4px;
-  align-items: center;
+  align-items: flex-start;
 }
 .item-input {
   flex: 1;
@@ -1153,10 +1173,20 @@ h1 span {
   font-family: inherit;
   padding: 4px 2px;
   outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+  min-height: calc(1.4em + 8px);
+  field-sizing: content;
 }
 .item-input:focus {
   border-bottom-color: var(--amber);
   background: #fffef9;
+}
+.item-row .item-remove {
+  margin-top: 2px;
 }
 .item-remove {
   flex-shrink: 0;

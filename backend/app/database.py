@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import certifi
 from pymongo import MongoClient
 from pymongo.database import Database
@@ -12,6 +14,40 @@ db: Database = client[settings.mongodb_db_name]
 
 def get_db() -> Database:
     return db
+
+
+def _seed_landing_prompts_if_empty() -> None:
+    """Garante os dois prompts padrão da landing na primeira subida."""
+    if db.landing_prompts.count_documents({}) > 0:
+        return
+    now = datetime.now(timezone.utc)
+    db.landing_prompts.insert_many(
+        [
+            {
+                "title": "Gerar uma SWOT de IA em JSON",
+                "description": "Produza a análise no formato importável pela plataforma Valorian.",
+                "meta_label": "Prompt · SWOT de IA",
+                "prompt_url": "/material_gratuito/prompt-swot-ia-json.md",
+                "order": 0,
+                "active": True,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "title": "Preencher o Canvas de Oportunidades em JSON",
+                "description": (
+                    "Gere um rascunho inicial por área de negócio, "
+                    "pronto para importar na plataforma Valorian."
+                ),
+                "meta_label": "Prompt · Canvas de Oportunidades",
+                "prompt_url": "/material_gratuito/prompt-canvas-oportunidades-json.md",
+                "order": 1,
+                "active": True,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ]
+    )
 
 
 def init_indexes() -> None:
@@ -36,6 +72,9 @@ def init_indexes() -> None:
     db.leads.create_index("created_at")
     db.landing_materials.create_index([("active", 1), ("order", 1)])
     db.landing_materials.create_index("created_at")
+    db.landing_prompts.create_index([("active", 1), ("order", 1)])
+    db.landing_prompts.create_index("created_at")
+    _seed_landing_prompts_if_empty()
     db.canvas_projects.create_index([("user_id", 1), ("updated_at", -1)])
     db.swot_analyses.create_index("user_id", unique=True)
     db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)

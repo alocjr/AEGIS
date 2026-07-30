@@ -794,6 +794,7 @@ onUnmounted(() => {
                   <input
                     :value="item.texto"
                     class="item-input"
+                    :title="item.texto || undefined"
                     maxlength="500"
                     @blur="onItemBlur(q.field, index, $event)"
                   />
@@ -819,6 +820,7 @@ onUnmounted(() => {
                   <input
                     :value="item.texto"
                     class="item-input"
+                    :title="item.texto || undefined"
                     maxlength="500"
                     @blur="onItemBlur(q.field, index, $event)"
                   />

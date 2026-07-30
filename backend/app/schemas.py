@@ -266,3 +266,22 @@ class AdminLandingMaterialUpdateRequest(BaseModel):
     audio_url: str | None = Field(None, max_length=2000)
     order: int | None = Field(None, ge=0, le=9999)
     active: bool | None = None
+
+
+class AdminLandingPromptCreateRequest(BaseModel):
+    """Prompt MD exibido na landing."""
+    title: str = Field(min_length=2, max_length=200)
+    description: str = Field(min_length=1, max_length=2000)
+    meta_label: str = Field(default="", max_length=200)
+    prompt_url: str = Field(min_length=1, max_length=2000)
+    order: int = Field(default=0, ge=0, le=9999)
+    active: bool = True
+
+
+class AdminLandingPromptUpdateRequest(BaseModel):
+    title: str | None = Field(None, min_length=2, max_length=200)
+    description: str | None = Field(None, min_length=1, max_length=2000)
+    meta_label: str | None = Field(None, max_length=200)
+    prompt_url: str | None = Field(None, min_length=1, max_length=2000)
+    order: int | None = Field(None, ge=0, le=9999)
+    active: bool | None = None

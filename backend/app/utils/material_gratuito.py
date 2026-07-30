@@ -24,7 +24,11 @@ ALLOWED_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".webp",
+    ".md",
+    ".txt",
 }
+
+PROMPT_ALLOWED_EXTENSIONS = {".md", ".txt"}
 
 MAX_UPLOAD_BYTES = 40 * 1024 * 1024  # 40 MB
 

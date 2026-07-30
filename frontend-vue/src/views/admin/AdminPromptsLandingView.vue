@@ -1,0 +1,520 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import {
+  listLandingPrompts,
+  createLandingPrompt,
+  updateLandingPrompt,
+  deleteLandingPrompt,
+  uploadLandingPromptFile,
+} from '@/api/admin'
+import type { LandingPrompt } from '@/api/admin'
+
+const loading = ref(true)
+const error = ref<string | null>(null)
+const items = ref<LandingPrompt[]>([])
+
+const modalOpen = ref(false)
+const modalMode = ref<'create' | 'edit'>('create')
+const editingId = ref<string | null>(null)
+const modalSaving = ref(false)
+const modalError = ref<string | null>(null)
+const uploading = ref(false)
+
+const form = ref({
+  title: '',
+  description: '',
+  meta_label: '',
+  prompt_url: '',
+  order: 0,
+  active: true,
+})
+
+const deleteTarget = ref<LandingPrompt | null>(null)
+const deleteConfirming = ref(false)
+const deleteError = ref<string | null>(null)
+
+function resetForm() {
+  form.value = {
+    title: '',
+    description: '',
+    meta_label: '',
+    prompt_url: '',
+    order: items.value.length,
+    active: true,
+  }
+  editingId.value = null
+  modalError.value = null
+}
+
+function openCreate() {
+  modalMode.value = 'create'
+  resetForm()
+  modalOpen.value = true
+}
+
+function openEdit(item: LandingPrompt) {
+  modalMode.value = 'edit'
+  editingId.value = item.id
+  modalError.value = null
+  form.value = {
+    title: item.title,
+    description: item.description,
+    meta_label: item.meta_label || '',
+    prompt_url: item.prompt_url,
+    order: item.order,
+    active: item.active,
+  }
+  modalOpen.value = true
+}
+
+function closeModal() {
+  modalOpen.value = false
+  modalSaving.value = false
+  modalError.value = null
+}
+
+async function onUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  modalError.value = null
+  uploading.value = true
+  try {
+    const result = await uploadLandingPromptFile(file)
+    form.value.prompt_url = result.url
+  } catch (e: unknown) {
+    modalError.value =
+      e instanceof Error ? e.message : 'Erro ao enviar arquivo.'
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
+
+async function saveModal() {
+  modalError.value = null
+  const title = form.value.title.trim()
+  const description = form.value.description.trim()
+  const meta_label = form.value.meta_label.trim()
+  const prompt_url = form.value.prompt_url.trim()
+  if (!title || !description || !prompt_url) {
+    modalError.value = 'Preencha título, descrição e o arquivo/URL do prompt.'
+    return
+  }
+  modalSaving.value = true
+  try {
+    const payload = {
+      title,
+      description,
+      meta_label,
+      prompt_url,
+      order: Number(form.value.order) || 0,
+      active: form.value.active,
+    }
+    if (modalMode.value === 'create') {
+      await createLandingPrompt(payload)
+    } else if (editingId.value) {
+      await updateLandingPrompt(editingId.value, payload)
+    }
+    items.value = await listLandingPrompts()
+    closeModal()
+  } catch (e: unknown) {
+    modalError.value =
+      e instanceof Error ? e.message : 'Erro ao salvar prompt.'
+  } finally {
+    modalSaving.value = false
+  }
+}
+
+function askDelete(item: LandingPrompt) {
+  deleteTarget.value = item
+  deleteError.value = null
+  deleteConfirming.value = true
+}
+
+function cancelDelete() {
+  deleteTarget.value = null
+  deleteError.value = null
+  deleteConfirming.value = false
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  deleteError.value = null
+  try {
+    await deleteLandingPrompt(deleteTarget.value.id)
+    items.value = await listLandingPrompts()
+    cancelDelete()
+  } catch (e: unknown) {
+    deleteError.value =
+      e instanceof Error ? e.message : 'Erro ao excluir prompt.'
+  }
+}
+
+onMounted(async () => {
+  try {
+    items.value = await listLandingPrompts()
+  } catch (e) {
+    error.value =
+      e instanceof Error ? e.message : 'Erro ao carregar prompts.'
+  } finally {
+    loading.value = false
+  }
+})
+</script>
+
+<template>
+  <div class="prompts-landing-page">
+    <header class="page-header">
+      <h1 class="page-title">Prompts da Landing</h1>
+      <p class="page-sub">
+        Arquivos Markdown exibidos em “Prompts úteis” no hero da landing.
+        Cole uma URL ou faça upload (salva em <code>/material_gratuito</code>).
+      </p>
+      <div class="page-actions">
+        <button type="button" class="btn-primary" @click="openCreate">Novo prompt</button>
+      </div>
+    </header>
+
+    <div v-if="loading" class="loading">Carregando...</div>
+    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <div v-else-if="items.length === 0" class="empty">
+      Nenhum prompt cadastrado. Clique em <strong>Novo prompt</strong> para criar.
+    </div>
+    <div v-else class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ordem</th>
+            <th>Título</th>
+            <th>Rótulo</th>
+            <th>Ativo</th>
+            <th>Arquivo</th>
+            <th class="th-actions">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in items" :key="item.id">
+            <td>{{ item.order }}</td>
+            <td class="name-cell">
+              <div>{{ item.title }}</div>
+              <div class="desc-preview">{{ item.description }}</div>
+            </td>
+            <td>{{ item.meta_label || '—' }}</td>
+            <td>{{ item.active ? 'Sim' : 'Não' }}</td>
+            <td>
+              <a :href="item.prompt_url" target="_blank" rel="noopener" class="link">Abrir</a>
+            </td>
+            <td class="td-actions">
+              <button type="button" class="btn-secondary btn-sm" @click="openEdit(item)">Editar</button>
+              <button type="button" class="btn-danger btn-sm" @click="askDelete(item)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title">
+          <h2 id="prompt-modal-title" class="modal-title">
+            {{ modalMode === 'create' ? 'Novo prompt' : 'Editar prompt' }}
+          </h2>
+          <div class="form-grid">
+            <label class="field">
+              <span>Título</span>
+              <input v-model="form.title" type="text" class="input" maxlength="200" />
+            </label>
+            <label class="field">
+              <span>Ordem</span>
+              <input v-model.number="form.order" type="number" class="input" min="0" max="9999" />
+            </label>
+            <label class="field field-full">
+              <span>Rótulo (ex.: Prompt · SWOT de IA)</span>
+              <input v-model="form.meta_label" type="text" class="input" maxlength="200" />
+            </label>
+            <label class="field field-full">
+              <span>Descrição</span>
+              <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
+            </label>
+
+            <div class="field field-full">
+              <span>Arquivo do prompt (.md ou .txt)</span>
+              <div class="url-upload-row">
+                <input
+                  v-model="form.prompt_url"
+                  type="text"
+                  class="input"
+                  placeholder="/material_gratuito/prompt.md ou https://..."
+                />
+                <label class="btn-upload" :class="{ disabled: uploading }">
+                  {{ uploading ? 'Enviando…' : 'Upload' }}
+                  <input
+                    type="file"
+                    class="file-input"
+                    accept=".md,.txt,text/markdown,text/plain"
+                    :disabled="uploading"
+                    @change="onUpload"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <label class="field checkbox-field">
+              <input v-model="form.active" type="checkbox" />
+              <span>Ativo na landing</span>
+            </label>
+          </div>
+          <p v-if="modalError" class="error-msg">{{ modalError }}</p>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" :disabled="modalSaving" @click="closeModal">Cancelar</button>
+            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
+              {{ modalSaving ? 'Salvando...' : 'Salvar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="deleteConfirming" class="modal-backdrop" @click.self="cancelDelete">
+        <div class="modal modal-sm" role="dialog" aria-modal="true">
+          <h2 class="modal-title">Excluir prompt?</h2>
+          <p class="modal-text">
+            Remover <strong>{{ deleteTarget?.title }}</strong> da lista de prompts da landing.
+          </p>
+          <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
+            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<style scoped>
+.prompts-landing-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.page-header {
+  margin-bottom: 28px;
+}
+.page-title {
+  font-family: var(--serif);
+  font-size: 28px;
+  color: var(--k0);
+  margin-bottom: 4px;
+}
+.page-sub {
+  font-size: 14px;
+  color: var(--k5);
+  margin-bottom: 16px;
+}
+.page-sub code {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.page-actions {
+  display: flex;
+  gap: 12px;
+}
+.loading,
+.error-msg,
+.empty {
+  padding: 40px 0;
+  color: var(--k5);
+}
+.error-msg {
+  color: #8f2b2b;
+  padding: 8px 0;
+}
+.empty strong {
+  color: var(--k0);
+}
+.table-wrap {
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.data-table th,
+.data-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--bd2);
+  vertical-align: top;
+}
+.data-table th {
+  font-weight: 600;
+  color: var(--k0);
+  background: var(--bg, #f7f5f0);
+}
+.name-cell {
+  font-weight: 500;
+  color: var(--k0);
+  max-width: 280px;
+}
+.desc-preview {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--k5);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.link {
+  color: var(--k0);
+  text-decoration: underline;
+}
+.th-actions,
+.td-actions {
+  white-space: nowrap;
+}
+.td-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  font-size: 13px;
+  padding: 8px 14px;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.btn-primary {
+  background: var(--k0);
+  color: var(--wh);
+}
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--bd);
+  color: var(--k0);
+}
+.btn-danger {
+  background: #8f2b2b;
+  color: #fff;
+}
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+.modal {
+  background: var(--wh);
+  border-radius: 12px;
+  padding: 28px;
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+.modal-sm {
+  width: min(420px, 100%);
+}
+.modal-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: var(--k0);
+}
+.modal-text {
+  font-size: 14px;
+  color: var(--k3);
+  margin-bottom: 16px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 14px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--k3);
+}
+.field-full {
+  grid-column: 1 / -1;
+}
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.input {
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--k0);
+  background: var(--wh);
+  flex: 1;
+  min-width: 0;
+}
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+.url-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.btn-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 14px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--bg, #f7f5f0);
+  color: var(--k0);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-upload.disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+</style>

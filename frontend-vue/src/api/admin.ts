@@ -277,3 +277,58 @@ export function uploadLandingMaterialFile(file: File): Promise<LandingMaterialUp
   fd.append('file', file)
   return postFormData<LandingMaterialUploadResult>('/api/admin/landing-materials/upload', fd)
 }
+
+// ——— Prompts da landing ———
+
+export interface LandingPrompt {
+  id: string
+  title: string
+  description: string
+  meta_label: string
+  prompt_url: string
+  order: number
+  active: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface LandingPromptPayload {
+  title: string
+  description: string
+  meta_label?: string
+  prompt_url: string
+  order?: number
+  active?: boolean
+}
+
+export function listLandingPrompts(): Promise<LandingPrompt[]> {
+  return get<LandingPrompt[]>('/api/admin/landing-prompts')
+}
+
+export function createLandingPrompt(body: LandingPromptPayload): Promise<LandingPrompt> {
+  return post<LandingPrompt>('/api/admin/landing-prompts', body)
+}
+
+export function updateLandingPrompt(
+  id: string,
+  body: Partial<LandingPromptPayload>
+): Promise<LandingPrompt> {
+  return put<LandingPrompt>(`/api/admin/landing-prompts/${encodeURIComponent(id)}`, body)
+}
+
+export function deleteLandingPrompt(id: string): Promise<{ message: string; id: string }> {
+  return del<{ message: string; id: string }>(`/api/admin/landing-prompts/${encodeURIComponent(id)}`)
+}
+
+export interface LandingPromptUploadResult {
+  url: string
+  filename: string
+  size: number
+}
+
+/** Envia arquivo MD/TXT para material_gratuito/ e retorna a URL pública. */
+export function uploadLandingPromptFile(file: File): Promise<LandingPromptUploadResult> {
+  const fd = new FormData()
+  fd.append('file', file)
+  return postFormData<LandingPromptUploadResult>('/api/admin/landing-prompts/upload', fd)
+}

@@ -86,6 +86,91 @@
   }, 15000);
 })();
 
+/* Prompts da landing: lista dinâmica via API (mesmo padrão dos materiais). */
+(function loadLandingPromptsBoot() {
+  function promptsApiUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var fromQuery = params.get('apiBase');
+    if (fromQuery && fromQuery.length) {
+      return fromQuery.replace(/\/$/, '') + '/api/public/landing-prompts';
+    }
+    return '/api/public/landing-prompts';
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderPromptItem(item) {
+    var meta = item.meta_label
+      ? '<span class="prompt-link-meta">' + escapeHtml(item.meta_label) + '</span>'
+      : '';
+    return (
+      '<li>' +
+        '<a class="prompt-link" href="' + escapeHtml(item.prompt_url) + '" target="_blank" rel="noopener noreferrer">' +
+          meta +
+          '<span class="prompt-link-title">' + escapeHtml(item.title) + '</span>' +
+          '<span class="prompt-link-desc">' + escapeHtml(item.description) + '</span>' +
+        '</a>' +
+      '</li>'
+    );
+  }
+
+  function setPromptsHtml(html) {
+    var list = document.getElementById('prompts-list');
+    if (list) list.innerHTML = html;
+  }
+
+  function loadLandingPrompts() {
+    var list = document.getElementById('prompts-list');
+    if (!list) return;
+
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function () {
+      if (ctrl) ctrl.abort();
+    }, 12000);
+
+    var opts = ctrl ? { signal: ctrl.signal } : {};
+    fetch(promptsApiUrl(), opts)
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (items) {
+        if (!Array.isArray(items) || items.length === 0) {
+          setPromptsHtml('<li class="prompts-empty">Em breve: prompts úteis para download.</li>');
+          return;
+        }
+        setPromptsHtml(items.map(renderPromptItem).join(''));
+      })
+      .catch(function () {
+        setPromptsHtml('<li class="prompts-empty">Não foi possível carregar os prompts agora.</li>');
+      })
+      .then(function () {
+        clearTimeout(timer);
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadLandingPrompts);
+  } else {
+    loadLandingPrompts();
+  }
+
+  setTimeout(function () {
+    var list = document.getElementById('prompts-list');
+    if (!list) return;
+    if (/Carregando prompts/i.test(list.textContent || '')) {
+      setPromptsHtml('<li class="prompts-empty">Não foi possível carregar os prompts agora.</li>');
+    }
+  }, 15000);
+})();
+
 try {
   // Navbar scroll effect
   const navbar = document.getElementById('navbar');

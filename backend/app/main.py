@@ -255,6 +255,7 @@ if USE_VUE_UI:
     @app.get("/admin/progresso")
     @app.get("/admin/quiz")
     @app.get("/admin/materiais-landing")
+    @app.get("/admin/prompts-landing")
     def admin_pages():
         return _vue_index()
 

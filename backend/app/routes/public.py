@@ -78,6 +78,25 @@ def list_landing_materials_public(db: Database = Depends(get_db)):
     ]
 
 
+@router.get("/landing-prompts")
+def list_landing_prompts_public(db: Database = Depends(get_db)):
+    """Lista prompts MD ativos para a landing. Público."""
+    docs = list(
+        db.landing_prompts.find({"active": True}).sort([("order", 1), ("created_at", 1)])
+    )
+    return [
+        {
+            "id": str(d["_id"]),
+            "title": d.get("title", ""),
+            "description": d.get("description", ""),
+            "meta_label": d.get("meta_label") or "",
+            "prompt_url": d.get("prompt_url", ""),
+            "order": int(d.get("order") or 0),
+        }
+        for d in docs
+    ]
+
+
 @router.post("/leads")
 def create_lead(payload: LeadCreate, db: Database = Depends(get_db)):
     """Recebe os dados do formulário de aplicação da landing e persiste como lead."""
