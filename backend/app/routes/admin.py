@@ -142,6 +142,17 @@ def _get_total_materiais(course_payload: dict) -> int:
 
 
 @router.get("/dashboard")
+def _swot_is_filled(doc: dict | None) -> bool:
+    """SWOT preenchido = ao menos um item em qualquer quadrante."""
+    if not doc:
+        return False
+    for key in ("forcas", "fraquezas", "oportunidades", "ameacas"):
+        items = doc.get(key) or []
+        if isinstance(items, list) and len(items) > 0:
+            return True
+    return False
+
+
 def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
     """Lista alunos com progresso (encontros, material, quiz) e data do próximo encontro. Ordenado pela data do próximo encontro (mais próximo primeiro). Apenas admin."""
     users = list(
@@ -159,6 +170,17 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
     maturity_responded_user_ids = set()
     for doc in db.maturity_responses.find({}, {"user_id": 1}):
         maturity_responded_user_ids.add(doc["user_id"])
+
+    swot_filled_by_user: dict = {}
+    for doc in db.swot_analyses.find(
+        {},
+        {"user_id": 1, "forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1},
+    ):
+        swot_filled_by_user[doc["user_id"]] = _swot_is_filled(doc)
+
+    canvas_count_by_user: dict = {}
+    for r in db.canvas_projects.aggregate([{"$group": {"_id": "$user_id", "count": {"$sum": 1}}}]):
+        canvas_count_by_user[r["_id"]] = int(r["count"])
 
     courses_cache: dict = {}  # slug -> (pfe, titulo)
     rows = []
@@ -211,6 +233,8 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
             "quiz_total": quiz_count,
             "maturity_done": maturity_done,
             "maturity_total": maturity_total,
+            "swot_filled": bool(swot_filled_by_user.get(uid, False)),
+            "canvas_count": canvas_count_by_user.get(uid, 0),
             "next_meeting_iso": next_iso,
             "_next_ts": next_ts,
         })
@@ -516,12 +540,22 @@ def get_user_course_and_progress(
             "total": resp.get("total"),
         }
 
+    swot_doc = db.swot_analyses.find_one(
+        {"user_id": uid},
+        {"forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1, "updated_at": 1},
+    )
+    swot_updated = swot_doc.get("updated_at") if swot_doc else None
+    canvas_count = db.canvas_projects.count_documents({"user_id": uid})
+
     return {
         "user": {"id": user_id, "name": user.get("name", ""), "email": user.get("email", "")},
         "course_slug": course_slug,
         "programa_formacao_executiva": payload_for_json(payload),
         "materiais_por_encontro": materiais_por_encontro,
         "quiz_por_encontro": quiz_por_encontro,
+        "swot_filled": _swot_is_filled(swot_doc),
+        "swot_updated_at": swot_updated.isoformat() if swot_updated else None,
+        "canvas_count": canvas_count,
         "progress": {
             "concluidos": progress.get("concluidos", []),
             "ativo": progress.get("ativo", 1),

@@ -72,6 +72,8 @@ export interface DashboardStudent {
   quiz_total: number
   maturity_done: number
   maturity_total: number
+  swot_filled: boolean
+  canvas_count: number
   next_meeting_iso: string | null
 }
 
@@ -85,6 +87,9 @@ export interface UserCourseAndProgress {
   programa_formacao_executiva: Record<string, unknown>
   materiais_por_encontro?: Record<string, number>
   quiz_por_encontro?: Record<string, { tem_quiz: boolean; respondido: boolean; score?: number; total?: number }>
+  swot_filled: boolean
+  swot_updated_at: string | null
+  canvas_count: number
   progress: {
     concluidos: number[]
     ativo: number

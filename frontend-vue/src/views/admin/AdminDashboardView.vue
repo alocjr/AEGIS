@@ -136,6 +136,19 @@ onMounted(async () => {
           </div>
         </div>
 
+        <div class="card-extras">
+          <div class="extra-chip" :class="s.swot_filled ? 'extra-chip--ok' : 'extra-chip--pending'">
+            <span class="extra-chip-label">SWOT</span>
+            <span class="extra-chip-value">{{ s.swot_filled ? 'Preenchido' : 'Pendente' }}</span>
+          </div>
+          <div class="extra-chip" :class="s.canvas_count > 0 ? 'extra-chip--ok' : 'extra-chip--pending'">
+            <span class="extra-chip-label">Canvas</span>
+            <span class="extra-chip-value">
+              {{ s.canvas_count }} {{ s.canvas_count === 1 ? 'projeto' : 'projetos' }}
+            </span>
+          </div>
+        </div>
+
         <div v-if="s.next_meeting_iso" class="card-next">
           <span class="card-next-label">Próximo encontro</span>
           <span class="card-next-date">{{ formatNext(s.next_meeting_iso) }}</span>
@@ -314,6 +327,57 @@ onMounted(async () => {
   color: var(--k4);
   text-align: right;
   min-width: 2.5em;
+}
+
+.card-extras {
+  display: flex;
+  gap: 10px;
+  padding: 0 22px 18px;
+  flex-wrap: wrap;
+}
+
+.extra-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--bd2);
+  background: var(--k9);
+}
+
+.extra-chip--ok {
+  border-color: rgba(45, 106, 79, 0.25);
+  background: rgba(45, 106, 79, 0.06);
+}
+
+.extra-chip--pending {
+  border-color: rgba(143, 43, 43, 0.18);
+  background: rgba(143, 43, 43, 0.04);
+}
+
+.extra-chip-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--k5);
+}
+
+.extra-chip-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--k3);
+}
+
+.extra-chip--ok .extra-chip-value {
+  color: #2d6a4f;
+}
+
+.extra-chip--pending .extra-chip-value {
+  color: #8f2b2b;
 }
 
 .card-next {

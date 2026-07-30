@@ -290,6 +290,35 @@ onMounted(() => loadData())
             <span class="resumo-card-desc" v-else>Nenhuma pergunta respondida</span>
           </div>
         </div>
+        <div class="resumo-card" :class="data.swot_filled ? 'resumo-card--swot-ok' : 'resumo-card--swot-pending'">
+          <div class="resumo-card-header">
+            <span class="resumo-card-title">SWOT de IA</span>
+            <span class="resumo-card-pct" :class="data.swot_filled ? '' : 'resumo-card-pct--muted'">
+              {{ data.swot_filled ? 'Sim' : 'Não' }}
+            </span>
+          </div>
+          <div class="resumo-card-detail">
+            <span class="resumo-card-nums">{{ data.swot_filled ? 'Preenchido' : 'Pendente' }}</span>
+            <span class="resumo-card-desc" v-if="data.swot_updated_at">
+              Atualizado em {{ formatDate(data.swot_updated_at) }}
+            </span>
+            <span class="resumo-card-desc" v-else>Nenhum item nos quadrantes</span>
+          </div>
+        </div>
+        <div class="resumo-card" :class="data.canvas_count > 0 ? 'resumo-card--canvas-ok' : 'resumo-card--canvas-pending'">
+          <div class="resumo-card-header">
+            <span class="resumo-card-title">Projetos Canvas</span>
+            <span class="resumo-card-pct">{{ data.canvas_count }}</span>
+          </div>
+          <div class="resumo-card-detail">
+            <span class="resumo-card-nums">
+              {{ data.canvas_count }} {{ data.canvas_count === 1 ? 'projeto' : 'projetos' }}
+            </span>
+            <span class="resumo-card-desc">
+              {{ data.canvas_count > 0 ? 'criados pelo aluno' : 'nenhum projeto criado' }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div v-if="encontrosLiberados.length > 0" class="enc-section enc-section--liberados">
@@ -588,6 +617,24 @@ onMounted(() => loadData())
 .resumo-card-desc {
   font-size: 12px;
   color: var(--k5);
+}
+.resumo-card--swot-ok,
+.resumo-card--canvas-ok {
+  border-color: rgba(45, 106, 79, 0.28);
+}
+.resumo-card--swot-ok .resumo-card-pct,
+.resumo-card--canvas-ok .resumo-card-pct,
+.resumo-card--swot-ok .resumo-card-nums,
+.resumo-card--canvas-ok .resumo-card-nums {
+  color: #2d6a4f;
+}
+.resumo-card--swot-pending,
+.resumo-card--canvas-pending {
+  border-color: rgba(143, 43, 43, 0.2);
+}
+.resumo-card--swot-pending .resumo-card-nums,
+.resumo-card--canvas-pending .resumo-card-nums {
+  color: #8f2b2b;
 }
 
 .enc-section {
