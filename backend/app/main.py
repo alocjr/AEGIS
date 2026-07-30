@@ -66,6 +66,7 @@ from app.routes.maturity import router as maturity_router
 from app.routes.progress import router as progress_router
 from app.routes.quiz import router as quiz_router
 from app.routes.public import router as public_router
+from app.routes.swot_analysis import router as swot_analysis_router
 from app.utils.material_gratuito import material_gratuito_dir
 
 
@@ -193,6 +194,7 @@ app.include_router(course_router)
 app.include_router(progress_router)
 app.include_router(maturity_router)
 app.include_router(canvas_projects_router)
+app.include_router(swot_analysis_router)
 app.include_router(quiz_router)
 app.include_router(admin_router)
 app.include_router(public_router)
@@ -240,6 +242,10 @@ if USE_VUE_UI:
 
     @app.get("/projetos")
     def projetos_page():
+        return _vue_index()
+
+    @app.get("/swot")
+    def swot_page():
         return _vue_index()
 
     @app.get("/admin")

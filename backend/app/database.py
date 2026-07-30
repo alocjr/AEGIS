@@ -37,5 +37,6 @@ def init_indexes() -> None:
     db.landing_materials.create_index([("active", 1), ("order", 1)])
     db.landing_materials.create_index("created_at")
     db.canvas_projects.create_index([("user_id", 1), ("updated_at", -1)])
+    db.swot_analyses.create_index("user_id", unique=True)
     db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)
     db.auth_rate_limits.create_index([("email", 1), ("scope", 1), ("at", -1)])

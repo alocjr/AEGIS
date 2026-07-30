@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>White Paper — SWOT de IA · Valorian</title>
+<style>
+  :root{
+    --navy:#0E1B33; --navy-2:#16243F; --ink:#242A33;
+    --gold:#C6A15B; --gold-2:#E3CB93;
+    --ivory:#F6F1E7; --ivory-2:#FBF8F1;
+    --oxblood:#7C3A3A;
+    --muted:#6E6A60; --line:rgba(198,161,91,.32);
+    --serif:Cambria,"Hoefler Text",Georgia,"Times New Roman",serif;
+    --sans:Calibri,"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--ivory);color:var(--ink);font-family:var(--sans);
+    font-size:17px;line-height:1.62;font-weight:400}
+  .wrap{max-width:820px;margin:0 auto;background:var(--ivory-2);
+    box-shadow:0 1px 40px rgba(14,27,51,.10)}
+  .eyebrow{font-size:.72rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--gold);font-weight:600}
+
+  /* Cover */
+  .cover{background:var(--navy);color:#EDE7DA;padding:56px 44px 44px;position:relative;overflow:hidden}
+  .cover:before{content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(680px 240px at 88% -8%, rgba(198,161,91,.20), transparent 60%),
+      linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);}
+  .cover>*{position:relative}
+  .cover .eyebrow{color:var(--gold-2)}
+  .cover h1{font-family:var(--serif);font-weight:600;line-height:1.04;
+    font-size:clamp(2.5rem,7.5vw,3.9rem);margin:.34em 0 .18em;letter-spacing:.01em;color:#FBF8F1}
+  .cover h1 em{font-style:italic;color:var(--gold-2)}
+  .cover .sub{font-family:var(--serif);font-size:clamp(1.05rem,3.2vw,1.32rem);
+    color:#CFC7B6;max-width:34ch;line-height:1.4}
+  .rule{height:2px;width:64px;background:var(--gold);margin:22px 0 0;border:0}
+  .meta{margin-top:26px;font-size:.8rem;letter-spacing:.06em;color:#9DA6B8;
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .meta b{color:var(--gold-2);font-weight:600}
+  .dot{width:4px;height:4px;border-radius:50%;background:#4C5875}
+
+  /* Body */
+  section{padding:38px 44px}
+  section+section{border-top:1px solid var(--line)}
+  h2{font-family:var(--serif);font-weight:600;color:var(--navy);
+    font-size:clamp(1.35rem,4.4vw,1.75rem);line-height:1.15;margin:.2em 0 .55em;letter-spacing:.01em}
+  h3{font-family:var(--sans);font-weight:700;color:var(--navy);font-size:1.02rem;
+    margin:1.5em 0 .35em;letter-spacing:.01em}
+  p{margin:0 0 1em}
+  .lead{font-family:var(--serif);font-size:1.16rem;line-height:1.55;color:#3A3F49}
+  .lead:first-letter{initial-letter:2;-webkit-initial-letter:2;color:var(--gold);
+    font-weight:700;margin-right:8px}
+  strong{color:var(--navy);font-weight:700}
+  .muted{color:var(--muted)}
+
+  ul{margin:0 0 1em;padding:0;list-style:none}
+  ul li{position:relative;padding:0 0 .55em 22px}
+  ul li:before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;
+    transform:rotate(45deg);background:var(--gold)}
+
+  /* Pillars strip */
+  .pillars{display:flex;flex-wrap:wrap;gap:8px;margin:.4em 0 1em}
+  .chip{font-size:.78rem;letter-spacing:.02em;background:#fff;border:1px solid var(--line);
+    color:var(--navy);padding:5px 11px;border-radius:2px}
+
+  /* Object banner */
+  .object{background:var(--navy);color:#F1EBDD;border-left:4px solid var(--gold);
+    padding:18px 22px;margin:6px 0 4px}
+  .object .eyebrow{color:var(--gold-2)}
+  .object p{margin:.35em 0 0;font-family:var(--serif);font-size:1.12rem;line-height:1.42;color:#FBF8F1}
+
+  /* SWOT matrix — signature */
+  .axis-top{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .axis-top span{text-align:center;font-size:.7rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--muted);font-weight:600;padding-bottom:6px}
+  .matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative}
+  .q{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);
+    padding:16px 18px}
+  .q.neg{border-top-color:var(--oxblood)}
+  .q .tag{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+  .q .letter{font-family:var(--serif);font-weight:700;font-size:1.5rem;color:var(--gold);line-height:1}
+  .q.neg .letter{color:var(--oxblood)}
+  .q .name{font-weight:700;color:var(--navy);font-size:.98rem;letter-spacing:.01em}
+  .q .quest{font-size:.82rem;color:var(--muted);font-style:italic;margin:-2px 0 10px;line-height:1.35}
+  .q ul{margin:0}
+  .q ul li{font-size:.92rem;padding:0 0 .5em 18px;line-height:1.42}
+  .q ul li:before{width:6px;height:6px;top:.55em}
+  .q.neg ul li:before{background:var(--oxblood)}
+  .node{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:74px;height:74px;border-radius:50%;background:var(--navy);color:var(--gold-2);
+    display:grid;place-content:center;text-align:center;font-size:.6rem;letter-spacing:.12em;
+    font-weight:700;border:2px solid var(--gold);box-shadow:0 4px 18px rgba(14,27,51,.35);z-index:2}
+
+  /* TOWS */
+  .tows{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:.6em}
+  .tows .cell{border:1px solid var(--line);padding:14px 16px;background:#fff}
+  .tows .k{font-family:var(--serif);font-weight:700;color:var(--gold);font-size:.9rem;letter-spacing:.06em}
+  .tows .cell.hard{border-color:var(--oxblood);background:#FCF6F4}
+  .tows .cell.hard .k{color:var(--oxblood)}
+  .tows p{font-size:.93rem;margin:.35em 0 0;line-height:1.44}
+
+  /* Verdict */
+  .verdict{background:var(--navy);color:#EFE9DB;padding:26px 30px;margin-top:8px;position:relative}
+  .verdict:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
+  .verdict .eyebrow{color:var(--gold-2)}
+  .verdict h3{color:#FBF8F1;margin:.4em 0 .5em;font-size:1.16rem}
+  .verdict p{color:#D8D2C4;margin:0 0 .6em}
+  .verdict strong{color:var(--gold-2)}
+
+  footer{background:var(--navy);color:#8C93A6;padding:26px 44px;font-size:.8rem;
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+  footer b{color:#FBF8F1;font-family:var(--serif);font-weight:600;letter-spacing:.02em}
+  footer .g{color:var(--gold)}
+
+  @media (max-width:620px){
+    .cover{padding:40px 24px 32px}
+    section{padding:30px 24px}
+    footer{padding:24px}
+    .matrix{grid-template-columns:1fr}
+    .axis-top{display:none}
+    .tows{grid-template-columns:1fr}
+    .node{position:static;transform:none;width:auto;height:auto;border-radius:3px;
+      margin:2px 0;padding:8px 12px;box-shadow:none}
+  }
+  @media print{
+    body{background:#fff}.wrap{box-shadow:none;max-width:none}
+    section{page-break-inside:avoid}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* Steps */
+  .steps{list-style:none;margin:.3em 0 1.2em;padding:0;counter-reset:s}
+  .steps li{position:relative;padding:2px 0 .95em 48px;counter-increment:s}
+  .steps li:before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:-3px;
+    font-family:var(--serif);font-weight:700;font-size:1.3rem;color:var(--gold)}
+  .steps li strong{display:block;margin-bottom:1px}
+
+  /* Catalog — banco de itens */
+  .catalog{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:.5em 0 .4em}
+  .cat{background:#fff;border:1px solid var(--line);border-top:3px solid var(--gold);padding:15px 17px}
+  .cat.neg{border-top-color:var(--oxblood)}
+  .cat .tag{display:flex;align-items:baseline;gap:9px;margin-bottom:2px}
+  .cat .letter{font-family:var(--serif);font-weight:700;font-size:1.5rem;color:var(--gold);line-height:1}
+  .cat.neg .letter{color:var(--oxblood)}
+  .cat .name{font-weight:700;color:var(--navy);font-size:.98rem}
+  .cat .glabel{font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin:.85em 0 .2em}
+  .cat ul{margin:0}
+  .cat ul li{font-size:.88rem;padding:0 0 .35em 16px;line-height:1.38}
+  .cat ul li:before{width:5px;height:5px;top:.55em;left:2px}
+  .cat.neg ul li:before{background:var(--oxblood)}
+
+  /* Pillar questions */
+  .pillarq{margin:.3em 0 1em;border-top:1px solid var(--line)}
+  .pillarq div{padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem;line-height:1.42}
+  .pillarq b{color:var(--navy);font-weight:700}
+  .pillarq i{color:#3A3F49;font-style:italic}
+
+  /* TOWS teaching */
+  .tows .qz{display:block;font-style:italic;color:var(--muted);font-size:.85rem;margin:.35em 0 .2em;line-height:1.35}
+
+  /* Lenses — pilares de prontidão & dimensões do ambiente, com perguntas */
+  .lenses{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:.5em 0 .3em}
+  .lens{background:#fff;border:1px solid var(--line);padding:15px 17px}
+  .lens .glabel{display:block;font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--gold);font-weight:700;margin:0 0 .55em;padding-bottom:.5em;border-bottom:1px solid var(--line)}
+  .pil{margin:0}
+  .pil dt{font-weight:700;color:var(--navy);font-size:.9rem;margin:.65em 0 0}
+  .pil dt:first-of-type{margin-top:0}
+  .pil dd{margin:.08em 0 0;font-size:.85rem;color:#4A4F58;line-height:1.4}
+
+  @media (max-width:620px){ .catalog,.lenses{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+  <header class="cover">
+    <div class="eyebrow">White Paper · Valorian</div>
+    <h1>SWOT de <em>IA</em></h1>
+    <div class="sub">Análise estratégica sob a perspectiva de inteligência artificial — com um caso aplicado.</div>
+    <hr class="rule">
+    <div class="meta"><b>Valorian</b><span class="dot"></span><span>Letramento &amp; Estratégia de IA</span><span class="dot"></span><span>2026</span></div>
+  </header>
+
+  <section>
+    <p class="lead">A maioria das iniciativas de IA não fracassa por falta de tecnologia — fracassa por falta de leitura estratégica. A <strong>SWOT de IA</strong> adapta a matriz clássica de planejamento estratégico — a <strong>FOFA</strong>, em português — para um único propósito: diagnosticar <strong>a organização sob a ótica da sua estratégia de IA</strong> — se ela está, de fato, posicionada para realizá-la.</p>
+    <p class="muted">Este paper descreve o instrumento em uma página e o aplica a um caso ilustrativo, até o veredito.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">O método em uma página</div>
+    <h2>O objeto é a organização. A ótica é a estratégia de IA.</h2>
+    <p>Não se avalia um projeto isolado. Avalia-se <strong>a organização inteira</strong> — seus ativos, lacunas e ambiente — lida através de uma única lente: <strong>a estratégia organizacional de IA</strong>, a ambição declarada de para onde a empresa quer ir com inteligência artificial. Um item só entra na matriz se afeta materialmente a capacidade da organização de <em>executar essa estratégia</em>. É por isso que o objeto é a organização, e não a área de tecnologia: a IA entra aqui como <strong>vetor de transformação do modelo de negócio</strong>, não como projeto de TI.</p>
+
+    <h3>Sete pilares atravessam os quatro quadrantes</h3>
+    <p class="muted" style="margin-bottom:.4em">Cada quadrante é varrido pelos mesmos sete pilares — e cada pilar faz uma pergunta que orienta a busca. É o que impede a matriz de virar lista de opiniões.</p>
+    <div class="pillarq">
+      <div><b>Dados.</b> <i>Temos dados proprietários, limpos e integrados para alimentar e contextualizar modelos?</i></div>
+      <div><b>Talento.</b> <i>Há competência técnica e lideranças com letramento para conduzir?</i></div>
+      <div><b>Infraestrutura.</b> <i>A arquitetura (nuvem, APIs) consome IA com segurança, sem travar no legado?</i></div>
+      <div><b>Governança &amp; Regulação.</b> <i>Temos conformidade (LGPD), auditoria de viés e alucinação, isolamento de dados sensíveis e validação humana no que é crítico?</i></div>
+      <div><b>Cultura &amp; Liderança.</b> <i>Há patrocínio do topo e abertura à mudança — ou medo e resistência?</i></div>
+      <div><b>Portfólio de casos.</b> <i>Sabemos priorizar casos por valor e prontidão, com dono definido?</i></div>
+      <div><b>Ecossistema &amp; Fornecedores.</b> <i>Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?</i></div>
+    </div>
+
+    <h3>Duas regras que fazem o instrumento funcionar</h3>
+    <ul>
+      <li><strong>Locus disciplinado.</strong> Forças e Fraquezas são internas (o que mudamos sozinhos). Oportunidades e Ameaças são do ambiente (o que não controlamos).</li>
+      <li><strong>Baseado em evidência.</strong> Cada item ancorado num fato ou métrica — e priorizado por impacto, não enumerado.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">Como usar</div>
+    <h2>Da matriz à decisão, em cinco passos</h2>
+
+    <ol class="steps">
+      <li><strong>Declare a ótica.</strong> Escreva a estratégia organizacional de IA em uma frase — a ambição que serve de lente. Sem ela, os itens flutuam.</li>
+      <li><strong>Varra os quadrantes pelos sete pilares.</strong> Para cada pilar, pergunte o que é força e o que é fraqueza (interno), o que o ambiente oferece e o que ameaça (externo). Use o banco de itens abaixo como partida.</li>
+      <li><strong>Aplique o crivo.</strong> Descarte todo item que não afete materialmente a execução da estratégia — por mais verdadeiro que seja em outra análise.</li>
+      <li><strong>Priorize.</strong> Ordene por impacto × probabilidade (Oportunidades e Ameaças) e impacto × viabilidade (Forças e Fraquezas). Fique com os 2–3 itens mais fortes de cada quadrante.</li>
+      <li><strong>Cruze e conclua.</strong> Combine os quadrantes para gerar iniciativas e chegar ao veredito: a estratégia se sustenta, precisa de uma fase de fundação, ou deve ser repensada?</li>
+    </ol>
+
+    <h3>Banco de itens — por onde procurar em cada quadrante</h3>
+    <p class="muted" style="margin-bottom:.3em">Um repertório de partida, organizado pelos pilares. Não é lista para preencher inteira: é estímulo para não deixar passar o que importa.</p>
+
+    <div class="catalog">
+      <div class="cat">
+        <div class="tag"><span class="letter">F</span><span class="name">Forças</span></div>
+        <div class="glabel">Dados</div>
+        <ul><li>Base proprietária ampla, integrada e de qualidade, com histórico longo</li></ul>
+        <div class="glabel">Talento &amp; cultura</div>
+        <ul><li>Time de dados/IA constituído; lideranças com letramento; cultura de experimentação</li></ul>
+        <div class="glabel">Infra &amp; governança</div>
+        <ul><li>Dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana (human-in-the-loop)</li></ul>
+        <div class="glabel">Portfólio &amp; recursos</div>
+        <ul><li>Casos em produção com ROI comprovado; caixa e patrocínio do topo</li></ul>
+      </div>
+
+      <div class="cat">
+        <div class="tag"><span class="letter">O</span><span class="name">Oportunidades</span></div>
+        <div class="glabel">Tecnologia &amp; ecossistema</div>
+        <ul><li>Barateamento e maturação dos modelos; IA generativa, RAG e agêntica; ferramentas abertas e parceiros</li></ul>
+        <div class="glabel">Mercado &amp; clientes</div>
+        <ul><li>Demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos</li></ul>
+        <div class="glabel">Concorrência</div>
+        <ul><li>Concorrentes lentos ou pouco maduros — janela para liderar</li></ul>
+        <div class="glabel">Talento &amp; incentivos</div>
+        <ul><li>Oferta crescente de talento e ecossistemas locais; editais e incentivos</li></ul>
+      </div>
+
+      <div class="cat neg">
+        <div class="tag"><span class="letter">f</span><span class="name">Fraquezas</span></div>
+        <div class="glabel">Dados</div>
+        <ul><li>Silos, baixa qualidade, sem propriedade clara nem rotulagem</li></ul>
+        <div class="glabel">Talento &amp; cultura</div>
+        <ul><li>Falta de especialistas; letramento desigual; resistência ou aversão a risco</li></ul>
+        <div class="glabel">Infra &amp; governança</div>
+        <ul><li>Legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados sensíveis</li></ul>
+        <div class="glabel">Portfólio &amp; recursos</div>
+        <ul><li>Só pilotos sem escala; sem dono, critério de priorização ou business case</li></ul>
+      </div>
+
+      <div class="cat neg">
+        <div class="tag"><span class="letter">A</span><span class="name">Ameaças</span></div>
+        <div class="glabel">Concorrência</div>
+        <ul><li>Players maduros e marketplaces com IA avançada; risco de disrupção do core</li></ul>
+        <div class="glabel">Regulação</div>
+        <ul><li>LGPD, marco de IA e regras setoriais elevando o custo de conformidade; exposição de dados sensíveis a modelos públicos</li></ul>
+        <div class="glabel">Fornecedores &amp; modelo</div>
+        <ul><li>Lock-in, mudança de preço ou descontinuação; alucinação, viés e risco reputacional</li></ul>
+        <div class="glabel">Talento &amp; ritmo</div>
+        <ul><li>Guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas superando a adaptação</li></ul>
+      </div>
+    </div>
+
+    <h3>Como usar o cruzamento</h3>
+    <p>A matriz preenchida é matéria-prima, não conclusão. O cruzamento (matriz TOWS) combina um fator <strong>interno</strong> com um <strong>externo</strong> para transformar diagnóstico em decisão. Cada combinação responde a uma pergunta e gera um tipo de estratégia:</p>
+
+    <div class="tows">
+      <div class="cell"><span class="k">F × O · Ofensiva</span>
+        <span class="qz">Como usar nossas forças para capturar as oportunidades?</span>
+        <p>As apostas de crescimento — onde investir e acelerar.</p></div>
+      <div class="cell"><span class="k">F × A · Defesa</span>
+        <span class="qz">Como usar nossas forças para neutralizar as ameaças?</span>
+        <p>Como proteger a posição e transformar risco em barreira de entrada.</p></div>
+      <div class="cell"><span class="k">f × O · Reforço</span>
+        <span class="qz">Que fraquezas travam a captura das oportunidades?</span>
+        <p>O que consertar primeiro — a fila de capacitação.</p></div>
+      <div class="cell hard"><span class="k">f × A · Sobrevivência</span>
+        <span class="qz">Onde a vulnerabilidade interna encontra o risco externo?</span>
+        <p>O ponto de maior perigo — mitigar ou repensar a estratégia.</p></div>
+    </div>
+
+    <h3>Na prática</h3>
+    <ul>
+      <li><strong>Não cruze tudo.</strong> Combinar todos os itens explode a análise. Pegue os 2–3 priorizados de cada quadrante e cruze só os pares com conexão real.</li>
+      <li><strong>Cada cruzamento vira uma iniciativa</strong>, não uma frase: registre a ação, o dono e o horizonte.</li>
+      <li><strong>Comece pelo f × A.</strong> É onde a estratégia pode quebrar; se o risco for grave, ele reordena todas as prioridades.</li>
+      <li><strong>Do cruzamento ao veredito.</strong> Pese o que dá para jogar no ataque e na defesa (F×O, F×A) contra o que precisa ser corrigido ou mitigado (f×O, f×A) — e conclua se a estratégia é executável como está, executável com uma fase de fundação, ou se precisa ser repensada.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">Caso aplicado · ilustrativo</div>
+    <h2>Rede Aurora: pronta para a própria ambição de IA?</h2>
+    <p>Rede varejista de médio porte (moda e casa), ~40 lojas e e-commerce. O board definiu uma direção estratégica de IA para os próximos anos. A pergunta do SWOT não é sobre um projeto — é sobre a organização: ela está posicionada para realizar essa estratégia?</p>
+
+    <div class="object">
+      <div class="eyebrow">A ótica · estratégia organizacional de IA</div>
+      <p>Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala, operação assistida por IA (compras, estoque, atendimento) e decisão apoiada por dados — para <strong>defender margem</strong> diante dos marketplaces.</p>
+    </div>
+
+    <div class="axis-top"><span>Interno</span><span>Externo</span></div>
+    <div class="matrix">
+      <div class="node">A<br>ORGANI-<br>ZAÇÃO</div>
+
+      <div class="q">
+        <div class="tag"><span class="letter">F</span><span class="name">Forças</span></div>
+        <div class="quest">O que a organização tem hoje que sustenta a estratégia de IA?</div>
+        <ul>
+          <li>Base de dados proprietária ampla e integrada (vendas, CRM, estoque) — ativo transversal, não de um caso só.</li>
+          <li>Caixa e margem saudáveis: capacidade de investir sem depender de um único payback.</li>
+          <li>Omnichannel (lojas, e-commerce, WhatsApp) gera dados ricos e múltiplos pontos de aplicação.</li>
+          <li>Board patrocina a IA como direção estratégica, não como iniciativa de uma área.</li>
+        </ul>
+      </div>
+
+      <div class="q">
+        <div class="tag"><span class="letter">O</span><span class="name">Oportunidades</span></div>
+        <div class="quest">Que condição externa a estratégia de IA pode explorar?</div>
+        <ul>
+          <li>Barateamento e maturação da IA reduzem a barreira para aplicá-la em várias funções ao mesmo tempo.</li>
+          <li>Varejo médio ainda pouco digitalizado em IA — janela para virar referência regional antes da concorrência.</li>
+          <li>Ecossistema local de talento e parceiros (universidades, Porto Digital) para formar e contratar capacidade.</li>
+        </ul>
+      </div>
+
+      <div class="q neg">
+        <div class="tag"><span class="letter">f</span><span class="name">Fraquezas</span></div>
+        <div class="quest">O que, dentro de casa, trava a estratégia de IA?</div>
+        <ul>
+          <li>Sem estrutura nem governança de IA corporativa: sem dono, política ou critério de portfólio.</li>
+          <li>Letramento desigual: comercial engajado; operações, finanças e RH sem repertório para achar casos.</li>
+          <li>Dados fortes em vendas, mas fracos e em silos na cadeia e no back-office — a ambição transversal esbarra aí.</li>
+          <li>Pouca capacidade interna: dependência de fornecedores para sustentar soluções no longo prazo.</li>
+        </ul>
+      </div>
+
+      <div class="q neg">
+        <div class="tag"><span class="letter">A</span><span class="name">Ameaças</span></div>
+        <div class="quest">O que pode inviabilizar ou encarecer a estratégia de IA?</div>
+        <ul>
+          <li>Marketplaces e grandes players com IA madura pressionam margem e experiência — risco de ficar estruturalmente atrás.</li>
+          <li>LGPD e regulação de IA elevam o custo de conformidade de uma estratégia ampla e data-intensive.</li>
+          <li>Guerra por talento: difícil atrair e reter capacidade de IA contra big techs e startups.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Cruzamento — do diagnóstico à decisão</h3>
+    <div class="tows">
+      <div class="cell"><span class="k">F × O · Ofensiva</span><p>Dados proprietários + patrocínio do board para capturar a janela e virar referência regional de varejo com IA antes dos concorrentes locais.</p></div>
+      <div class="cell"><span class="k">F × A · Defesa</span><p>Usar caixa e omnichannel para construir capacidade e experiência que os marketplaces não replicam no território local, protegendo margem.</p></div>
+      <div class="cell"><span class="k">f × O · Reforço</span><p>A janela só se captura com governança e letramento além do comercial — pré-condição para escalar além de pilotos.</p></div>
+      <div class="cell hard"><span class="k">f × A · Ponto duro</span><p>Sem estrutura de IA, contra guerra por talento e regulação, a estratégia se dissolve em pilotos sem dono, sem gente e sem conformidade.</p></div>
+    </div>
+
+    <div class="verdict">
+      <div class="eyebrow">Veredito</div>
+      <h3>Ambição certa, organização ainda não pronta.</h3>
+      <p>A direção é legítima e a Rede Aurora tem ativos reais — dados, caixa, patrocínio — para persegui-la. Mas o gargalo não é tecnológico: é de <strong>capacidade organizacional</strong>. Sem estrutura de governança de IA, critério de portfólio e letramento distribuído além do comercial, a estratégia transversal degenera em pilotos dispersos.</p>
+      <p>A recomendação não é “desacelere a ambição” — é <strong>institucionalizar a IA antes de multiplicá-la</strong>: dono, política, priorização e formação de lideranças. A força de dados só vira vantagem competitiva quando há uma organização capaz de operá-la em escala.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Quando usar</div>
+    <h2>Um bom SWOT de IA precisa poder dizer “repense”.</h2>
+    <p>Use-o em <strong>modo validação</strong> quando já há uma estratégia de IA formulada — para testar se a organização a sustenta; ou em <strong>modo diagnóstico</strong>, quando ainda não há — e o cruzamento alimenta a formulação. Em ambos, o valor está no crivo: a matriz só existe para dizer se a organização está, de fato, à altura da estratégia que declarou.</p>
+    <p class="muted">Um SWOT de IA que nunca conclui “ainda não estamos prontos” provavelmente foi preenchido para confirmar o que já se queria fazer.</p>
+  </section>
+
+  <footer>
+    <span><b>Valorian</b> <span class="g">·</span> Estratégia &amp; Letramento de IA</span>
+    <span>White Paper · SWOT de IA · 2026</span>
+  </footer>
+
+</div>
+</html>
