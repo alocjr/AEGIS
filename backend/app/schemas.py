@@ -90,7 +90,7 @@ class CanvasProjectUpdateRequest(BaseModel):
 
 
 class SwotItem(BaseModel):
-    """Item da matriz SWOT v2 — amarrado a um dos sete pilares."""
+    """Item da matriz SWOT — amarrado a um pilar do quadrante (canônico ou custom)."""
 
     id: str = Field(default="", max_length=64)
     texto: str = Field(default="", max_length=500)
@@ -100,6 +100,20 @@ class SwotItem(BaseModel):
     probabilidade: int | None = Field(None, ge=1, le=5)
     evidencia: str | None = Field(None, max_length=1000)
     prioridade: int | None = Field(None, ge=1, le=40)
+
+
+class SwotPilarSlot(BaseModel):
+    """Slot de pilar ativo em um quadrante (banco de itens + extras)."""
+
+    id: str = Field(min_length=1, max_length=40)
+    nome: str = Field(default="", max_length=80)
+
+
+class SwotPilaresPorQuadrante(BaseModel):
+    forcas: list[SwotPilarSlot] | None = Field(None, max_length=12)
+    fraquezas: list[SwotPilarSlot] | None = Field(None, max_length=12)
+    oportunidades: list[SwotPilarSlot] | None = Field(None, max_length=12)
+    ameacas: list[SwotPilarSlot] | None = Field(None, max_length=12)
 
 
 class SwotInitiative(BaseModel):
@@ -113,6 +127,7 @@ class SwotInitiative(BaseModel):
 
 class SwotAnalysisUpdateRequest(BaseModel):
     optica: str | None = Field(None, max_length=2000)
+    pilares: SwotPilaresPorQuadrante | None = None
     forcas: list[SwotItem | str] | None = Field(None, max_length=40)
     fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
     oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)
@@ -127,13 +142,14 @@ class SwotAnalysisUpdateRequest(BaseModel):
 
 
 class SwotImportRequest(BaseModel):
-    """Envelope aegis.swot-ia (v1 ou v2) ou payload direto."""
+    """Envelope aegis.swot-ia (v1–v3) ou payload direto."""
 
     format: str | None = None
     version: int | None = None
     payload: SwotAnalysisUpdateRequest | None = None
     # Campos do payload também aceitos no root (import sem envelope)
     optica: str | None = Field(None, max_length=2000)
+    pilares: SwotPilaresPorQuadrante | None = None
     forcas: list[SwotItem | str] | None = Field(None, max_length=40)
     fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
     oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)

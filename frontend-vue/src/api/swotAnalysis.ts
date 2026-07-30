@@ -16,6 +16,13 @@ export type SwotPilarId =
   | 'ecossistema'
   | ''
 
+export interface SwotPilarSlot {
+  id: string
+  nome: string
+}
+
+export type SwotPilaresPorQuadrante = Record<SwotListField, SwotPilarSlot[]>
+
 export interface SwotItem {
   id: string
   texto: string
@@ -39,6 +46,7 @@ export interface SwotInitiative {
 export interface SwotAnalysis {
   id: string
   optica: string
+  pilares: SwotPilaresPorQuadrante
   forcas: SwotItem[]
   fraquezas: SwotItem[]
   oportunidades: SwotItem[]
@@ -56,6 +64,7 @@ export interface SwotAnalysis {
 
 export type SwotAnalysisPayload = Partial<{
   optica: string
+  pilares: SwotPilaresPorQuadrante
   forcas: SwotItem[]
   fraquezas: SwotItem[]
   oportunidades: SwotItem[]
@@ -116,6 +125,42 @@ export const SWOT_PILLARS: { id: Exclude<SwotPilarId, ''>; name: string; q: stri
     q: 'Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?',
   },
 ]
+
+/** Defaults do banco de itens por quadrante (rótulos de partida). */
+export const SWOT_QUADRANT_DEFAULT_PILLARS: SwotPilaresPorQuadrante = {
+  forcas: [
+    { id: 'dados', nome: 'Dados' },
+    { id: 'talento', nome: 'Talento & cultura' },
+    { id: 'infraestrutura', nome: 'Infra & governança' },
+    { id: 'portfolio', nome: 'Portfólio & recursos' },
+  ],
+  oportunidades: [
+    { id: 'ecossistema', nome: 'Tecnologia & ecossistema' },
+    { id: 'portfolio', nome: 'Mercado & clientes' },
+    { id: 'talento', nome: 'Talento & incentivos' },
+  ],
+  fraquezas: [
+    { id: 'dados', nome: 'Dados' },
+    { id: 'talento', nome: 'Talento & cultura' },
+    { id: 'governanca', nome: 'Infra & governança' },
+    { id: 'portfolio', nome: 'Portfólio & recursos' },
+  ],
+  ameacas: [
+    { id: 'portfolio', nome: 'Concorrência' },
+    { id: 'governanca', nome: 'Regulação' },
+    { id: 'ecossistema', nome: 'Fornecedores & modelo' },
+    { id: 'talento', nome: 'Talento & ritmo' },
+  ],
+}
+
+export function emptyPilares(): SwotPilaresPorQuadrante {
+  return {
+    forcas: [],
+    fraquezas: [],
+    oportunidades: [],
+    ameacas: [],
+  }
+}
 
 export function getSwotAnalysis(): Promise<SwotAnalysis> {
   return get<SwotAnalysis>('/api/swot-analysis')

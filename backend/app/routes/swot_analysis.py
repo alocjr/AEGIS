@@ -1,7 +1,8 @@
-"""SWOT de IA — um documento de análise por mentorado (modelo v2 com pilares)."""
+"""SWOT de IA — um documento de análise por mentorado (modelo v3 com pilares por quadrante)."""
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import datetime, timezone
 
@@ -10,25 +11,22 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_verified_user
-from app.schemas import SwotAnalysisUpdateRequest, SwotImportRequest, SwotInitiative, SwotItem
+from app.schemas import (
+    SwotAnalysisUpdateRequest,
+    SwotImportRequest,
+    SwotInitiative,
+    SwotItem,
+    SwotPilaresPorQuadrante,
+)
 
 router = APIRouter(prefix="/api/swot-analysis", tags=["swot-analysis"])
 
 _LIST_FIELDS = ("forcas", "fraquezas", "oportunidades", "ameacas")
 _TOWS_FIELDS = ("tows_fo", "tows_fa", "tows_fxo", "tows_fxa")
 _INTERNAL_FIELDS = frozenset({"forcas", "fraquezas"})
-_VEREDITO_TIPOS = frozenset({"executavel", "fundacao", "repensar", ""})
-_PILLARS = frozenset(
-    {
-        "dados",
-        "talento",
-        "infraestrutura",
-        "governanca",
-        "cultura",
-        "portfolio",
-        "ecossistema",
-    }
-)
+_VEREDITO_TIPOS = frozenset({"executavel", "sustenta", "fundacao", "repensar", ""})
+# Pilares canônicos + slugs custom (banco de itens / UI / import v3).
+_PILLAR_RE = re.compile(r"^[a-z][a-z0-9_-]{0,39}$")
 _FIELD_ID_PREFIX = {
     "forcas": "f",
     "fraquezas": "fx",
@@ -36,8 +34,16 @@ _FIELD_ID_PREFIX = {
     "ameacas": "a",
 }
 
+_EMPTY_PILARES = {
+    "forcas": [],
+    "fraquezas": [],
+    "oportunidades": [],
+    "ameacas": [],
+}
+
 _EMPTY_FIELDS = {
     "optica": "",
+    "pilares": {**_EMPTY_PILARES},
     "forcas": [],
     "fraquezas": [],
     "oportunidades": [],
@@ -108,8 +114,9 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
         return None
 
     pilar = str(data.get("pilar") or "").strip().lower()
-    if pilar not in _PILLARS:
+    if pilar and not _PILLAR_RE.fullmatch(pilar):
         pilar = ""
+    # Aceita canônicos e slugs custom criados na UI.
 
     item_id = str(data.get("id") or "").strip()[:64]
     if not item_id or item_id in used_ids:
@@ -220,12 +227,55 @@ def _clean_initiatives(value: list[SwotInitiative] | None) -> list[dict]:
     return _as_initiatives(value)
 
 
+def _clean_pillar_slots(value) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    out: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        if isinstance(raw, str):
+            pilar_id = raw.strip().lower()
+            nome = ""
+        elif isinstance(raw, dict):
+            pilar_id = str(raw.get("id") or "").strip().lower()
+            nome = str(raw.get("nome") or "").strip()[:80]
+        else:
+            continue
+        if not _PILLAR_RE.fullmatch(pilar_id) or pilar_id in seen:
+            continue
+        seen.add(pilar_id)
+        out.append({"id": pilar_id, "nome": nome})
+        if len(out) >= 12:
+            break
+    return out
+
+
+def _clean_pilares(value: SwotPilaresPorQuadrante | dict | None) -> dict:
+    if value is None:
+        return {field: [] for field in _LIST_FIELDS}
+    if isinstance(value, SwotPilaresPorQuadrante):
+        data = value.model_dump(exclude_unset=False)
+    elif isinstance(value, dict):
+        data = value
+    else:
+        return {field: [] for field in _LIST_FIELDS}
+    return {field: _clean_pillar_slots(data.get(field)) for field in _LIST_FIELDS}
+
+
+def _as_pilares(doc: dict) -> dict:
+    raw = doc.get("pilares")
+    if not isinstance(raw, dict):
+        return {field: [] for field in _LIST_FIELDS}
+    return _clean_pilares(raw)
+
+
 def _to_item(doc: dict) -> dict:
     created_at = doc.get("created_at")
     updated_at = doc.get("updated_at")
     return {
         "id": str(doc["_id"]),
         "optica": doc.get("optica") or "",
+        "pilares": _as_pilares(doc),
         "forcas": _as_item_list(doc.get("forcas"), "forcas"),
         "fraquezas": _as_item_list(doc.get("fraquezas"), "fraquezas"),
         "oportunidades": _as_item_list(doc.get("oportunidades"), "oportunidades"),
@@ -269,6 +319,9 @@ def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> 
         if key in updates:
             updates[key] = _clean_initiatives(getattr(body, key))
 
+    if "pilares" in updates:
+        updates["pilares"] = _clean_pilares(getattr(body, "pilares", None))
+
     if "optica" in updates:
         updates["optica"] = (updates.get("optica") or "").strip()[:2000]
     if "veredito_titulo" in updates:
@@ -277,6 +330,9 @@ def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> 
         updates["veredito_texto"] = (updates.get("veredito_texto") or "").strip()[:8000]
     if "veredito_tipo" in updates:
         tipo = (updates.get("veredito_tipo") or "").strip()
+        # Alias do prompt/método Valorian
+        if tipo == "sustenta":
+            tipo = "executavel"
         updates["veredito_tipo"] = tipo if tipo in _VEREDITO_TIPOS else ""
 
     updates["updated_at"] = datetime.now(timezone.utc)
@@ -288,8 +344,8 @@ def _payload_from_import(body: SwotImportRequest) -> SwotAnalysisUpdateRequest:
     fmt = (body.format or "").strip()
     if fmt and fmt != "aegis.swot-ia":
         raise HTTPException(status_code=400, detail="Formato inválido. Esperado format=aegis.swot-ia.")
-    if body.version is not None and body.version not in (1, 2):
-        raise HTTPException(status_code=400, detail="Versão não suportada. Use version 1 ou 2.")
+    if body.version is not None and body.version not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Versão não suportada. Use version 1, 2 ou 3.")
 
     if body.payload is not None:
         return body.payload
@@ -369,11 +425,12 @@ def import_swot(
     user=Depends(get_verified_user),
     db: Database = Depends(get_db),
 ):
-    """Importa um documento aegis.swot-ia (v1/v2) e substitui o conteúdo editável."""
+    """Importa um documento aegis.swot-ia (v1–v3) e substitui o conteúdo editável."""
     payload = _payload_from_import(body)
     # Importação é substituição completa dos campos do payload presentes
     full = SwotAnalysisUpdateRequest(
         optica=payload.optica if payload.optica is not None else "",
+        pilares=payload.pilares if payload.pilares is not None else SwotPilaresPorQuadrante(),
         forcas=payload.forcas if payload.forcas is not None else [],
         fraquezas=payload.fraquezas if payload.fraquezas is not None else [],
         oportunidades=payload.oportunidades if payload.oportunidades is not None else [],

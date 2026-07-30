@@ -5,6 +5,8 @@ import {
   updateSwotAnalysis,
   importSwotAnalysis,
   SWOT_PILLARS,
+  SWOT_QUADRANT_DEFAULT_PILLARS,
+  emptyPilares,
   type SwotAnalysis,
   type SwotAnalysisPayload,
   type SwotInitiative,
@@ -13,6 +15,8 @@ import {
   type SwotTowsField,
   type SwotVereditoTipo,
   type SwotPilarId,
+  type SwotPilarSlot,
+  type SwotPilaresPorQuadrante,
   type SwotImportDocument,
 } from '@/api/swotAnalysis'
 
@@ -25,11 +29,17 @@ const importError = ref<string | null>(null)
 const showMethod = ref(true)
 const showCatalog = ref(false)
 const openHelp = ref<SwotListField | null>(null)
+const addingPillarFor = ref<SwotListField | null>(null)
+const customPillarDraft = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 let saving = false
 let pendingSave = false
 
 const PILLARS = SWOT_PILLARS
+const PILLAR_BY_ID = Object.fromEntries(PILLARS.map((p) => [p.id, p])) as Record<
+  Exclude<SwotPilarId, ''>,
+  (typeof PILLARS)[number]
+>
 
 type QuadrantHint = {
   letter: string
@@ -38,6 +48,8 @@ type QuadrantHint = {
   neg: boolean
   groups: { label: string; text: string; pilar: Exclude<SwotPilarId, ''> }[]
 }
+
+type QuadrantPillar = { id: string; name: string; q: string }
 
 /** Repertório de partida por quadrante — estímulo, não checklist. */
 const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
@@ -150,6 +162,50 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
 const CATALOG = (['forcas', 'oportunidades', 'fraquezas', 'ameacas'] as SwotListField[]).map(
   (field) => QUADRANT_HINTS[field]
 )
+
+/** Defaults do banco de itens por quadrante. */
+const DEFAULT_SLOTS = SWOT_QUADRANT_DEFAULT_PILLARS
+
+function defaultNomeFor(field: SwotListField, pilarId: string): string {
+  const fromDefault = DEFAULT_SLOTS[field].find((s) => s.id === pilarId)
+  if (fromDefault?.nome) return fromDefault.nome
+  return PILLAR_BY_ID[pilarId as Exclude<SwotPilarId, ''>]?.name || pilarId
+}
+
+function normalizePilares(raw?: SwotPilaresPorQuadrante | null): SwotPilaresPorQuadrante {
+  const base = emptyPilares()
+  if (!raw) return base
+  for (const field of ['forcas', 'fraquezas', 'oportunidades', 'ameacas'] as SwotListField[]) {
+    const list = raw[field]
+    if (!Array.isArray(list)) continue
+    const seen = new Set<string>()
+    base[field] = list
+      .map((slot) => {
+        const id = String(slot?.id || '')
+          .trim()
+          .toLowerCase()
+        if (!id || seen.has(id)) return null
+        seen.add(id)
+        return { id, nome: String(slot?.nome || '').trim() }
+      })
+      .filter((s): s is SwotPilarSlot => !!s)
+  }
+  return base
+}
+
+function resolvePillar(field: SwotListField, id: string, nomeHint = ''): QuadrantPillar {
+  const canonical = PILLAR_BY_ID[id as Exclude<SwotPilarId, ''>]
+  const name = (nomeHint || '').trim() || defaultNomeFor(field, id)
+  if (canonical) {
+    return { id, name, q: canonical.q }
+  }
+  const pretty = id
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+  return { id, name: name || pretty || id, q: '' }
+}
 
 const QUADRANTS: {
   field: SwotListField
@@ -268,6 +324,7 @@ function normalizeItem(raw: SwotItem | string | Partial<SwotItem>): SwotItem {
 
 const form = ref({
   optica: '',
+  pilares: emptyPilares() as SwotPilaresPorQuadrante,
   forcas: [] as SwotItem[],
   fraquezas: [] as SwotItem[],
   oportunidades: [] as SwotItem[],
@@ -299,6 +356,7 @@ function setDraft(field: SwotListField, pilar: string, value: string) {
 function applyDoc(doc: SwotAnalysis) {
   form.value = {
     optica: doc.optica || '',
+    pilares: normalizePilares(doc.pilares),
     forcas: (doc.forcas || []).map(normalizeItem),
     fraquezas: (doc.fraquezas || []).map(normalizeItem),
     oportunidades: (doc.oportunidades || []).map(normalizeItem),
@@ -347,11 +405,87 @@ function itemsForPilar(field: SwotListField, pilar: string): { item: SwotItem; i
     .filter(({ item }) => (item.pilar || '') === pilar)
 }
 
+function slotsForQuadrant(field: SwotListField): SwotPilarSlot[] {
+  const saved = form.value.pilares[field] || []
+  if (saved.length) return saved
+  return DEFAULT_SLOTS[field].map((s) => ({ ...s }))
+}
+
+function knownPillarIds(field: SwotListField): Set<string> {
+  return new Set(pillarsForQuadrant(field).map((p) => p.id))
+}
+
+function pillarsForQuadrant(field: SwotListField): QuadrantPillar[] {
+  const seen = new Set<string>()
+  const slots: SwotPilarSlot[] = []
+  const push = (id: string, nome = '') => {
+    const key = (id || '').trim().toLowerCase()
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    slots.push({ id: key, nome: (nome || '').trim() })
+  }
+  for (const s of slotsForQuadrant(field)) push(s.id, s.nome)
+  for (const item of form.value[field]) {
+    if (item.pilar) push(item.pilar)
+  }
+  return slots.map((s) => resolvePillar(field, s.id, s.nome))
+}
+
+function ensurePersistedSlots(field: SwotListField): SwotPilarSlot[] {
+  const current = form.value.pilares[field] || []
+  if (current.length) return current.map((s) => ({ ...s }))
+  return DEFAULT_SLOTS[field].map((s) => ({ ...s }))
+}
+
 function unassignedItems(field: SwotListField): { item: SwotItem; index: number }[] {
-  const known = new Set(PILLARS.map((p) => p.id))
+  const known = knownPillarIds(field)
   return form.value[field]
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => !item.pilar || !known.has(item.pilar as Exclude<SwotPilarId, ''>))
+    .filter(({ item }) => !item.pilar || !known.has(item.pilar))
+}
+
+function availablePillarsToAdd(field: SwotListField): QuadrantPillar[] {
+  const used = knownPillarIds(field)
+  return PILLARS.filter((p) => !used.has(p.id)).map((p) => resolvePillar(field, p.id))
+}
+
+function slugifyPillar(raw: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
+function openAddPillar(field: SwotListField) {
+  addingPillarFor.value = addingPillarFor.value === field ? null : field
+  customPillarDraft.value = ''
+}
+
+function addCanonicalPillar(field: SwotListField, pilarId: string) {
+  if (!pilarId || knownPillarIds(field).has(pilarId)) return
+  const next = ensurePersistedSlots(field)
+  next.push({ id: pilarId, nome: defaultNomeFor(field, pilarId) })
+  form.value.pilares = { ...form.value.pilares, [field]: next }
+  addingPillarFor.value = null
+  customPillarDraft.value = ''
+  void persist()
+}
+
+function addCustomPillar(field: SwotListField) {
+  const label = customPillarDraft.value.trim()
+  const slug = slugifyPillar(label)
+  if (!slug || knownPillarIds(field).has(slug)) return
+  if (!/^[a-z][a-z0-9_-]{0,39}$/.test(slug)) return
+  const next = ensurePersistedSlots(field)
+  next.push({ id: slug, nome: label })
+  form.value.pilares = { ...form.value.pilares, [field]: next }
+  addingPillarFor.value = null
+  customPillarDraft.value = ''
+  void persist()
 }
 
 function addItem(field: SwotListField, pilar: string) {
@@ -458,8 +592,8 @@ async function onImportFile(ev: Event) {
     if (doc.format && doc.format !== 'aegis.swot-ia') {
       throw new Error('Formato inválido. Esperado format=aegis.swot-ia.')
     }
-    if (doc.version != null && doc.version !== 1 && doc.version !== 2) {
-      throw new Error('Versão não suportada. Use version 1 ou 2.')
+    if (doc.version != null && doc.version !== 1 && doc.version !== 2 && doc.version !== 3) {
+      throw new Error('Versão não suportada. Use version 1, 2 ou 3.')
     }
     const updated = await importSwotAnalysis(doc)
     applyDoc(updated)
@@ -600,8 +734,8 @@ onUnmounted(() => {
           <div class="eyebrow">2 · Matriz</div>
           <h2>Interno × Externo</h2>
           <p class="hint">
-            Em cada quadrante, os itens ficam sob os sete pilares. Priorize 2–3 por quadrante. Toque no ? para o
-            repertório de partida.
+            Em cada quadrante, os itens ficam sob os pilares do repertório de partida daquele quadrante. Inclua
+            outro pilar se precisar. Priorize 2–3 itens por quadrante. Toque no ? para o repertório.
           </p>
         </div>
         <div class="axis-top"><span>Interno</span><span>Externo</span></div>
@@ -670,8 +804,12 @@ onUnmounted(() => {
               </ul>
             </div>
 
-            <div v-for="p in PILLARS" :key="q.field + p.id" class="pillar-block">
-              <div class="pillar-label" :title="p.q">{{ p.name }}</div>
+            <div
+              v-for="p in pillarsForQuadrant(q.field)"
+              :key="q.field + p.id"
+              class="pillar-block"
+            >
+              <div class="pillar-label" :title="p.q || undefined">{{ p.name }}</div>
               <ul class="item-list">
                 <li
                   v-for="{ item, index } in itemsForPilar(q.field, p.id)"
@@ -699,6 +837,41 @@ onUnmounted(() => {
                   @keydown="onDraftKeydown(q.field, p.id, $event)"
                 />
                 <button type="button" @click="addItem(q.field, p.id)">+</button>
+              </div>
+            </div>
+
+            <div class="pillar-add">
+              <button
+                type="button"
+                class="pillar-add-toggle"
+                :aria-expanded="addingPillarFor === q.field"
+                @click="openAddPillar(q.field)"
+              >
+                {{ addingPillarFor === q.field ? 'Cancelar' : '+ Incluir pilar' }}
+              </button>
+              <div v-if="addingPillarFor === q.field" class="pillar-add-panel">
+                <p class="pillar-add-hint">Escolha um pilar canônico ou crie um novo para este quadrante.</p>
+                <div v-if="availablePillarsToAdd(q.field).length" class="pillar-add-choices">
+                  <button
+                    v-for="opt in availablePillarsToAdd(q.field)"
+                    :key="opt.id"
+                    type="button"
+                    class="pillar-choice"
+                    @click="addCanonicalPillar(q.field, opt.id)"
+                  >
+                    {{ opt.name }}
+                  </button>
+                </div>
+                <div class="pillar-add-custom">
+                  <input
+                    v-model="customPillarDraft"
+                    type="text"
+                    maxlength="40"
+                    placeholder="Novo pilar (ex.: Mercado)"
+                    @keydown.enter.prevent="addCustomPillar(q.field)"
+                  />
+                  <button type="button" @click="addCustomPillar(q.field)">Criar</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1440,6 +1613,92 @@ onUnmounted(() => {
 .add-init:hover {
   border-color: var(--gold);
   color: var(--gold);
+}
+.pillar-add {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.pillar-add-toggle {
+  border: none;
+  background: transparent;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.q.neg .pillar-add-toggle {
+  color: var(--oxblood);
+}
+.pillar-add-toggle:hover {
+  text-decoration: underline;
+}
+.pillar-add-panel {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+}
+.pillar-add-hint {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.pillar-add-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.pillar-choice {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--navy);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 2px;
+}
+.pillar-choice:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.pillar-add-custom {
+  display: flex;
+  gap: 6px;
+}
+.pillar-add-custom input {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+}
+.pillar-add-custom input:focus {
+  border-color: var(--gold);
+}
+.pillar-add-custom button {
+  border: 1px solid var(--navy);
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pillar-add-custom button:hover {
+  background: #16243f;
 }
 .add-init {
   margin-top: 8px;

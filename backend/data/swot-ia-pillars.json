@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "description": "Catálogo canônico dos sete pilares da SWOT de IA (Valorian). Usado para validar o campo pilar nos itens v2.",
+  "version": 3,
+  "description": "Catálogo de pilares da SWOT de IA (Valorian). Os sete pilares canônicos atravessam o método; cada quadrante parte do subconjunto do banco de itens e pode receber pilares extras (canônicos ou custom).",
   "pillars": [
     {
       "id": "dados",
@@ -38,6 +38,35 @@
       "question": "Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?"
     }
   ],
+  "quadrant_defaults": {
+    "forcas": [
+      { "id": "dados", "nome": "Dados" },
+      { "id": "talento", "nome": "Talento & cultura" },
+      { "id": "infraestrutura", "nome": "Infra & governança" },
+      { "id": "portfolio", "nome": "Portfólio & recursos" }
+    ],
+    "oportunidades": [
+      { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
+      { "id": "portfolio", "nome": "Mercado & clientes" },
+      { "id": "talento", "nome": "Talento & incentivos" }
+    ],
+    "fraquezas": [
+      { "id": "dados", "nome": "Dados" },
+      { "id": "talento", "nome": "Talento & cultura" },
+      { "id": "governanca", "nome": "Infra & governança" },
+      { "id": "portfolio", "nome": "Portfólio & recursos" }
+    ],
+    "ameacas": [
+      { "id": "portfolio", "nome": "Concorrência" },
+      { "id": "governanca", "nome": "Regulação" },
+      { "id": "ecossistema", "nome": "Fornecedores & modelo" },
+      { "id": "talento", "nome": "Talento & ritmo" }
+    ]
+  },
+  "custom_pillars": {
+    "id_pattern": "^[a-z][a-z0-9_-]{0,39}$",
+    "note": "Pilares extras (canônicos ausentes no default do quadrante, ou ids novos) entram em payload.pilares[<quadrante>] e nos itens via campo pilar."
+  },
   "scoring": {
     "interno": {
       "quadrants": ["forcas", "fraquezas"],
@@ -57,14 +86,8 @@
     "tows_fxo": { "label": "f × O · Reforço", "internos": "fraquezas", "externos": "oportunidades" },
     "tows_fxa": { "label": "f × A · Sobrevivência", "internos": "fraquezas", "externos": "ameacas" }
   },
-  "migration_from_v1": {
-    "item_string_to_object": {
-      "texto": "valor da string v1",
-      "id": "gerar (ex.: f1, fx1, o1, a1)",
-      "pilar": "obrigatório na importação v2 — pedir ao usuário ou inferir",
-      "impacto": "opcional 1–5",
-      "viabilidade_ou_probabilidade": "opcional 1–5 conforme quadrante"
-    },
-    "tows_v1_compatible": "acao, dono, horizonte permanecem; itens_internos/itens_externos são opcionais e novos na v2"
+  "migration_from_v2": {
+    "pilares": "Se ausente, usar quadrant_defaults. Itens com pilar canônico inválido no v2 ficam sem pilar; no v3 pilares custom são preservados.",
+    "version": "Aceitar version 1–3 na importação; documentos novos devem usar version 3."
   }
 }

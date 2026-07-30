@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aegis.valorian.local/schemas/swot-ia-export-v2.json",
-  "title": "AEGIS SWOT de IA — export/import v2",
-  "description": "Documento portátil da SWOT de IA com itens amarrados aos sete pilares e scores de priorização. Compatível com o método Valorian (white paper SWOT de IA).",
+  "title": "AEGIS SWOT de IA — export/import v3",
+  "description": "Documento portátil da SWOT de IA. Pilares por quadrante partem do banco de itens; pilares extras (canônicos ou custom) são declarados em payload.pilares. Compatível com o método Valorian.",
   "type": "object",
   "required": ["format", "version", "payload"],
   "additionalProperties": false,
@@ -12,8 +12,9 @@
       "description": "Identificador estável do formato."
     },
     "version": {
-      "const": 2,
-      "description": "Versão do contrato. v2 exige itens tipados com pilar."
+      "type": "integer",
+      "enum": [2, 3],
+      "description": "v3 declara pilares por quadrante; v2 continua aceito na importação (defaults do banco)."
     },
     "exported_at": {
       "type": "string",
@@ -31,28 +32,64 @@
         "organization": { "type": "string", "maxLength": 200 },
         "source": {
           "type": "string",
-          "enum": ["platform", "manual", "import", "example"]
+          "enum": ["platform", "manual", "import", "example", "user", "draft"]
         },
         "notes": { "type": "string", "maxLength": 2000 }
       }
     },
     "payload": {
-      "$ref": "#/$defs/SwotPayloadV2"
+      "$ref": "#/$defs/SwotPayloadV3"
     }
   },
   "$defs": {
     "PilarId": {
       "type": "string",
-      "enum": [
-        "dados",
-        "talento",
-        "infraestrutura",
-        "governanca",
-        "cultura",
-        "portfolio",
-        "ecossistema"
-      ],
-      "description": "Os sete pilares que atravessam os quatro quadrantes."
+      "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+      "description": "Id do pilar: canônico (dados, talento, …) ou custom criado pelo usuário."
+    },
+    "PilarSlot": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/PilarId" },
+        "nome": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Rótulo de exibição no quadrante (ex.: label do banco de itens)."
+        }
+      }
+    },
+    "PilaresPorQuadrante": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Slots de pilar ativos em cada quadrante (ordem = ordem de exibição). Defaults = banco de itens.",
+      "properties": {
+        "forcas": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/PilarSlot" }
+        },
+        "fraquezas": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/PilarSlot" }
+        },
+        "oportunidades": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/PilarSlot" }
+        },
+        "ameacas": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/PilarSlot" }
+        }
+      }
     },
     "Score": {
       "type": "integer",
@@ -141,9 +178,9 @@
     },
     "VereditoTipo": {
       "type": "string",
-      "enum": ["executavel", "fundacao", "repensar", ""]
+      "enum": ["sustenta", "executavel", "fundacao", "repensar", ""]
     },
-    "SwotPayloadV2": {
+    "SwotPayloadV3": {
       "type": "object",
       "required": [
         "optica",
@@ -165,6 +202,9 @@
           "type": "string",
           "maxLength": 2000,
           "description": "Estratégia organizacional de IA — a lente da análise."
+        },
+        "pilares": {
+          "$ref": "#/$defs/PilaresPorQuadrante"
         },
         "forcas": {
           "type": "array",

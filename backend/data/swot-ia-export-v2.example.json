@@ -1,16 +1,43 @@
 {
   "format": "aegis.swot-ia",
-  "version": 2,
+  "version": 3,
   "exported_at": "2026-07-30T17:00:00Z",
   "locale": "pt-BR",
   "meta": {
     "title": "SWOT de IA — Rede Aurora",
     "organization": "Rede Aurora",
     "source": "example",
-    "notes": "Caso ilustrativo do white paper Valorian. Itens priorizados (2–4 por quadrante) com pilares e scores."
+    "notes": "Caso ilustrativo. Pilares por quadrante = banco de itens + um pilar extra em Forças (cultura)."
   },
   "payload": {
     "optica": "Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala, operação assistida por IA (compras, estoque, atendimento) e decisão apoiada por dados — para defender margem diante dos marketplaces.",
+
+    "pilares": {
+      "forcas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "infraestrutura", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" },
+        { "id": "cultura", "nome": "Cultura & Liderança" }
+      ],
+      "oportunidades": [
+        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
+        { "id": "portfolio", "nome": "Mercado & clientes" },
+        { "id": "talento", "nome": "Talento & incentivos" }
+      ],
+      "fraquezas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "governanca", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" }
+      ],
+      "ameacas": [
+        { "id": "portfolio", "nome": "Concorrência" },
+        { "id": "governanca", "nome": "Regulação" },
+        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
+        { "id": "talento", "nome": "Talento & ritmo" }
+      ]
+    },
 
     "forcas": [
       {
@@ -82,7 +109,7 @@
       {
         "id": "fx4",
         "texto": "Pouca capacidade interna: dependência de fornecedores para sustentar soluções no longo prazo.",
-        "pilar": "ecossistema",
+        "pilar": "talento",
         "impacto": 4,
         "viabilidade": 2,
         "evidencia": "Time interno insuficiente para operar e evoluir soluções sem parceiros.",

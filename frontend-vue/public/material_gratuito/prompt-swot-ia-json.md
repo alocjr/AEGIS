@@ -1,6 +1,6 @@
 # Prompt — Gerar uma SWOT de IA (JSON) a partir dos seus dados
 
-Você é um consultor sênior de estratégia de IA. Sua tarefa é produzir uma **Análise SWOT de IA** detalhada de uma organização e entregá-la como um **arquivo JSON** no formato `aegis.swot-ia` (versão 2), descrito ao final.
+Você é um consultor sênior de estratégia de IA. Sua tarefa é produzir uma **Análise SWOT de IA** detalhada de uma organização e entregá-la como um **arquivo JSON** no formato `aegis.swot-ia` (versão **3**), descrito ao final.
 
 Trabalhe para gerar uma **primeira versão completa** que o usuário só precise revisar — não uma análise perfeita. Prefira avançar com suposições explícitas a travar pedindo dados.
 
@@ -11,12 +11,22 @@ Trabalhe para gerar uma **primeira versão completa** que o usuário só precise
 - **Locus disciplinado:** Forças e Fraquezas são **internas** (o que a organização muda sozinha). Oportunidades e Ameaças são **externas** (o ambiente, que ela não controla).
 - **Baseado em evidência:** cada item traz uma `evidencia` curta (o fato/base que o sustenta). **Nunca invente fatos.** Se um item for inferência a partir de dados esparsos, deixe isso claro na `evidencia` (ex.: “inferido de…”, “a confirmar”).
 
-### Os sete pilares (campo `pilar`)
-Varra **cada quadrante** por estes pilares e use exatamente estes valores no campo `pilar`:
+### Pilares por quadrante (banco de itens)
 
-`dados` · `talento` · `infraestrutura` · `governanca` · `cultura` · `portfolio` · `ecossistema`
+Cada quadrante parte de um **subconjunto** do banco de itens — não dos sete pilares canônicos de uma vez. Declare esses slots em `payload.pilares` e use o mesmo `id` no campo `pilar` de cada item.
 
-(dados; talento e competências; infraestrutura e arquitetura; governança, risco e regulação; cultura e liderança; portfólio de casos e recursos; ecossistema e fornecedores)
+**Defaults (obrigatório incluir; pode acrescentar):**
+
+| Quadrante | Pilares de partida (`id` · nome) |
+|-----------|----------------------------------|
+| **Forças** | `dados` · Dados · `talento` · Talento & cultura · `infraestrutura` · Infra & governança · `portfolio` · Portfólio & recursos |
+| **Oportunidades** | `ecossistema` · Tecnologia & ecossistema · `portfolio` · Mercado & clientes · `talento` · Talento & incentivos |
+| **Fraquezas** | `dados` · Dados · `talento` · Talento & cultura · `governanca` · Infra & governança · `portfolio` · Portfólio & recursos |
+| **Ameaças** | `portfolio` · Concorrência · `governanca` · Regulação · `ecossistema` · Fornecedores & modelo · `talento` · Talento & ritmo |
+
+**Pilares extras:** se a análise precisar de um eixo que não está no default do quadrante, **inclua** em `payload.pilares[<quadrante>]` — seja um canônico ausente (ex.: `cultura` em Forças) ou um id novo (ex.: `mercado`, padrão `^[a-z][a-z0-9_-]{0,39}$`) com `nome` legível. Todo `pilar` de item deve existir na lista daquele quadrante.
+
+Os sete canônicos (referência): `dados` · `talento` · `infraestrutura` · `governanca` · `cultura` · `portfolio` · `ecossistema`.
 
 ### As perguntas-teste de cada quadrante
 - **Forças** *(interno · positivo)* — o que temos hoje que **sustenta** a execução da estratégia?
@@ -30,7 +40,7 @@ Varra **cada quadrante** por estes pilares e use exatamente estes valores no cam
 - **1** = muito baixo · **2** = baixo · **3** = médio · **4** = alto · **5** = muito alto.
 
 ### Priorização
-Mantenha **2 a 4 itens por quadrante** — os mais fortes por impacto × (viabilidade ou probabilidade). Numere `prioridade` de 1 (mais importante) para cima, dentro de cada quadrante. Não enumere tudo: priorize.
+Mantenha **2 a 4 itens por quadrante** — os mais fortes por impacto × (viabilidade ou probabilidade). Numere `prioridade` de 1 (mais importante) para cima, dentro de cada quadrante. Não enumere tudo: priorize. Não é obrigatório preencher item em todo pilar — pilares vazios no default servem de estímulo.
 
 ### Cruzamento (TOWS)
 Gere **pelo menos uma ação** para cada cruzamento, referenciando itens por `id`:
@@ -59,12 +69,12 @@ Conclua honestamente com `veredito_tipo` ∈ **`sustenta`** (executável como es
 - Convenção de `id`: forças `f1, f2…`; fraquezas `fx1, fx2…`; oportunidades `o1, o2…`; ameaças `a1, a2…`; cruzamentos `fo1, fa1, fxo1, fxa1…`. As listas de TOWS só podem referenciar ids existentes.
 - Não inclua nenhum campo fora do schema abaixo.
 
-### Schema `aegis.swot-ia` v2
+### Schema `aegis.swot-ia` v3
 
 ```json
 {
   "format": "aegis.swot-ia",
-  "version": 2,
+  "version": 3,
   "exported_at": "<ISO-8601 UTC>",
   "locale": "pt-BR",
   "meta": {
@@ -75,10 +85,35 @@ Conclua honestamente com `veredito_tipo` ∈ **`sustenta`** (executável como es
   },
   "payload": {
     "optica": "<a estratégia organizacional de IA, em 1–2 frases — a lente da análise>",
-    "forcas":        [{ "id": "f1",  "texto": "<...>", "pilar": "<pilar>", "impacto": 1, "viabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
-    "fraquezas":     [{ "id": "fx1", "texto": "<...>", "pilar": "<pilar>", "impacto": 1, "viabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
-    "oportunidades": [{ "id": "o1",  "texto": "<...>", "pilar": "<pilar>", "impacto": 1, "probabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
-    "ameacas":       [{ "id": "a1",  "texto": "<...>", "pilar": "<pilar>", "impacto": 1, "probabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
+    "pilares": {
+      "forcas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "infraestrutura", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" }
+      ],
+      "oportunidades": [
+        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
+        { "id": "portfolio", "nome": "Mercado & clientes" },
+        { "id": "talento", "nome": "Talento & incentivos" }
+      ],
+      "fraquezas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "governanca", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" }
+      ],
+      "ameacas": [
+        { "id": "portfolio", "nome": "Concorrência" },
+        { "id": "governanca", "nome": "Regulação" },
+        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
+        { "id": "talento", "nome": "Talento & ritmo" }
+      ]
+    },
+    "forcas":        [{ "id": "f1",  "texto": "<...>", "pilar": "<id do slot em pilares.forcas>", "impacto": 1, "viabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
+    "fraquezas":     [{ "id": "fx1", "texto": "<...>", "pilar": "<id do slot em pilares.fraquezas>", "impacto": 1, "viabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
+    "oportunidades": [{ "id": "o1",  "texto": "<...>", "pilar": "<id do slot em pilares.oportunidades>", "impacto": 1, "probabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
+    "ameacas":       [{ "id": "a1",  "texto": "<...>", "pilar": "<id do slot em pilares.ameacas>", "impacto": 1, "probabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
     "tows_fo":  [{ "id": "fo1",  "acao": "<...>", "dono": "<...>", "horizonte": "<...>", "itens_internos": ["f1"],  "itens_externos": ["o1"] }],
     "tows_fa":  [{ "id": "fa1",  "acao": "<...>", "dono": "<...>", "horizonte": "<...>", "itens_internos": ["f2"],  "itens_externos": ["a1"] }],
     "tows_fxo": [{ "id": "fxo1", "acao": "<...>", "dono": "<...>", "horizonte": "<...>", "itens_internos": ["fx1"], "itens_externos": ["o1"] }],
@@ -90,24 +125,50 @@ Conclua honestamente com `veredito_tipo` ∈ **`sustenta`** (executável como es
 }
 ```
 
-Campos: `pilar` ∈ {`dados`,`talento`,`infraestrutura`,`governanca`,`cultura`,`portfolio`,`ecossistema`}. `impacto`, `viabilidade`, `probabilidade` são inteiros de 1 a 5. `prioridade` é inteiro (1 = mais importante) por quadrante. Arrays com 2–4 itens (Forças/Fraquezas/Oportunidades/Ameaças) e ≥1 ação por cruzamento.
+Campos: `pilares.<quadrante>[]` lista os slots (`id` + `nome`). `pilar` do item ∈ ids daquele quadrante (canônico ou custom). `impacto`, `viabilidade`, `probabilidade` são inteiros de 1 a 5. `prioridade` é inteiro (1 = mais importante) por quadrante. Arrays com 2–4 itens (Forças/Fraquezas/Oportunidades/Ameaças) e ≥1 ação por cruzamento.
 
 ## 4. Exemplo de referência (compacto — apenas para fixar o formato)
 
 ```json
 {
   "format": "aegis.swot-ia",
-  "version": 2,
+  "version": 3,
   "exported_at": "2026-07-30T17:00:00Z",
   "locale": "pt-BR",
   "meta": {
     "title": "SWOT de IA — Rede Aurora",
     "organization": "Rede Aurora",
     "source": "example",
-    "notes": "Exemplo ilustrativo. Itens priorizados (2–4 por quadrante) com pilares e scores."
+    "notes": "Exemplo ilustrativo. Pilares = banco de itens; cultura incluída como pilar extra em Forças."
   },
   "payload": {
     "optica": "Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala e operação assistida por IA — para defender margem diante dos marketplaces.",
+    "pilares": {
+      "forcas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "infraestrutura", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" },
+        { "id": "cultura", "nome": "Cultura & Liderança" }
+      ],
+      "oportunidades": [
+        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
+        { "id": "portfolio", "nome": "Mercado & clientes" },
+        { "id": "talento", "nome": "Talento & incentivos" }
+      ],
+      "fraquezas": [
+        { "id": "dados", "nome": "Dados" },
+        { "id": "talento", "nome": "Talento & cultura" },
+        { "id": "governanca", "nome": "Infra & governança" },
+        { "id": "portfolio", "nome": "Portfólio & recursos" }
+      ],
+      "ameacas": [
+        { "id": "portfolio", "nome": "Concorrência" },
+        { "id": "governanca", "nome": "Regulação" },
+        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
+        { "id": "talento", "nome": "Talento & ritmo" }
+      ]
+    },
     "forcas": [
       { "id": "f1", "texto": "Base de dados proprietária ampla e integrada (vendas, CRM, estoque).", "pilar": "dados", "impacto": 5, "viabilidade": 4, "evidencia": "Histórico multi-ano em data warehouse comum.", "prioridade": 1 },
       { "id": "f2", "texto": "Board patrocina a IA como direção estratégica, não como iniciativa de área.", "pilar": "cultura", "impacto": 5, "viabilidade": 5, "evidencia": "Direção de IA formalizada pelo board.", "prioridade": 2 }
@@ -140,8 +201,10 @@ Campos: `pilar` ∈ {`dados`,`talento`,`infraestrutura`,`governanca`,`cultura`,`
 - [ ] A **ótica** está explícita e é o fio condutor — todo item se relaciona a ela.
 - [ ] Interno vs. externo respeitado; nada de oportunidade disfarçada de força.
 - [ ] Itens **específicos de IA** (nada que caberia em qualquer SWOT genérico).
-- [ ] 2–4 itens priorizados por quadrante, com `pilar`, scores e `evidencia`.
+- [ ] `payload.pilares` declara os defaults do banco por quadrante; extras só se necessários.
+- [ ] Cada item referencia um `pilar` existente na lista daquele quadrante.
+- [ ] 2–4 itens priorizados por quadrante, com scores e `evidencia`.
 - [ ] Cada cruzamento TOWS referencia **ids válidos**; o `tows_fxa` foi considerado primeiro.
 - [ ] Veredito honesto e coerente com a matriz (inclusive admitindo `repensar`).
-- [ ] O arquivo é **JSON válido** e contém **apenas** o JSON.
+- [ ] O arquivo é **JSON válido**, `version: 3`, e contém **apenas** o JSON.
 - [ ] No chat, deixe claro que é um **rascunho inicial para ajuste** e aponte 2–3 pontos a revisar.
