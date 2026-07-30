@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
@@ -87,6 +87,20 @@ class CanvasProjectUpdateRequest(BaseModel):
     score_valor: int | None = Field(None, ge=1, le=5)
     score_viabilidade: int | None = Field(None, ge=1, le=5)
     proximo_passo: str | None = Field(None, max_length=4000)
+
+
+class CanvasImportRequest(BaseModel):
+    """Envelope aegis.canvas-oportunidades (prompt → JSON importável)."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    schema_name: str | None = Field(None, alias="schema", max_length=80)
+    versao: str | int | None = None
+    status: str | None = Field(None, max_length=40)
+    gerado_por: str | None = Field(None, max_length=80)
+    projeto: dict[str, Any] | None = None
+    areas: list[dict[str, Any]] | None = None
+    roadmap: list[dict[str, Any]] | None = None
 
 
 class SwotItem(BaseModel):

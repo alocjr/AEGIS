@@ -86,3 +86,51 @@ export function deleteCanvasProject(id: string): Promise<{ message: string; id: 
     `/api/canvas-projects/${encodeURIComponent(id)}`
   )
 }
+
+/** Documento gerado pelo prompt aegis.canvas-oportunidades. */
+export type CanvasImportDocument = {
+  schema?: string
+  versao?: string | number
+  status?: string
+  gerado_por?: string
+  projeto?: {
+    nome?: string
+    descricao?: string
+    setor?: string
+    porte?: string
+  }
+  areas?: Array<{
+    area?: string
+    contexto?: string
+    objetivo_estrategico?: string
+    oportunidades?: Array<Record<string, unknown>>
+  }>
+  roadmap?: Array<{ id?: string; justificativa?: string }>
+}
+
+export type CanvasImportResult = {
+  created: number
+  items: CanvasProjectSummary[]
+}
+
+export type CanvasImportIntoResult = {
+  applied: number
+  available: number
+  item: CanvasProject
+}
+
+/** Cria um projeto por oportunidade a partir do JSON do prompt. */
+export function importCanvasProjects(body: CanvasImportDocument): Promise<CanvasImportResult> {
+  return post<CanvasImportResult>('/api/canvas-projects/import', body)
+}
+
+/** Substitui o canvas aberto com a 1ª oportunidade do JSON. */
+export function importIntoCanvasProject(
+  id: string,
+  body: CanvasImportDocument
+): Promise<CanvasImportIntoResult> {
+  return post<CanvasImportIntoResult>(
+    `/api/canvas-projects/${encodeURIComponent(id)}/import`,
+    body
+  )
+}

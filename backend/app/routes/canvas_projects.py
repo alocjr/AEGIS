@@ -10,9 +10,28 @@ from app.database import get_db
 from app.deps import get_verified_user
 from app.schemas import (
     OPPORTUNITY_TYPE_OPTIONS,
+    CanvasImportRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
 )
+
+_TYPE_SLUG_TO_LABEL = {
+    "automacao": "Automação",
+    "classificacao_previsao": "Classificação/Previsão",
+    "extracao_busca": "Extração/Busca",
+    "geracao": "Geração",
+    "copiloto": "Copiloto",
+    "agente": "Agente autônomo",
+    "agente_autonomo": "Agente autônomo",
+}
+_LABEL_TO_CANON = {label.lower(): label for label in OPPORTUNITY_TYPE_OPTIONS}
+_NIVEL = {"baixo": "baixo", "baixa": "baixa", "medio": "médio", "media": "média", "alto": "alto", "alta": "alta"}
+_HITL = {
+    "nenhum": "nenhum",
+    "sugerir": "sugerir",
+    "aprovar": "aprovar",
+    "supervisionar": "supervisionar",
+}
 
 router = APIRouter(prefix="/api/canvas-projects", tags=["canvas-projects"])
 
@@ -129,6 +148,189 @@ def _get_owned(db: Database, user_id, project_id: str) -> dict:
     return doc
 
 
+def _clip(text: str, max_len: int) -> str:
+    t = (text or "").strip()
+    if len(t) <= max_len:
+        return t
+    return t[: max_len - 1].rstrip() + "…"
+
+
+def _score_1_5(value) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if 1 <= n <= 5 else None
+
+
+def _nivel(value) -> str:
+    raw = str(value or "").strip().lower()
+    return _NIVEL.get(raw, raw)
+
+
+def _map_tipos(raw) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    allowed = set(OPPORTUNITY_TYPE_OPTIONS)
+    out: list[str] = []
+    for item in raw:
+        key = str(item or "").strip()
+        if not key:
+            continue
+        label = _TYPE_SLUG_TO_LABEL.get(key.lower()) or _LABEL_TO_CANON.get(key.lower()) or key
+        if label in allowed and label not in out:
+            out.append(label)
+    return out[:12]
+
+
+def _push(items: list[str], text: str | None) -> None:
+    t = (text or "").strip()
+    if t and t not in items and len(items) < 40:
+        items.append(t)
+
+
+def _opportunity_to_fields(area: dict, opp: dict, projeto_meta: dict | None) -> dict:
+    """Mapeia uma oportunidade do schema aegis.canvas-oportunidades → campos do canvas."""
+    area_name = str(area.get("area") or "").strip()
+    contexto: list[str] = []
+    _push(contexto, area.get("contexto"))
+    if isinstance(projeto_meta, dict):
+        desc = str(projeto_meta.get("descricao") or "").strip()
+        setor = str(projeto_meta.get("setor") or "").strip()
+        porte = str(projeto_meta.get("porte") or "").strip()
+        bits = [b for b in (setor, porte) if b]
+        if bits:
+            _push(contexto, f"Contexto do projeto: {', '.join(bits)}.")
+        _push(contexto, desc)
+
+    dores: list[str] = []
+    _push(dores, opp.get("dor"))
+
+    oportunidade: list[str] = []
+    _push(oportunidade, opp.get("oportunidade"))
+
+    dados_obj = opp.get("dados") if isinstance(opp.get("dados"), dict) else {}
+    dados: list[str] = []
+    _push(dados, dados_obj.get("descricao"))
+    disp = _nivel(dados_obj.get("disponibilidade"))
+    if disp:
+        _push(dados, f"Disponibilidade: {disp}.")
+
+    valor_obj = opp.get("valor") if isinstance(opp.get("valor"), dict) else {}
+    valor: list[str] = []
+    _push(valor, valor_obj.get("direto"))
+    _push(valor, valor_obj.get("indireto"))
+    metrica = str(valor_obj.get("metrica") or "").strip()
+    if metrica:
+        _push(valor, f"Métrica: {metrica}")
+
+    custo_obj = opp.get("custo") if isinstance(opp.get("custo"), dict) else {}
+    custo: list[str] = []
+    for key, label in (
+        ("capex", "CAPEX"),
+        ("opex", "OPEX"),
+        ("integracao", "Integração"),
+    ):
+        n = _nivel(custo_obj.get(key))
+        if n:
+            _push(custo, f"{label}: {n}.")
+    _push(custo, custo_obj.get("mudanca"))
+
+    riscos_obj = opp.get("riscos") if isinstance(opp.get("riscos"), dict) else {}
+    riscos: list[str] = []
+    _push(riscos, riscos_obj.get("descricao"))
+    reg = riscos_obj.get("regulatorio")
+    if isinstance(reg, list):
+        regs = [str(x).strip() for x in reg if str(x).strip()]
+        if regs:
+            _push(riscos, f"Regulatório: {', '.join(regs)}.")
+    hitl_raw = str(riscos_obj.get("human_in_the_loop") or "").strip().lower()
+    hitl = _HITL.get(hitl_raw, hitl_raw)
+    if hitl:
+        _push(riscos, f"Human-in-the-loop: {hitl}.")
+
+    premissa = str(opp.get("premissa") or "").strip()
+    if premissa:
+        _push(riscos, f"Premissa: {premissa}")
+
+    decisao = opp.get("decisao") if isinstance(opp.get("decisao"), dict) else {}
+    score_valor = _score_1_5(decisao.get("valor"))
+    score_viabilidade = _score_1_5(decisao.get("viabilidade"))
+    proximo = str(decisao.get("proximo_passo") or "").strip()
+
+    opp_text = str(opp.get("oportunidade") or "").strip()
+    opp_id = str(opp.get("id") or "").strip()
+    if opp_text:
+        title = _clip(f"{area_name} · {opp_text}" if area_name else opp_text, 200)
+    elif area_name and opp_id:
+        title = _clip(f"{area_name} · {opp_id}", 200)
+    elif area_name:
+        title = _clip(area_name, 200)
+    else:
+        title = "Oportunidade importada"
+
+    return {
+        "title": title,
+        "area_negocio": _clip(area_name, 200),
+        "responsavel": "",
+        "data": "",
+        "objetivo_estrategico": _clip(str(area.get("objetivo_estrategico") or ""), 2000),
+        "contexto": contexto,
+        "dores": dores,
+        "oportunidade": oportunidade,
+        "oportunidade_tipos": _map_tipos(opp.get("tipo")),
+        "dados": dados,
+        "valor": valor,
+        "custo": custo,
+        "riscos": riscos,
+        "score_valor": score_valor,
+        "score_viabilidade": score_viabilidade,
+        "proximo_passo": _clip(proximo, 4000),
+    }
+
+
+def _projects_from_import(body: CanvasImportRequest) -> list[dict]:
+    schema_name = (body.schema_name or "").strip()
+    if schema_name and schema_name != "aegis.canvas-oportunidades":
+        raise HTTPException(
+            status_code=400,
+            detail="Formato inválido. Esperado schema=aegis.canvas-oportunidades.",
+        )
+    if body.versao is not None and str(body.versao).strip() not in ("1",):
+        raise HTTPException(status_code=400, detail="Versão não suportada. Use versao \"1\".")
+
+    areas = body.areas
+    if not isinstance(areas, list) or not areas:
+        raise HTTPException(status_code=400, detail="JSON sem áreas/oportunidades para importar.")
+
+    projeto_meta = body.projeto if isinstance(body.projeto, dict) else None
+    mapped: list[dict] = []
+    for area in areas:
+        if not isinstance(area, dict):
+            continue
+        opps = area.get("oportunidades")
+        if not isinstance(opps, list):
+            continue
+        for opp in opps:
+            if not isinstance(opp, dict):
+                continue
+            if not (
+                str(opp.get("oportunidade") or "").strip()
+                or str(opp.get("dor") or "").strip()
+                or str(opp.get("id") or "").strip()
+            ):
+                continue
+            mapped.append(_opportunity_to_fields(area, opp, projeto_meta))
+
+    if not mapped:
+        raise HTTPException(status_code=400, detail="Nenhuma oportunidade válida encontrada no JSON.")
+    if len(mapped) > 60:
+        raise HTTPException(status_code=400, detail="Limite de 60 oportunidades por importação.")
+    return mapped
+
+
 @router.get("")
 def list_projects(user=Depends(get_verified_user), db: Database = Depends(get_db)):
     """Lista projetos (canvas) do mentorado — mais recentes primeiro."""
@@ -155,6 +357,58 @@ def create_project(
     result = db.canvas_projects.insert_one(doc)
     doc["_id"] = result.inserted_id
     return _to_item(doc)
+
+
+@router.post("/import")
+def import_projects(
+    body: CanvasImportRequest,
+    user=Depends(get_verified_user),
+    db: Database = Depends(get_db),
+):
+    """Importa aegis.canvas-oportunidades e cria um projeto por oportunidade."""
+    mapped = _projects_from_import(body)
+    now = datetime.now(timezone.utc)
+    docs = []
+    for fields in mapped:
+        docs.append(
+            {
+                "user_id": user["_id"],
+                **fields,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+    result = db.canvas_projects.insert_many(docs)
+    for doc, inserted_id in zip(docs, result.inserted_ids):
+        doc["_id"] = inserted_id
+    return {
+        "created": len(docs),
+        "items": [_to_item(d, summary=True) for d in docs],
+    }
+
+
+@router.post("/{project_id}/import")
+def import_into_project(
+    project_id: str,
+    body: CanvasImportRequest,
+    user=Depends(get_verified_user),
+    db: Database = Depends(get_db),
+):
+    """Importa o JSON e substitui o conteúdo do projeto aberto (1ª oportunidade)."""
+    _get_owned(db, user["_id"], project_id)
+    mapped = _projects_from_import(body)
+    fields = mapped[0]
+    updates = {**fields, "updated_at": datetime.now(timezone.utc)}
+    db.canvas_projects.update_one(
+        {"_id": ObjectId(project_id), "user_id": user["_id"]},
+        {"$set": updates},
+    )
+    doc = _get_owned(db, user["_id"], project_id)
+    return {
+        "applied": 1,
+        "available": len(mapped),
+        "item": _to_item(doc),
+    }
 
 
 @router.get("/{project_id}")

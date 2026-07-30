@@ -4,10 +4,12 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   getCanvasProject,
   updateCanvasProject,
+  importIntoCanvasProject,
   type CanvasProject,
   type CanvasProjectPayload,
   type CanvasListField,
   type CanvasQuadrant,
+  type CanvasImportDocument,
 } from '@/api/canvasProjects'
 
 const route = useRoute()
@@ -18,6 +20,10 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
+const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
+const importError = ref<string | null>(null)
+const importOkMsg = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 const project = ref<CanvasProject | null>(null)
 const openHelp = ref<CanvasListField | null>(null)
 let saving = false
@@ -310,6 +316,58 @@ function setScore(field: 'score_valor' | 'score_viabilidade', n: number) {
   void persist()
 }
 
+function openImportPicker() {
+  importError.value = null
+  importState.value = 'idle'
+  importOkMsg.value = ''
+  fileInput.value?.click()
+}
+
+async function onImportFile(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !projectId.value) return
+
+  importState.value = 'importing'
+  importError.value = null
+  importOkMsg.value = ''
+  try {
+    const text = await file.text()
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      throw new Error('Arquivo inválido. Envie um JSON válido.')
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('JSON inválido. Esperado um objeto aegis.canvas-oportunidades.')
+    }
+    const doc = parsed as CanvasImportDocument
+    if (doc.schema != null && doc.schema !== 'aegis.canvas-oportunidades') {
+      throw new Error('Formato inválido. Esperado schema=aegis.canvas-oportunidades.')
+    }
+    if (doc.versao != null && String(doc.versao) !== '1') {
+      throw new Error('Versão não suportada. Use versao "1".')
+    }
+    const result = await importIntoCanvasProject(projectId.value, doc)
+    applyProject(result.item)
+    importState.value = 'ok'
+    saveState.value = 'saved'
+    importOkMsg.value =
+      result.available > 1
+        ? `Canvas preenchido com a 1ª oportunidade (${result.available} no arquivo). Use Importar JSON na lista para criar todas.`
+        : 'JSON importado com sucesso.'
+    window.setTimeout(() => {
+      if (importState.value === 'ok') importState.value = 'idle'
+      if (saveState.value === 'saved') saveState.value = 'idle'
+    }, 4000)
+  } catch (e) {
+    importState.value = 'error'
+    importError.value = e instanceof Error ? e.message : 'Falha na importação.'
+  }
+}
+
 async function persist() {
   if (!projectId.value) return
   if (saving) {
@@ -363,13 +421,33 @@ onUnmounted(() => {
   <div class="page">
     <div class="toolbar">
       <RouterLink to="/projetos" class="back">← Projetos</RouterLink>
-      <div class="save-status">
-        <span v-if="saveState === 'saving'">Salvando…</span>
-        <span v-else-if="saveState === 'saved'" class="ok">Salvo</span>
-        <span v-else-if="saveState === 'error'" class="err">{{ saveError || 'Erro ao salvar' }}</span>
-        <span v-else class="muted">Salva ao sair do campo</span>
+      <div class="toolbar-actions">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="sr-only"
+          @change="onImportFile"
+        />
+        <button
+          type="button"
+          class="import-btn"
+          :disabled="loading || importState === 'importing'"
+          @click="openImportPicker"
+        >
+          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
+        </button>
+        <div class="save-status">
+          <span v-if="saveState === 'saving'">Salvando…</span>
+          <span v-else-if="saveState === 'saved'" class="ok">Salvo</span>
+          <span v-else-if="saveState === 'error'" class="err">{{ saveError || 'Erro ao salvar' }}</span>
+          <span v-else class="muted">Salva ao sair do campo</span>
+        </div>
       </div>
     </div>
+
+    <div v-if="importState === 'error'" class="banner err">{{ importError }}</div>
+    <div v-else-if="importState === 'ok'" class="banner ok">{{ importOkMsg }}</div>
 
     <div v-if="loading" class="state">Carregando canvas…</div>
     <div v-else-if="error" class="state err">{{ error }}</div>
@@ -689,6 +767,60 @@ onUnmounted(() => {
   gap: 12px;
   margin-bottom: 14px;
   flex-wrap: wrap;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.import-btn {
+  border: 1px solid var(--bd);
+  background: #fff;
+  color: var(--k0);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.import-btn:hover:not(:disabled) {
+  border-color: var(--k0);
+}
+.import-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.banner {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  border: 1px solid var(--bd);
+  background: var(--wh);
+}
+.banner.ok {
+  color: #2f6e4a;
+  border-color: #bbd3b7;
+  background: #e8f0e7;
+}
+.banner.err {
+  color: #8f2b2b;
+  border-color: #e2bcbc;
+  background: #f8ecec;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .back {
   color: var(--k0, var(--ink));

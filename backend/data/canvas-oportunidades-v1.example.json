@@ -1,0 +1,98 @@
+{
+  "schema": "aegis.canvas-oportunidades",
+  "versao": "1",
+  "status": "rascunho",
+  "gerado_por": "claude",
+  "projeto": {
+    "nome": "Rede Aurora",
+    "descricao": "Rede varejista de médio porte, ~40 lojas no Nordeste e e-commerce em crescimento.",
+    "setor": "varejo",
+    "porte": "medio"
+  },
+  "areas": [
+    {
+      "area": "Atendimento ao Cliente (SAC)",
+      "contexto": "~12 mil contatos/mes (WhatsApp, telefone, e-mail) com 18 atendentes. KPIs: tempo de resposta e CSAT.",
+      "objetivo_estrategico": "Reduzir tempo de resposta e elevar CSAT sem ampliar a equipe.",
+      "oportunidades": [
+        {
+          "id": "atendimento-01",
+          "dor": "~60% dos contatos sao duvidas repetidas (status de pedido, troca, horario); o repetitivo consome a equipe e o caso complexo espera na fila.",
+          "oportunidade": "Copiloto que sugere respostas ao atendente e resolve automaticamente as intencoes repetidas de status e troca.",
+          "tipo": ["copiloto", "automacao"],
+          "dados": {
+            "descricao": "2 anos de tickets no CRM + base de FAQ; integracao com ERP de pedidos via API ja existe; categorizacao inconsistente.",
+            "disponibilidade": "media"
+          },
+          "valor": {
+            "direto": "Liberar ~40% do tempo gasto em contatos repetidos.",
+            "indireto": "Menos erro humano e fila menor em picos.",
+            "metrica": "Tempo de resposta -30% e CSAT +5 pontos."
+          },
+          "custo": {
+            "capex": "baixo",
+            "opex": "medio",
+            "integracao": "media",
+            "mudanca": "Treinar 18 atendentes e ajustar o script de atendimento."
+          },
+          "riscos": {
+            "descricao": "Risco de resposta errada em troca/reembolso; alucinacao em politica de troca.",
+            "regulatorio": ["LGPD"],
+            "human_in_the_loop": "aprovar"
+          },
+          "decisao": {
+            "valor": 4,
+            "viabilidade": 4,
+            "quadrante": "ganho_rapido",
+            "proximo_passo": "PoC de 4 semanas com as 5 intencoes mais frequentes; atendente aprova antes de enviar."
+          },
+          "premissa": ""
+        }
+      ]
+    },
+    {
+      "area": "Financeiro",
+      "contexto": "Controladoria com rotinas manuais de conciliacao e relatorios gerenciais.",
+      "objetivo_estrategico": "Fechar o mes mais rapido e com menos erro.",
+      "oportunidades": [
+        {
+          "id": "financeiro-01",
+          "dor": "Diretoria quer 'um dashboard com IA generativa' sem uma dor operacional clara por tras.",
+          "oportunidade": "Assistente que resume indicadores em linguagem natural sobre os relatorios existentes.",
+          "tipo": ["geracao"],
+          "dados": {
+            "descricao": "Relatorios ja existem em BI; o ganho incremental sobre eles e pequeno.",
+            "disponibilidade": "alta"
+          },
+          "valor": {
+            "direto": "Economia marginal de tempo de leitura de relatorio.",
+            "indireto": "Percepcao de modernidade.",
+            "metrica": "Sem metrica de negocio clara."
+          },
+          "custo": {
+            "capex": "medio",
+            "opex": "medio",
+            "integracao": "media",
+            "mudanca": "Baixa adocao esperada sem dor real."
+          },
+          "riscos": {
+            "descricao": "Risco de numeros resumidos incorretamente; baixa confianca do usuario.",
+            "regulatorio": [],
+            "human_in_the_loop": "supervisionar"
+          },
+          "decisao": {
+            "valor": 2,
+            "viabilidade": 2,
+            "quadrante": "evitar_vaidade",
+            "proximo_passo": "Nao priorizar; revisitar apenas se surgir uma dor concreta."
+          },
+          "premissa": "Assumido que os relatorios de BI atuais ja atendem bem a diretoria."
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    { "id": "atendimento-01", "justificativa": "Ganho rapido: alto valor e alta viabilidade; comecar por aqui." },
+    { "id": "financeiro-01", "justificativa": "Evitar por ora: sem dor real nem metrica de negocio." }
+  ]
+}

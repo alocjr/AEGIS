@@ -5,8 +5,10 @@ import {
   listCanvasProjects,
   createCanvasProject,
   deleteCanvasProject,
+  importCanvasProjects,
   type CanvasProjectSummary,
   type CanvasQuadrant,
+  type CanvasImportDocument,
 } from '@/api/canvasProjects'
 
 const router = useRouter()
@@ -16,6 +18,10 @@ const error = ref<string | null>(null)
 const items = ref<CanvasProjectSummary[]>([])
 const deleteTarget = ref<CanvasProjectSummary | null>(null)
 const deleteError = ref<string | null>(null)
+const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
+const importError = ref<string | null>(null)
+const importOkMsg = ref('')
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
   ganho_rapido: 'Ganho rápido',
@@ -124,6 +130,53 @@ async function onCreate() {
   }
 }
 
+function openImportPicker() {
+  importError.value = null
+  importState.value = 'idle'
+  importOkMsg.value = ''
+  fileInput.value?.click()
+}
+
+async function onImportFile(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  importState.value = 'importing'
+  importError.value = null
+  importOkMsg.value = ''
+  try {
+    const text = await file.text()
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      throw new Error('Arquivo inválido. Envie um JSON válido.')
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('JSON inválido. Esperado um objeto aegis.canvas-oportunidades.')
+    }
+    const doc = parsed as CanvasImportDocument
+    if (doc.schema != null && doc.schema !== 'aegis.canvas-oportunidades') {
+      throw new Error('Formato inválido. Esperado schema=aegis.canvas-oportunidades.')
+    }
+    if (doc.versao != null && String(doc.versao) !== '1') {
+      throw new Error('Versão não suportada. Use versao "1".')
+    }
+    const result = await importCanvasProjects(doc)
+    await refresh()
+    importState.value = 'ok'
+    importOkMsg.value = `${result.created} projeto${result.created === 1 ? '' : 's'} importado${result.created === 1 ? '' : 's'}.`
+    window.setTimeout(() => {
+      if (importState.value === 'ok') importState.value = 'idle'
+    }, 3500)
+  } catch (e) {
+    importState.value = 'error'
+    importError.value = e instanceof Error ? e.message : 'Falha na importação.'
+  }
+}
+
 function askDelete(item: CanvasProjectSummary, ev: Event) {
   ev.preventDefault()
   ev.stopPropagation()
@@ -163,7 +216,8 @@ onMounted(async () => {
     <div class="page-header">
       <h1 class="page-title">Projetos · Canvas de Oportunidades</h1>
       <p class="page-desc">
-        Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08).
+        Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08),
+        ou importe o JSON gerado pelo prompt do Canvas de Oportunidades.
       </p>
     </div>
 
@@ -337,10 +391,28 @@ onMounted(async () => {
       </div>
 
       <div class="card card-cta">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="sr-only"
+          @change="onImportFile"
+        />
         <button type="button" class="btn-new" :disabled="creating" @click="onCreate">
           {{ creating ? 'Criando…' : '+ Novo projeto' }}
         </button>
+        <button
+          type="button"
+          class="btn-import"
+          :disabled="importState === 'importing'"
+          @click="openImportPicker"
+        >
+          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
+        </button>
       </div>
+
+      <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
+      <div v-else-if="importState === 'ok'" class="card import-ok">{{ importOkMsg }}</div>
 
       <div v-if="items.length === 0" class="card card-empty">
         <p>Você ainda não tem projetos.</p>
@@ -591,6 +663,47 @@ onMounted(async () => {
 .btn-new:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+.card-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.btn-import {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  background: #fff;
+  color: var(--k0);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-import:hover:not(:disabled) {
+  border-color: var(--k0);
+}
+.btn-import:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.import-ok {
+  color: #2f6e4a;
+  border-color: #bbd3b7;
+  background: #e8f0e7;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .card-empty {
   text-align: center;

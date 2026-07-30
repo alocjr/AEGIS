@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valorian.local/schemas/canvas-oportunidades-v1.schema.json",
+  "title": "AEGIS Canvas de Oportunidades de IA (v1)",
+  "type": "object",
+  "required": ["schema", "versao", "areas"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "const": "aegis.canvas-oportunidades"
+    },
+    "versao": {
+      "oneOf": [{ "const": "1" }, { "const": 1 }]
+    },
+    "status": {
+      "type": "string"
+    },
+    "gerado_por": {
+      "type": "string"
+    },
+    "projeto": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "nome": { "type": "string" },
+        "descricao": { "type": "string" },
+        "setor": { "type": "string" },
+        "porte": { "type": "string", "enum": ["pequeno", "medio", "grande"] }
+      }
+    },
+    "areas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["area", "oportunidades"],
+        "additionalProperties": true,
+        "properties": {
+          "area": { "type": "string", "minLength": 1 },
+          "contexto": { "type": "string" },
+          "objetivo_estrategico": { "type": "string" },
+          "oportunidades": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "dor", "oportunidade", "tipo", "dados", "valor", "custo", "riscos", "decisao"],
+              "additionalProperties": true,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "dor": { "type": "string" },
+                "oportunidade": { "type": "string" },
+                "tipo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "automacao",
+                      "classificacao_previsao",
+                      "extracao_busca",
+                      "geracao",
+                      "copiloto",
+                      "agente"
+                    ]
+                  }
+                },
+                "dados": {
+                  "type": "object",
+                  "properties": {
+                    "descricao": { "type": "string" },
+                    "disponibilidade": { "type": "string", "enum": ["alta", "media", "baixa"] }
+                  }
+                },
+                "valor": {
+                  "type": "object",
+                  "properties": {
+                    "direto": { "type": "string" },
+                    "indireto": { "type": "string" },
+                    "metrica": { "type": "string" }
+                  }
+                },
+                "custo": {
+                  "type": "object",
+                  "properties": {
+                    "capex": { "type": "string", "enum": ["baixo", "medio", "alto"] },
+                    "opex": { "type": "string", "enum": ["baixo", "medio", "alto"] },
+                    "integracao": { "type": "string", "enum": ["baixa", "media", "alta"] },
+                    "mudanca": { "type": "string" }
+                  }
+                },
+                "riscos": {
+                  "type": "object",
+                  "properties": {
+                    "descricao": { "type": "string" },
+                    "regulatorio": { "type": "array", "items": { "type": "string" } },
+                    "human_in_the_loop": {
+                      "type": "string",
+                      "enum": ["nenhum", "sugerir", "aprovar", "supervisionar"]
+                    }
+                  }
+                },
+                "decisao": {
+                  "type": "object",
+                  "properties": {
+                    "valor": { "type": "integer", "minimum": 1, "maximum": 5 },
+                    "viabilidade": { "type": "integer", "minimum": 1, "maximum": 5 },
+                    "quadrante": {
+                      "type": "string",
+                      "enum": [
+                        "ganho_rapido",
+                        "aposta_estrategica",
+                        "incremental",
+                        "evitar_vaidade"
+                      ]
+                    },
+                    "proximo_passo": { "type": "string" }
+                  }
+                },
+                "premissa": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "roadmap": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "justificativa": { "type": "string" }
+        }
+      }
+    }
+  }
+}
