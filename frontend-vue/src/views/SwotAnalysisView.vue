@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import {
   getSwotAnalysis,
   updateSwotAnalysis,
@@ -17,6 +17,7 @@ const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
 const showMethod = ref(true)
 const showCatalog = ref(false)
+const openHelp = ref<SwotListField | null>(null)
 let saving = false
 let pendingSave = false
 
@@ -33,98 +34,117 @@ const PILLARS = [
   { name: 'Ecossistema & Fornecedores', q: 'Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?' },
 ]
 
-const CATALOG = [
-  {
+type QuadrantHint = {
+  letter: string
+  name: string
+  locus: string
+  neg: boolean
+  groups: { label: string; text: string }[]
+}
+
+/** Repertório de partida por quadrante — estímulo, não checklist. */
+const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
+  forcas: {
     letter: 'F',
     name: 'Forças',
+    locus: 'interno · positivo',
     neg: false,
     groups: [
-      { label: 'Dados', items: ['Base proprietária ampla, integrada e de qualidade, com histórico longo'] },
+      {
+        label: 'Dados',
+        text: 'base proprietária ampla, integrada e de qualidade, com histórico longo.',
+      },
       {
         label: 'Talento & cultura',
-        items: ['Time de dados/IA constituído; lideranças com letramento; cultura de experimentação'],
+        text: 'time de dados/IA constituído; lideranças com letramento; cultura de experimentação.',
       },
       {
         label: 'Infra & governança',
-        items: [
-          'Dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana (human-in-the-loop)',
-        ],
+        text: 'dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana (human-in-the-loop).',
       },
-      { label: 'Portfólio & recursos', items: ['Casos em produção com ROI comprovado; caixa e patrocínio do topo'] },
+      {
+        label: 'Portfólio & recursos',
+        text: 'casos em produção com ROI comprovado; caixa e patrocínio do topo.',
+      },
     ],
   },
-  {
+  oportunidades: {
     letter: 'O',
     name: 'Oportunidades',
+    locus: 'externo · positivo',
     neg: false,
     groups: [
       {
         label: 'Tecnologia & ecossistema',
-        items: [
-          'Barateamento e maturação dos modelos; IA generativa, RAG e agêntica; ferramentas abertas e parceiros',
-        ],
+        text: 'barateamento e maturação dos modelos; IA generativa, RAG e agêntica; ferramentas abertas e parceiros.',
       },
       {
         label: 'Mercado & clientes',
-        items: ['Demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos'],
+        text: 'demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos.',
       },
-      { label: 'Concorrência', items: ['Concorrentes lentos ou pouco maduros — janela para liderar'] },
+      {
+        label: 'Concorrência',
+        text: 'concorrentes lentos ou pouco maduros; janela para liderar.',
+      },
       {
         label: 'Talento & incentivos',
-        items: ['Oferta crescente de talento e ecossistemas locais; editais e incentivos'],
+        text: 'oferta crescente de talento e ecossistemas locais; editais e incentivos.',
       },
     ],
   },
-  {
+  fraquezas: {
     letter: 'f',
     name: 'Fraquezas',
+    locus: 'interno · negativo',
     neg: true,
     groups: [
-      { label: 'Dados', items: ['Silos, baixa qualidade, sem propriedade clara nem rotulagem'] },
+      {
+        label: 'Dados',
+        text: 'silos, baixa qualidade, sem propriedade clara nem rotulagem.',
+      },
       {
         label: 'Talento & cultura',
-        items: ['Falta de especialistas; letramento desigual; resistência ou aversão a risco'],
+        text: 'falta de especialistas; letramento desigual; resistência ou aversão a risco.',
       },
       {
         label: 'Infra & governança',
-        items: [
-          'Legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados sensíveis',
-        ],
+        text: 'legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados sensíveis.',
       },
       {
         label: 'Portfólio & recursos',
-        items: ['Só pilotos sem escala; sem dono, critério de priorização ou business case'],
+        text: 'só pilotos sem escala; sem dono, critério de priorização ou business case.',
       },
     ],
   },
-  {
+  ameacas: {
     letter: 'A',
     name: 'Ameaças',
+    locus: 'externo · negativo',
     neg: true,
     groups: [
       {
         label: 'Concorrência',
-        items: ['Players maduros e marketplaces com IA avançada; risco de disrupção do core'],
+        text: 'players maduros e marketplaces com IA avançada; risco de disrupção do core.',
       },
       {
         label: 'Regulação',
-        items: [
-          'LGPD, marco de IA e regras setoriais elevando o custo de conformidade; exposição de dados sensíveis a modelos públicos',
-        ],
+        text: 'LGPD, marco de IA e regras setoriais elevando o custo de conformidade; exposição de dados sensíveis a modelos públicos.',
       },
       {
         label: 'Fornecedores & modelo',
-        items: ['Lock-in, mudança de preço ou descontinuação; alucinação, viés e risco reputacional'],
+        text: 'lock-in, mudança de preço ou descontinuação; alucinação, viés e risco reputacional.',
       },
       {
         label: 'Talento & ritmo',
-        items: [
-          'Guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas superando a adaptação',
-        ],
+        text: 'guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas superando a adaptação.',
       },
     ],
   },
-] as const
+}
+
+const CATALOG = (['forcas', 'oportunidades', 'fraquezas', 'ameacas'] as SwotListField[]).map(
+  (field) => QUADRANT_HINTS[field]
+)
 
 const QUADRANTS: {
   field: SwotListField
@@ -333,7 +353,20 @@ function setVereditoTipo(tipo: SwotVereditoTipo) {
   void persist()
 }
 
+function toggleHelp(field: SwotListField, ev?: Event) {
+  ev?.stopPropagation()
+  openHelp.value = openHelp.value === field ? null : field
+}
+
+function onDocPointerDown(ev: Event) {
+  const target = ev.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('.q-help') || target.closest('.q-help-btn')) return
+  openHelp.value = null
+}
+
 onMounted(async () => {
+  document.addEventListener('pointerdown', onDocPointerDown)
   try {
     const doc = await getSwotAnalysis()
     applyDoc(doc)
@@ -342,6 +375,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', onDocPointerDown)
 })
 </script>
 
@@ -410,12 +447,12 @@ onMounted(async () => {
                 <span class="letter">{{ c.letter }}</span>
                 <span class="name">{{ c.name }}</span>
               </div>
-              <template v-for="g in c.groups" :key="g.label">
-                <div class="glabel">{{ g.label }}</div>
-                <ul>
-                  <li v-for="(it, idx) in g.items" :key="idx">{{ it }}</li>
-                </ul>
-              </template>
+              <p class="cat-locus">{{ c.locus }}</p>
+              <ul class="cat-groups">
+                <li v-for="g in c.groups" :key="g.label">
+                  <b>{{ g.label }}</b> — {{ g.text }}
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -437,7 +474,7 @@ onMounted(async () => {
         <div class="section-head">
           <div class="eyebrow">2 · Matriz</div>
           <h2>Interno × Externo</h2>
-          <p class="hint">Adicione itens em lista. Priorize 2–3 por quadrante.</p>
+          <p class="hint">Adicione itens em lista. Priorize 2–3 por quadrante. Toque no ? para ver o repertório de partida.</p>
         </div>
         <div class="axis-top"><span>Interno</span><span>Externo</span></div>
         <div class="matrix">
@@ -446,8 +483,35 @@ onMounted(async () => {
             v-for="q in QUADRANTS"
             :key="q.field"
             class="q"
-            :class="{ neg: q.neg }"
+            :class="{ neg: q.neg, 'help-open': openHelp === q.field }"
           >
+            <button
+              type="button"
+              class="q-help-btn"
+              :aria-expanded="openHelp === q.field"
+              :aria-label="`Repertório de partida · ${q.name}`"
+              @click="toggleHelp(q.field, $event)"
+            >
+              ?
+            </button>
+            <div v-if="openHelp === q.field" class="q-help" role="dialog" :aria-label="`Ajuda · ${q.name}`">
+              <div class="q-help-head">
+                <span class="q-help-letter" :class="{ neg: q.neg }">{{ QUADRANT_HINTS[q.field].letter }}</span>
+                <div>
+                  <strong>{{ QUADRANT_HINTS[q.field].name }}</strong>
+                  <span class="q-help-locus">{{ QUADRANT_HINTS[q.field].locus }}</span>
+                </div>
+              </div>
+              <p class="q-help-note">
+                Repertório de partida, organizado pelos pilares — estímulo, não checklist a preencher inteiro.
+              </p>
+              <ul class="q-help-list">
+                <li v-for="g in QUADRANT_HINTS[q.field].groups" :key="g.label">
+                  <span class="q-help-pillar">{{ g.label }}</span>
+                  <span class="q-help-text">{{ g.text }}</span>
+                </li>
+              </ul>
+            </div>
             <div class="tag">
               <span class="letter">{{ q.letter }}</span>
               <span class="name">{{ q.name }}</span>
@@ -785,37 +849,40 @@ onMounted(async () => {
   color: var(--navy);
   font-size: 0.92rem;
 }
-.cat .glabel {
-  font-size: 0.64rem;
-  letter-spacing: 0.12em;
+.cat-locus {
+  margin: 2px 0 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  font-weight: 700;
-  margin: 0.75em 0 0.2em;
+  font-weight: 600;
 }
-.cat ul {
+.cat-groups {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.cat ul li {
+.cat-groups li {
   position: relative;
   font-size: 0.84rem;
-  padding: 0 0 0.32em 14px;
-  line-height: 1.38;
+  padding: 0 0 0.55em 14px;
+  line-height: 1.4;
 }
-.cat ul li::before {
+.cat-groups li::before {
   content: '';
   position: absolute;
   left: 1px;
-  top: 0.5em;
+  top: 0.55em;
   width: 5px;
   height: 5px;
   transform: rotate(45deg);
   background: var(--gold);
 }
-.cat.neg ul li::before {
+.cat.neg .cat-groups li::before {
   background: var(--oxblood);
+}
+.cat-groups b {
+  color: var(--navy);
 }
 .card-object {
   background: var(--navy);
@@ -883,15 +950,139 @@ onMounted(async () => {
   border-top: 3px solid var(--gold);
   padding: 14px 16px;
   min-height: 180px;
+  position: relative;
+}
+.q.help-open {
+  z-index: 5;
 }
 .q.neg {
   border-top-color: var(--oxblood);
+}
+.q-help-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--gold);
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  padding: 0;
+}
+.q.neg .q-help-btn {
+  color: var(--oxblood);
+}
+.q-help-btn:hover,
+.q-help-btn[aria-expanded='true'] {
+  border-color: var(--gold);
+  background: #fffaf0;
+}
+.q.neg .q-help-btn:hover,
+.q.neg .q-help-btn[aria-expanded='true'] {
+  border-color: var(--oxblood);
+  background: #fcf6f4;
+}
+.q-help {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  width: min(300px, calc(100% - 16px));
+  max-height: min(340px, 70vh);
+  overflow: auto;
+  background: #fffef9;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(14, 27, 51, 0.18);
+  padding: 12px 14px;
+  z-index: 6;
+  border-radius: 2px;
+}
+.q.neg .q-help {
+  border-color: rgba(124, 58, 58, 0.28);
+  background: #fffaf8;
+}
+.q-help-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.q-help-letter {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.q-help-letter.neg {
+  color: var(--oxblood);
+}
+.q-help-head strong {
+  display: block;
+  color: var(--navy);
+  font-size: 0.95rem;
+}
+.q-help-locus {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.q-help-note {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+  font-style: italic;
+}
+.q-help-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.q-help-list li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.q-help-list li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.q-help-pillar {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 3px;
+}
+.q.neg .q-help-pillar {
+  color: var(--oxblood);
+}
+.q-help-text {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #3a3f49;
 }
 .q .tag {
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin-bottom: 6px;
+  padding-right: 28px;
 }
 .q .letter {
   font-family: var(--serif);

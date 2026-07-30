@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const menuOpen = ref(false)
 const route = useRoute()
+const router = useRouter()
 
 onMounted(() => {
   auth.loadUser()
@@ -23,6 +24,17 @@ function onLogout() {
 
 function toggleMenu() {
   menuOpen.value = !menuOpen.value
+}
+
+async function goSwot(ev: Event) {
+  ev.preventDefault()
+  menuOpen.value = false
+  try {
+    await router.push({ name: 'SwotAnalysis' })
+  } catch (err) {
+    console.error('Falha ao abrir SWOT', err)
+    window.location.assign('/swot')
+  }
 }
 </script>
 
@@ -50,7 +62,7 @@ function toggleMenu() {
         <RouterLink to="/quiz-respostas" class="tb-pill" @click="menuOpen = false">Quiz</RouterLink>
         <RouterLink to="/ai-maturity" class="tb-pill" @click="menuOpen = false">Modelo de Maturidade</RouterLink>
         <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">AI Canvas</RouterLink>
-        <RouterLink to="/swot" class="tb-pill" @click="menuOpen = false">SWOT</RouterLink>
+        <a href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
         <RouterLink
           v-if="(auth.user?.course_slugs?.length ?? 0) > 1"
           to="/trilhas"
@@ -73,7 +85,6 @@ function toggleMenu() {
     />
   </header>
 </template>
-
 <style scoped>
 .topbar {
   position: fixed;
@@ -175,7 +186,7 @@ function toggleMenu() {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
   .tb-burger {
     display: flex;
   }
