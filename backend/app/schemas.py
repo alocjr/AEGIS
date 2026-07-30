@@ -89,18 +89,55 @@ class CanvasProjectUpdateRequest(BaseModel):
     proximo_passo: str | None = Field(None, max_length=4000)
 
 
+class SwotItem(BaseModel):
+    """Item da matriz SWOT v2 — amarrado a um dos sete pilares."""
+
+    id: str = Field(default="", max_length=64)
+    texto: str = Field(default="", max_length=500)
+    pilar: str = Field(default="", max_length=40)
+    impacto: int | None = Field(None, ge=1, le=5)
+    viabilidade: int | None = Field(None, ge=1, le=5)
+    probabilidade: int | None = Field(None, ge=1, le=5)
+    evidencia: str | None = Field(None, max_length=1000)
+    prioridade: int | None = Field(None, ge=1, le=40)
+
+
 class SwotInitiative(BaseModel):
+    id: str | None = Field(None, max_length=64)
     acao: str = Field(default="", max_length=1000)
     dono: str = Field(default="", max_length=200)
     horizonte: str = Field(default="", max_length=120)
+    itens_internos: list[str] = Field(default_factory=list, max_length=10)
+    itens_externos: list[str] = Field(default_factory=list, max_length=10)
 
 
 class SwotAnalysisUpdateRequest(BaseModel):
     optica: str | None = Field(None, max_length=2000)
-    forcas: list[str] | None = Field(None, max_length=40)
-    fraquezas: list[str] | None = Field(None, max_length=40)
-    oportunidades: list[str] | None = Field(None, max_length=40)
-    ameacas: list[str] | None = Field(None, max_length=40)
+    forcas: list[SwotItem | str] | None = Field(None, max_length=40)
+    fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
+    oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)
+    ameacas: list[SwotItem | str] | None = Field(None, max_length=40)
+    tows_fo: list[SwotInitiative] | None = Field(None, max_length=20)
+    tows_fa: list[SwotInitiative] | None = Field(None, max_length=20)
+    tows_fxo: list[SwotInitiative] | None = Field(None, max_length=20)
+    tows_fxa: list[SwotInitiative] | None = Field(None, max_length=20)
+    veredito_tipo: str | None = Field(None, max_length=40)
+    veredito_titulo: str | None = Field(None, max_length=300)
+    veredito_texto: str | None = Field(None, max_length=8000)
+
+
+class SwotImportRequest(BaseModel):
+    """Envelope aegis.swot-ia (v1 ou v2) ou payload direto."""
+
+    format: str | None = None
+    version: int | None = None
+    payload: SwotAnalysisUpdateRequest | None = None
+    # Campos do payload também aceitos no root (import sem envelope)
+    optica: str | None = Field(None, max_length=2000)
+    forcas: list[SwotItem | str] | None = Field(None, max_length=40)
+    fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
+    oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)
+    ameacas: list[SwotItem | str] | None = Field(None, max_length=40)
     tows_fo: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fa: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fxo: list[SwotInitiative] | None = Field(None, max_length=20)

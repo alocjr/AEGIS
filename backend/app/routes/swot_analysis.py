@@ -1,19 +1,40 @@
-"""SWOT de IA — um documento de análise por mentorado."""
+"""SWOT de IA — um documento de análise por mentorado (modelo v2 com pilares)."""
 
+from __future__ import annotations
+
+import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_verified_user
-from app.schemas import SwotAnalysisUpdateRequest, SwotInitiative
+from app.schemas import SwotAnalysisUpdateRequest, SwotImportRequest, SwotInitiative, SwotItem
 
 router = APIRouter(prefix="/api/swot-analysis", tags=["swot-analysis"])
 
 _LIST_FIELDS = ("forcas", "fraquezas", "oportunidades", "ameacas")
 _TOWS_FIELDS = ("tows_fo", "tows_fa", "tows_fxo", "tows_fxa")
+_INTERNAL_FIELDS = frozenset({"forcas", "fraquezas"})
 _VEREDITO_TIPOS = frozenset({"executavel", "fundacao", "repensar", ""})
+_PILLARS = frozenset(
+    {
+        "dados",
+        "talento",
+        "infraestrutura",
+        "governanca",
+        "cultura",
+        "portfolio",
+        "ecossistema",
+    }
+)
+_FIELD_ID_PREFIX = {
+    "forcas": "f",
+    "fraquezas": "fx",
+    "oportunidades": "o",
+    "ameacas": "a",
+}
 
 _EMPTY_FIELDS = {
     "optica": "",
@@ -31,33 +52,128 @@ _EMPTY_FIELDS = {
 }
 
 
-def _as_item_list(value) -> list[str]:
+def _new_id(prefix: str) -> str:
+    return f"{prefix}_{secrets.token_hex(4)}"
+
+
+def _score(value) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if 1 <= n <= 5 else None
+
+
+def _priority(value) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if 1 <= n <= 40 else None
+
+
+def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
+    """Aceita string (v1) ou dict/SwotItem (v2) e devolve dict limpo."""
+    prefix = _FIELD_ID_PREFIX[field]
+    if isinstance(raw, str):
+        texto = raw.strip()[:500]
+        if not texto:
+            return None
+        item_id = _new_id(prefix)
+        used_ids.add(item_id)
+        return {
+            "id": item_id,
+            "texto": texto,
+            "pilar": "",
+            "impacto": None,
+            "viabilidade": None,
+            "probabilidade": None,
+            "evidencia": "",
+            "prioridade": None,
+        }
+
+    if isinstance(raw, SwotItem):
+        data = raw.model_dump()
+    elif isinstance(raw, dict):
+        data = raw
+    else:
+        return None
+
+    texto = str(data.get("texto") or "").strip()[:500]
+    if not texto:
+        return None
+
+    pilar = str(data.get("pilar") or "").strip().lower()
+    if pilar not in _PILLARS:
+        pilar = ""
+
+    item_id = str(data.get("id") or "").strip()[:64]
+    if not item_id or item_id in used_ids:
+        item_id = _new_id(prefix)
+    used_ids.add(item_id)
+
+    evidencia = str(data.get("evidencia") or "").strip()[:1000]
+    impacto = _score(data.get("impacto"))
+    viabilidade = _score(data.get("viabilidade")) if field in _INTERNAL_FIELDS else None
+    probabilidade = _score(data.get("probabilidade")) if field not in _INTERNAL_FIELDS else None
+
+    return {
+        "id": item_id,
+        "texto": texto,
+        "pilar": pilar,
+        "impacto": impacto,
+        "viabilidade": viabilidade,
+        "probabilidade": probabilidade,
+        "evidencia": evidencia,
+        "prioridade": _priority(data.get("prioridade")),
+    }
+
+
+def _as_item_list(value, field: str) -> list[dict]:
     if value is None:
         return []
     if isinstance(value, str):
-        text = value.strip()
-        return [text] if text else []
-    if isinstance(value, list):
-        out: list[str] = []
-        for item in value:
-            text = str(item or "").strip()
-            if text:
-                out.append(text[:500])
-            if len(out) >= 40:
-                break
-        return out
-    return []
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    out: list[dict] = []
+    used_ids: set[str] = set()
+    for raw in value:
+        item = _normalize_item(raw, field, used_ids)
+        if item:
+            out.append(item)
+        if len(out) >= 40:
+            break
+    return out
 
 
-def _clean_item_list(value: list[str] | None) -> list[str]:
+def _clean_item_list(value: list[SwotItem | str] | None, field: str) -> list[dict]:
     if not value:
         return []
-    out: list[str] = []
-    for item in value:
-        text = (item or "").strip()[:500]
-        if text:
-            out.append(text)
+    out: list[dict] = []
+    used_ids: set[str] = set()
+    for raw in value:
+        item = _normalize_item(raw, field, used_ids)
+        if item:
+            out.append(item)
         if len(out) >= 40:
+            break
+    return out
+
+
+def _id_list(value, max_items: int = 10) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for raw in value:
+        text = str(raw or "").strip()[:64]
+        if text and text not in out:
+            out.append(text)
+        if len(out) >= max_items:
             break
     return out
 
@@ -66,15 +182,33 @@ def _as_initiatives(value) -> list[dict]:
     if not isinstance(value, list):
         return []
     out: list[dict] = []
+    used_ids: set[str] = set()
     for raw in value:
-        if not isinstance(raw, dict):
+        if isinstance(raw, SwotInitiative):
+            data = raw.model_dump()
+        elif isinstance(raw, dict):
+            data = raw
+        else:
             continue
-        acao = str(raw.get("acao") or "").strip()[:1000]
-        dono = str(raw.get("dono") or "").strip()[:200]
-        horizonte = str(raw.get("horizonte") or "").strip()[:120]
+        acao = str(data.get("acao") or "").strip()[:1000]
+        dono = str(data.get("dono") or "").strip()[:200]
+        horizonte = str(data.get("horizonte") or "").strip()[:120]
         if not (acao or dono or horizonte):
             continue
-        out.append({"acao": acao, "dono": dono, "horizonte": horizonte})
+        init_id = str(data.get("id") or "").strip()[:64]
+        if not init_id or init_id in used_ids:
+            init_id = _new_id("t")
+        used_ids.add(init_id)
+        out.append(
+            {
+                "id": init_id,
+                "acao": acao,
+                "dono": dono,
+                "horizonte": horizonte,
+                "itens_internos": _id_list(data.get("itens_internos")),
+                "itens_externos": _id_list(data.get("itens_externos")),
+            }
+        )
         if len(out) >= 20:
             break
     return out
@@ -83,17 +217,7 @@ def _as_initiatives(value) -> list[dict]:
 def _clean_initiatives(value: list[SwotInitiative] | None) -> list[dict]:
     if not value:
         return []
-    out: list[dict] = []
-    for raw in value:
-        acao = (raw.acao or "").strip()[:1000]
-        dono = (raw.dono or "").strip()[:200]
-        horizonte = (raw.horizonte or "").strip()[:120]
-        if not (acao or dono or horizonte):
-            continue
-        out.append({"acao": acao, "dono": dono, "horizonte": horizonte})
-        if len(out) >= 20:
-            break
-    return out
+    return _as_initiatives(value)
 
 
 def _to_item(doc: dict) -> dict:
@@ -102,10 +226,10 @@ def _to_item(doc: dict) -> dict:
     return {
         "id": str(doc["_id"]),
         "optica": doc.get("optica") or "",
-        "forcas": _as_item_list(doc.get("forcas")),
-        "fraquezas": _as_item_list(doc.get("fraquezas")),
-        "oportunidades": _as_item_list(doc.get("oportunidades")),
-        "ameacas": _as_item_list(doc.get("ameacas")),
+        "forcas": _as_item_list(doc.get("forcas"), "forcas"),
+        "fraquezas": _as_item_list(doc.get("fraquezas"), "fraquezas"),
+        "oportunidades": _as_item_list(doc.get("oportunidades"), "oportunidades"),
+        "ameacas": _as_item_list(doc.get("ameacas"), "ameacas"),
         "tows_fo": _as_initiatives(doc.get("tows_fo")),
         "tows_fa": _as_initiatives(doc.get("tows_fa")),
         "tows_fxo": _as_initiatives(doc.get("tows_fxo")),
@@ -134,26 +258,12 @@ def _get_or_create(db: Database, user_id) -> dict:
     return doc
 
 
-@router.get("")
-def get_swot(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Retorna a SWOT de IA do mentorado (cria vazia se ainda não existir)."""
-    doc = _get_or_create(db, user["_id"])
-    return _to_item(doc)
-
-
-@router.put("")
-def update_swot(
-    body: SwotAnalysisUpdateRequest,
-    user=Depends(get_verified_user),
-    db: Database = Depends(get_db),
-):
-    """Atualiza a SWOT de IA do mentorado."""
-    doc = _get_or_create(db, user["_id"])
+def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> dict:
     updates = body.model_dump(exclude_unset=True)
 
     for key in _LIST_FIELDS:
         if key in updates:
-            updates[key] = _clean_item_list(updates.get(key))
+            updates[key] = _clean_item_list(getattr(body, key), key)
 
     for key in _TOWS_FIELDS:
         if key in updates:
@@ -171,5 +281,111 @@ def update_swot(
 
     updates["updated_at"] = datetime.now(timezone.utc)
     db.swot_analyses.update_one({"_id": doc["_id"]}, {"$set": updates})
-    refreshed = db.swot_analyses.find_one({"_id": doc["_id"]})
-    return _to_item(refreshed or doc)
+    return db.swot_analyses.find_one({"_id": doc["_id"]}) or doc
+
+
+def _payload_from_import(body: SwotImportRequest) -> SwotAnalysisUpdateRequest:
+    fmt = (body.format or "").strip()
+    if fmt and fmt != "aegis.swot-ia":
+        raise HTTPException(status_code=400, detail="Formato inválido. Esperado format=aegis.swot-ia.")
+    if body.version is not None and body.version not in (1, 2):
+        raise HTTPException(status_code=400, detail="Versão não suportada. Use version 1 ou 2.")
+
+    if body.payload is not None:
+        return body.payload
+
+    data = body.model_dump(
+        exclude_unset=True,
+        exclude={"format", "version", "payload"},
+    )
+    if not data:
+        raise HTTPException(status_code=400, detail="JSON sem payload SWOT.")
+    return SwotAnalysisUpdateRequest(**data)
+
+
+def _needs_v2_migration(doc: dict) -> bool:
+    for field in _LIST_FIELDS:
+        raw = doc.get(field)
+        if isinstance(raw, str):
+            return True
+        if isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, str):
+                    return True
+                if isinstance(item, dict) and not item.get("id"):
+                    return True
+    for field in _TOWS_FIELDS:
+        raw = doc.get(field)
+        if isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, dict) and not item.get("id") and (
+                    item.get("acao") or item.get("dono") or item.get("horizonte")
+                ):
+                    return True
+    return False
+
+
+def _migrate_doc_to_v2(doc: dict, db: Database) -> dict:
+    """Persiste itens/iniciativas no formato v2 na primeira leitura pós-upgrade."""
+    if not _needs_v2_migration(doc):
+        return doc
+    updates = {
+        "forcas": _as_item_list(doc.get("forcas"), "forcas"),
+        "fraquezas": _as_item_list(doc.get("fraquezas"), "fraquezas"),
+        "oportunidades": _as_item_list(doc.get("oportunidades"), "oportunidades"),
+        "ameacas": _as_item_list(doc.get("ameacas"), "ameacas"),
+        "tows_fo": _as_initiatives(doc.get("tows_fo")),
+        "tows_fa": _as_initiatives(doc.get("tows_fa")),
+        "tows_fxo": _as_initiatives(doc.get("tows_fxo")),
+        "tows_fxa": _as_initiatives(doc.get("tows_fxa")),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    db.swot_analyses.update_one({"_id": doc["_id"]}, {"$set": updates})
+    return db.swot_analyses.find_one({"_id": doc["_id"]}) or {**doc, **updates}
+
+
+@router.get("")
+def get_swot(user=Depends(get_verified_user), db: Database = Depends(get_db)):
+    """Retorna a SWOT de IA do mentorado (cria vazia se ainda não existir)."""
+    doc = _migrate_doc_to_v2(_get_or_create(db, user["_id"]), db)
+    return _to_item(doc)
+
+
+@router.put("")
+def update_swot(
+    body: SwotAnalysisUpdateRequest,
+    user=Depends(get_verified_user),
+    db: Database = Depends(get_db),
+):
+    """Atualiza a SWOT de IA do mentorado."""
+    doc = _get_or_create(db, user["_id"])
+    refreshed = _apply_updates(doc, body, db)
+    return _to_item(refreshed)
+
+
+@router.post("/import")
+def import_swot(
+    body: SwotImportRequest,
+    user=Depends(get_verified_user),
+    db: Database = Depends(get_db),
+):
+    """Importa um documento aegis.swot-ia (v1/v2) e substitui o conteúdo editável."""
+    payload = _payload_from_import(body)
+    # Importação é substituição completa dos campos do payload presentes
+    full = SwotAnalysisUpdateRequest(
+        optica=payload.optica if payload.optica is not None else "",
+        forcas=payload.forcas if payload.forcas is not None else [],
+        fraquezas=payload.fraquezas if payload.fraquezas is not None else [],
+        oportunidades=payload.oportunidades if payload.oportunidades is not None else [],
+        ameacas=payload.ameacas if payload.ameacas is not None else [],
+        tows_fo=payload.tows_fo if payload.tows_fo is not None else [],
+        tows_fa=payload.tows_fa if payload.tows_fa is not None else [],
+        tows_fxo=payload.tows_fxo if payload.tows_fxo is not None else [],
+        tows_fxa=payload.tows_fxa if payload.tows_fxa is not None else [],
+        veredito_tipo=payload.veredito_tipo if payload.veredito_tipo is not None else "",
+        veredito_titulo=payload.veredito_titulo if payload.veredito_titulo is not None else "",
+        veredito_texto=payload.veredito_texto if payload.veredito_texto is not None else "",
+    )
+    doc = _get_or_create(db, user["_id"])
+    refreshed = _apply_updates(doc, full, db)
+    return _to_item(refreshed)

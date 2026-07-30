@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis.valorian.local/schemas/swot-ia-export-v2.json",
+  "title": "AEGIS SWOT de IA — export/import v2",
+  "description": "Documento portátil da SWOT de IA com itens amarrados aos sete pilares e scores de priorização. Compatível com o método Valorian (white paper SWOT de IA).",
+  "type": "object",
+  "required": ["format", "version", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "aegis.swot-ia",
+      "description": "Identificador estável do formato."
+    },
+    "version": {
+      "const": 2,
+      "description": "Versão do contrato. v2 exige itens tipados com pilar."
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "locale": {
+      "type": "string",
+      "default": "pt-BR"
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "maxLength": 300 },
+        "organization": { "type": "string", "maxLength": 200 },
+        "source": {
+          "type": "string",
+          "enum": ["platform", "manual", "import", "example"]
+        },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "payload": {
+      "$ref": "#/$defs/SwotPayloadV2"
+    }
+  },
+  "$defs": {
+    "PilarId": {
+      "type": "string",
+      "enum": [
+        "dados",
+        "talento",
+        "infraestrutura",
+        "governanca",
+        "cultura",
+        "portfolio",
+        "ecossistema"
+      ],
+      "description": "Os sete pilares que atravessam os quatro quadrantes."
+    },
+    "Score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Escala 1–5 (1 = baixo, 5 = alto)."
+    },
+    "ItemInterno": {
+      "type": "object",
+      "required": ["id", "texto", "pilar"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Identificador estável no documento (ex.: f1, fx2). Usado nos cruzamentos TOWS."
+        },
+        "texto": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "pilar": { "$ref": "#/$defs/PilarId" },
+        "impacto": { "$ref": "#/$defs/Score" },
+        "viabilidade": {
+          "allOf": [{ "$ref": "#/$defs/Score" }],
+          "description": "Para Forças: viabilidade de explorar; para Fraquezas: viabilidade de corrigir."
+        },
+        "evidencia": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Fato ou métrica que ancora o item (regra de evidência)."
+        },
+        "prioridade": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40,
+          "description": "Ordem explícita após priorização (1 = mais prioritário)."
+        }
+      }
+    },
+    "ItemExterno": {
+      "type": "object",
+      "required": ["id", "texto", "pilar"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "texto": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "pilar": { "$ref": "#/$defs/PilarId" },
+        "impacto": { "$ref": "#/$defs/Score" },
+        "probabilidade": {
+          "allOf": [{ "$ref": "#/$defs/Score" }],
+          "description": "Probabilidade de a oportunidade/ameaça se materializar no horizonte da estratégia."
+        },
+        "evidencia": { "type": "string", "maxLength": 1000 },
+        "prioridade": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40
+        }
+      }
+    },
+    "IniciativaTows": {
+      "type": "object",
+      "required": ["acao"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "acao": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "dono": { "type": "string", "maxLength": 200 },
+        "horizonte": { "type": "string", "maxLength": 120 },
+        "itens_internos": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "type": "string" },
+          "description": "IDs de forcas ou fraquezas cruzados nesta iniciativa."
+        },
+        "itens_externos": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "type": "string" },
+          "description": "IDs de oportunidades ou ameacas cruzados nesta iniciativa."
+        }
+      }
+    },
+    "VereditoTipo": {
+      "type": "string",
+      "enum": ["executavel", "fundacao", "repensar", ""]
+    },
+    "SwotPayloadV2": {
+      "type": "object",
+      "required": [
+        "optica",
+        "forcas",
+        "fraquezas",
+        "oportunidades",
+        "ameacas",
+        "tows_fo",
+        "tows_fa",
+        "tows_fxo",
+        "tows_fxa",
+        "veredito_tipo",
+        "veredito_titulo",
+        "veredito_texto"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "optica": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Estratégia organizacional de IA — a lente da análise."
+        },
+        "forcas": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/ItemInterno" }
+        },
+        "fraquezas": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/ItemInterno" }
+        },
+        "oportunidades": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/ItemExterno" }
+        },
+        "ameacas": {
+          "type": "array",
+          "maxItems": 40,
+          "items": { "$ref": "#/$defs/ItemExterno" }
+        },
+        "tows_fo": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "F × O · Ofensiva",
+          "items": { "$ref": "#/$defs/IniciativaTows" }
+        },
+        "tows_fa": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "F × A · Defesa",
+          "items": { "$ref": "#/$defs/IniciativaTows" }
+        },
+        "tows_fxo": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "f × O · Reforço",
+          "items": { "$ref": "#/$defs/IniciativaTows" }
+        },
+        "tows_fxa": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "f × A · Sobrevivência",
+          "items": { "$ref": "#/$defs/IniciativaTows" }
+        },
+        "veredito_tipo": { "$ref": "#/$defs/VereditoTipo" },
+        "veredito_titulo": { "type": "string", "maxLength": 300 },
+        "veredito_texto": { "type": "string", "maxLength": 8000 }
+      }
+    }
+  }
+}

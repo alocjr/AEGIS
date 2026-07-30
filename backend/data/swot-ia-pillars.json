@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "description": "Catálogo canônico dos sete pilares da SWOT de IA (Valorian). Usado para validar o campo pilar nos itens v2.",
+  "pillars": [
+    {
+      "id": "dados",
+      "name": "Dados",
+      "question": "Temos dados proprietários, limpos e integrados para alimentar e contextualizar modelos?"
+    },
+    {
+      "id": "talento",
+      "name": "Talento",
+      "question": "Há competência técnica e lideranças com letramento para conduzir?"
+    },
+    {
+      "id": "infraestrutura",
+      "name": "Infraestrutura",
+      "question": "A arquitetura (nuvem, APIs) consome IA com segurança, sem travar no legado?"
+    },
+    {
+      "id": "governanca",
+      "name": "Governança & Regulação",
+      "question": "Temos conformidade (LGPD), auditoria de viés e alucinação, isolamento de dados sensíveis e validação humana no que é crítico?"
+    },
+    {
+      "id": "cultura",
+      "name": "Cultura & Liderança",
+      "question": "Há patrocínio do topo e abertura à mudança — ou medo e resistência?"
+    },
+    {
+      "id": "portfolio",
+      "name": "Portfólio de casos",
+      "question": "Sabemos priorizar casos por valor e prontidão, com dono definido?"
+    },
+    {
+      "id": "ecossistema",
+      "name": "Ecossistema & Fornecedores",
+      "question": "Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?"
+    }
+  ],
+  "scoring": {
+    "interno": {
+      "quadrants": ["forcas", "fraquezas"],
+      "axes": ["impacto", "viabilidade"],
+      "formula": "prioridade_sugerida = impacto * viabilidade",
+      "note": "Forças: viabilidade de explorar. Fraquezas: viabilidade de corrigir."
+    },
+    "externo": {
+      "quadrants": ["oportunidades", "ameacas"],
+      "axes": ["impacto", "probabilidade"],
+      "formula": "prioridade_sugerida = impacto * probabilidade"
+    }
+  },
+  "tows": {
+    "tows_fo": { "label": "F × O · Ofensiva", "internos": "forcas", "externos": "oportunidades" },
+    "tows_fa": { "label": "F × A · Defesa", "internos": "forcas", "externos": "ameacas" },
+    "tows_fxo": { "label": "f × O · Reforço", "internos": "fraquezas", "externos": "oportunidades" },
+    "tows_fxa": { "label": "f × A · Sobrevivência", "internos": "fraquezas", "externos": "ameacas" }
+  },
+  "migration_from_v1": {
+    "item_string_to_object": {
+      "texto": "valor da string v1",
+      "id": "gerar (ex.: f1, fx1, o1, a1)",
+      "pilar": "obrigatório na importação v2 — pedir ao usuário ou inferir",
+      "impacto": "opcional 1–5",
+      "viabilidade_ou_probabilidade": "opcional 1–5 conforme quadrante"
+    },
+    "tows_v1_compatible": "acao, dono, horizonte permanecem; itens_internos/itens_externos são opcionais e novos na v2"
+  }
+}

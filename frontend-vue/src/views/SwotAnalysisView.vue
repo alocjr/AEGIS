@@ -3,43 +3,40 @@ import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import {
   getSwotAnalysis,
   updateSwotAnalysis,
+  importSwotAnalysis,
+  SWOT_PILLARS,
   type SwotAnalysis,
   type SwotAnalysisPayload,
   type SwotInitiative,
+  type SwotItem,
   type SwotListField,
   type SwotTowsField,
   type SwotVereditoTipo,
+  type SwotPilarId,
+  type SwotImportDocument,
 } from '@/api/swotAnalysis'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
+const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
+const importError = ref<string | null>(null)
 const showMethod = ref(true)
 const showCatalog = ref(false)
 const openHelp = ref<SwotListField | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 let saving = false
 let pendingSave = false
 
-const PILLARS = [
-  { name: 'Dados', q: 'Temos dados proprietários, limpos e integrados para alimentar e contextualizar modelos?' },
-  { name: 'Talento', q: 'Há competência técnica e lideranças com letramento para conduzir?' },
-  { name: 'Infraestrutura', q: 'A arquitetura (nuvem, APIs) consome IA com segurança, sem travar no legado?' },
-  {
-    name: 'Governança & Regulação',
-    q: 'Temos conformidade (LGPD), auditoria de viés e alucinação, isolamento de dados sensíveis e validação humana no que é crítico?',
-  },
-  { name: 'Cultura & Liderança', q: 'Há patrocínio do topo e abertura à mudança — ou medo e resistência?' },
-  { name: 'Portfólio de casos', q: 'Sabemos priorizar casos por valor e prontidão, com dono definido?' },
-  { name: 'Ecossistema & Fornecedores', q: 'Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?' },
-]
+const PILLARS = SWOT_PILLARS
 
 type QuadrantHint = {
   letter: string
   name: string
   locus: string
   neg: boolean
-  groups: { label: string; text: string }[]
+  groups: { label: string; text: string; pilar: Exclude<SwotPilarId, ''> }[]
 }
 
 /** Repertório de partida por quadrante — estímulo, não checklist. */
@@ -50,20 +47,20 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     locus: 'interno · positivo',
     neg: false,
     groups: [
-      {
-        label: 'Dados',
-        text: 'base proprietária ampla, integrada e de qualidade, com histórico longo.',
-      },
+      { label: 'Dados', pilar: 'dados', text: 'base proprietária ampla, integrada e de qualidade, com histórico longo.' },
       {
         label: 'Talento & cultura',
+        pilar: 'talento',
         text: 'time de dados/IA constituído; lideranças com letramento; cultura de experimentação.',
       },
       {
         label: 'Infra & governança',
-        text: 'dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana (human-in-the-loop).',
+        pilar: 'infraestrutura',
+        text: 'dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana.',
       },
       {
         label: 'Portfólio & recursos',
+        pilar: 'portfolio',
         text: 'casos em produção com ROI comprovado; caixa e patrocínio do topo.',
       },
     ],
@@ -76,18 +73,22 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     groups: [
       {
         label: 'Tecnologia & ecossistema',
+        pilar: 'ecossistema',
         text: 'barateamento e maturação dos modelos; IA generativa, RAG e agêntica; ferramentas abertas e parceiros.',
       },
       {
         label: 'Mercado & clientes',
+        pilar: 'portfolio',
         text: 'demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos.',
       },
       {
         label: 'Concorrência',
+        pilar: 'portfolio',
         text: 'concorrentes lentos ou pouco maduros; janela para liderar.',
       },
       {
         label: 'Talento & incentivos',
+        pilar: 'talento',
         text: 'oferta crescente de talento e ecossistemas locais; editais e incentivos.',
       },
     ],
@@ -98,20 +99,20 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     locus: 'interno · negativo',
     neg: true,
     groups: [
-      {
-        label: 'Dados',
-        text: 'silos, baixa qualidade, sem propriedade clara nem rotulagem.',
-      },
+      { label: 'Dados', pilar: 'dados', text: 'silos, baixa qualidade, sem propriedade clara nem rotulagem.' },
       {
         label: 'Talento & cultura',
+        pilar: 'talento',
         text: 'falta de especialistas; letramento desigual; resistência ou aversão a risco.',
       },
       {
         label: 'Infra & governança',
-        text: 'legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados sensíveis.',
+        pilar: 'governanca',
+        text: 'legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados.',
       },
       {
         label: 'Portfólio & recursos',
+        pilar: 'portfolio',
         text: 'só pilotos sem escala; sem dono, critério de priorização ou business case.',
       },
     ],
@@ -124,19 +125,23 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     groups: [
       {
         label: 'Concorrência',
+        pilar: 'portfolio',
         text: 'players maduros e marketplaces com IA avançada; risco de disrupção do core.',
       },
       {
         label: 'Regulação',
-        text: 'LGPD, marco de IA e regras setoriais elevando o custo de conformidade; exposição de dados sensíveis a modelos públicos.',
+        pilar: 'governanca',
+        text: 'LGPD, marco de IA e regras setoriais elevando o custo de conformidade.',
       },
       {
         label: 'Fornecedores & modelo',
+        pilar: 'ecossistema',
         text: 'lock-in, mudança de preço ou descontinuação; alucinação, viés e risco reputacional.',
       },
       {
         label: 'Talento & ritmo',
-        text: 'guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas superando a adaptação.',
+        pilar: 'talento',
+        text: 'guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas.',
       },
     ],
   },
@@ -152,6 +157,7 @@ const QUADRANTS: {
   name: string
   quest: string
   neg: boolean
+  internal: boolean
 }[] = [
   {
     field: 'forcas',
@@ -159,6 +165,7 @@ const QUADRANTS: {
     name: 'Forças',
     quest: 'O que a organização tem hoje que sustenta a estratégia de IA?',
     neg: false,
+    internal: true,
   },
   {
     field: 'oportunidades',
@@ -166,6 +173,7 @@ const QUADRANTS: {
     name: 'Oportunidades',
     quest: 'Que condição externa a estratégia de IA pode explorar?',
     neg: false,
+    internal: false,
   },
   {
     field: 'fraquezas',
@@ -173,6 +181,7 @@ const QUADRANTS: {
     name: 'Fraquezas',
     quest: 'O que, dentro de casa, trava a estratégia de IA?',
     neg: true,
+    internal: true,
   },
   {
     field: 'ameacas',
@@ -180,6 +189,7 @@ const QUADRANTS: {
     name: 'Ameaças',
     quest: 'O que pode inviabilizar ou encarecer a estratégia de IA?',
     neg: true,
+    internal: false,
   },
 ]
 
@@ -223,12 +233,45 @@ const VEREDITO_OPTIONS: { id: SwotVereditoTipo; label: string }[] = [
   { id: 'repensar', label: 'Repensar a estratégia' },
 ]
 
+function emptyItem(pilar: string = ''): SwotItem {
+  return {
+    id: '',
+    texto: '',
+    pilar,
+    impacto: null,
+    viabilidade: null,
+    probabilidade: null,
+    evidencia: '',
+    prioridade: null,
+  }
+}
+
+function emptyInitiative(): SwotInitiative {
+  return { acao: '', dono: '', horizonte: '', itens_internos: [], itens_externos: [] }
+}
+
+function normalizeItem(raw: SwotItem | string | Partial<SwotItem>): SwotItem {
+  if (typeof raw === 'string') {
+    return { ...emptyItem(), texto: raw }
+  }
+  return {
+    id: raw.id || '',
+    texto: raw.texto || '',
+    pilar: raw.pilar || '',
+    impacto: raw.impacto ?? null,
+    viabilidade: raw.viabilidade ?? null,
+    probabilidade: raw.probabilidade ?? null,
+    evidencia: raw.evidencia || '',
+    prioridade: raw.prioridade ?? null,
+  }
+}
+
 const form = ref({
   optica: '',
-  forcas: [] as string[],
-  fraquezas: [] as string[],
-  oportunidades: [] as string[],
-  ameacas: [] as string[],
+  forcas: [] as SwotItem[],
+  fraquezas: [] as SwotItem[],
+  oportunidades: [] as SwotItem[],
+  ameacas: [] as SwotItem[],
   tows_fo: [] as SwotInitiative[],
   tows_fa: [] as SwotInitiative[],
   tows_fxo: [] as SwotInitiative[],
@@ -238,28 +281,32 @@ const form = ref({
   veredito_texto: '',
 })
 
-const drafts = reactive<Record<SwotListField, string>>({
-  forcas: '',
-  fraquezas: '',
-  oportunidades: '',
-  ameacas: '',
-})
+type DraftKey = `${SwotListField}:${string}`
+const drafts = reactive<Record<string, string>>({})
 
-function emptyInitiative(): SwotInitiative {
-  return { acao: '', dono: '', horizonte: '' }
+function draftKey(field: SwotListField, pilar: string): DraftKey {
+  return `${field}:${pilar || '_none'}`
+}
+
+function getDraft(field: SwotListField, pilar: string): string {
+  return drafts[draftKey(field, pilar)] || ''
+}
+
+function setDraft(field: SwotListField, pilar: string, value: string) {
+  drafts[draftKey(field, pilar)] = value
 }
 
 function applyDoc(doc: SwotAnalysis) {
   form.value = {
     optica: doc.optica || '',
-    forcas: [...(doc.forcas || [])],
-    fraquezas: [...(doc.fraquezas || [])],
-    oportunidades: [...(doc.oportunidades || [])],
-    ameacas: [...(doc.ameacas || [])],
-    tows_fo: (doc.tows_fo || []).map((i) => ({ ...i })),
-    tows_fa: (doc.tows_fa || []).map((i) => ({ ...i })),
-    tows_fxo: (doc.tows_fxo || []).map((i) => ({ ...i })),
-    tows_fxa: (doc.tows_fxa || []).map((i) => ({ ...i })),
+    forcas: (doc.forcas || []).map(normalizeItem),
+    fraquezas: (doc.fraquezas || []).map(normalizeItem),
+    oportunidades: (doc.oportunidades || []).map(normalizeItem),
+    ameacas: (doc.ameacas || []).map(normalizeItem),
+    tows_fo: (doc.tows_fo || []).map((i) => ({ ...emptyInitiative(), ...i })),
+    tows_fa: (doc.tows_fa || []).map((i) => ({ ...emptyInitiative(), ...i })),
+    tows_fxo: (doc.tows_fxo || []).map((i) => ({ ...emptyInitiative(), ...i })),
+    tows_fxa: (doc.tows_fxa || []).map((i) => ({ ...emptyInitiative(), ...i })),
     veredito_tipo: (doc.veredito_tipo || '') as SwotVereditoTipo,
     veredito_titulo: doc.veredito_titulo || '',
     veredito_texto: doc.veredito_texto || '',
@@ -294,12 +341,26 @@ async function persist() {
   }
 }
 
-function addItem(field: SwotListField) {
-  const text = drafts[field].trim()
+function itemsForPilar(field: SwotListField, pilar: string): { item: SwotItem; index: number }[] {
+  return form.value[field]
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => (item.pilar || '') === pilar)
+}
+
+function unassignedItems(field: SwotListField): { item: SwotItem; index: number }[] {
+  const known = new Set(PILLARS.map((p) => p.id))
+  return form.value[field]
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !item.pilar || !known.has(item.pilar as Exclude<SwotPilarId, ''>))
+}
+
+function addItem(field: SwotListField, pilar: string) {
+  const key = draftKey(field, pilar)
+  const text = (drafts[key] || '').trim()
   if (!text) return
   if (form.value[field].length >= 40) return
-  form.value[field] = [...form.value[field], text]
-  drafts[field] = ''
+  form.value[field] = [...form.value[field], { ...emptyItem(pilar), texto: text }]
+  drafts[key] = ''
   void persist()
 }
 
@@ -311,17 +372,20 @@ function removeItem(field: SwotListField, index: number) {
 function onItemBlur(field: SwotListField, index: number, ev: Event) {
   const input = ev.target as HTMLInputElement
   const next = input.value.trim()
-  const list = [...form.value[field]]
-  if (!next) list.splice(index, 1)
-  else list[index] = next
+  const list = form.value[field].map((item) => ({ ...item }))
+  if (!next) {
+    list.splice(index, 1)
+  } else {
+    list[index] = { ...list[index], texto: next }
+  }
   form.value[field] = list
   void persist()
 }
 
-function onDraftKeydown(field: SwotListField, ev: KeyboardEvent) {
+function onDraftKeydown(field: SwotListField, pilar: string, ev: KeyboardEvent) {
   if (ev.key === 'Enter') {
     ev.preventDefault()
-    addItem(field)
+    addItem(field, pilar)
   }
 }
 
@@ -337,19 +401,19 @@ function removeInitiative(field: SwotTowsField, index: number) {
 
 function onInitiativeBlur(field: SwotTowsField, index: number, key: keyof SwotInitiative, ev: Event) {
   const input = ev.target as HTMLInputElement
-  const list = form.value[field].map((row, i) =>
-    i === index ? { ...row, [key]: input.value } : row
-  )
-  const row = list[index]
-  if (row && !row.acao.trim() && !row.dono.trim() && !row.horizonte.trim()) {
+  const list = form.value[field].map((row) => ({ ...row }))
+  const row = { ...list[index], [key]: input.value }
+  if (!(row.acao || '').trim() && !(row.dono || '').trim() && !(row.horizonte || '').trim()) {
     list.splice(index, 1)
+  } else {
+    list[index] = row
   }
   form.value[field] = list
   void persist()
 }
 
 function setVereditoTipo(tipo: SwotVereditoTipo) {
-  form.value.veredito_tipo = form.value.veredito_tipo === tipo ? '' : tipo
+  form.value.veredito_tipo = tipo
   void persist()
 }
 
@@ -358,11 +422,57 @@ function toggleHelp(field: SwotListField, ev?: Event) {
   openHelp.value = openHelp.value === field ? null : field
 }
 
-function onDocPointerDown(ev: Event) {
+function onDocPointerDown(ev: PointerEvent) {
+  if (!openHelp.value) return
   const target = ev.target as HTMLElement | null
-  if (!target) return
-  if (target.closest('.q-help') || target.closest('.q-help-btn')) return
+  if (target?.closest('.q-help') || target?.closest('.q-help-btn')) return
   openHelp.value = null
+}
+
+function openImportPicker() {
+  importError.value = null
+  importState.value = 'idle'
+  fileInput.value?.click()
+}
+
+async function onImportFile(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  importState.value = 'importing'
+  importError.value = null
+  try {
+    const text = await file.text()
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      throw new Error('Arquivo JSON inválido.')
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('O JSON deve ser um objeto aegis.swot-ia.')
+    }
+    const doc = parsed as SwotImportDocument
+    if (doc.format && doc.format !== 'aegis.swot-ia') {
+      throw new Error('Formato inválido. Esperado format=aegis.swot-ia.')
+    }
+    if (doc.version != null && doc.version !== 1 && doc.version !== 2) {
+      throw new Error('Versão não suportada. Use version 1 ou 2.')
+    }
+    const updated = await importSwotAnalysis(doc)
+    applyDoc(updated)
+    importState.value = 'ok'
+    saveState.value = 'saved'
+    window.setTimeout(() => {
+      if (importState.value === 'ok') importState.value = 'idle'
+      if (saveState.value === 'saved') saveState.value = 'idle'
+    }, 2000)
+  } catch (e) {
+    importState.value = 'error'
+    importError.value = e instanceof Error ? e.message : 'Falha na importação.'
+  }
 }
 
 onMounted(async () => {
@@ -392,13 +502,28 @@ onUnmounted(() => {
           Diagnosticar a organização sob a ótica da estratégia de IA — da matriz ao veredito.
         </p>
       </div>
-      <div class="save-pill" :data-state="saveState">
-        <span v-if="saveState === 'saving'">Salvando…</span>
-        <span v-else-if="saveState === 'saved'">Salvo</span>
-        <span v-else-if="saveState === 'error'">{{ saveError || 'Erro ao salvar' }}</span>
-        <span v-else>Auto-salva</span>
+      <div class="header-actions">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="sr-only"
+          @change="onImportFile"
+        />
+        <button type="button" class="import-btn" :disabled="importState === 'importing'" @click="openImportPicker">
+          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
+        </button>
+        <div class="save-pill" :data-state="saveState">
+          <span v-if="saveState === 'saving'">Salvando…</span>
+          <span v-else-if="saveState === 'saved'">Salvo</span>
+          <span v-else-if="saveState === 'error'">{{ saveError || 'Erro ao salvar' }}</span>
+          <span v-else>Auto-salva</span>
+        </div>
       </div>
     </div>
+
+    <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
+    <div v-else-if="importState === 'ok'" class="card import-ok">JSON importado com sucesso.</div>
 
     <div v-if="loading" class="card">Carregando…</div>
     <div v-else-if="error" class="card error-msg">{{ error }}</div>
@@ -416,7 +541,7 @@ onUnmounted(() => {
           </p>
           <h3>Sete pilares</h3>
           <div class="pillarq">
-            <div v-for="p in PILLARS" :key="p.name">
+            <div v-for="p in PILLARS" :key="p.id">
               <b>{{ p.name }}.</b> <i>{{ p.q }}</i>
             </div>
           </div>
@@ -474,7 +599,10 @@ onUnmounted(() => {
         <div class="section-head">
           <div class="eyebrow">2 · Matriz</div>
           <h2>Interno × Externo</h2>
-          <p class="hint">Adicione itens em lista. Priorize 2–3 por quadrante. Toque no ? para ver o repertório de partida.</p>
+          <p class="hint">
+            Em cada quadrante, os itens ficam sob os sete pilares. Priorize 2–3 por quadrante. Toque no ? para o
+            repertório de partida.
+          </p>
         </div>
         <div class="axis-top"><span>Interno</span><span>Externo</span></div>
         <div class="matrix">
@@ -517,28 +645,61 @@ onUnmounted(() => {
               <span class="name">{{ q.name }}</span>
             </div>
             <div class="quest">{{ q.quest }}</div>
-            <ul class="item-list">
-              <li v-for="(item, idx) in form[q.field]" :key="q.field + idx" class="item-row">
+
+            <div
+              v-if="unassignedItems(q.field).length"
+              class="pillar-block pillar-orphan"
+            >
+              <div class="pillar-label">Sem pilar</div>
+              <ul class="item-list">
+                <li
+                  v-for="{ item, index } in unassignedItems(q.field)"
+                  :key="item.id || q.field + '-u-' + index"
+                  class="item-row"
+                >
+                  <input
+                    :value="item.texto"
+                    class="item-input"
+                    maxlength="500"
+                    @blur="onItemBlur(q.field, index, $event)"
+                  />
+                  <button type="button" class="item-remove" title="Remover" @click="removeItem(q.field, index)">
+                    ×
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div v-for="p in PILLARS" :key="q.field + p.id" class="pillar-block">
+              <div class="pillar-label" :title="p.q">{{ p.name }}</div>
+              <ul class="item-list">
+                <li
+                  v-for="{ item, index } in itemsForPilar(q.field, p.id)"
+                  :key="item.id || q.field + p.id + index"
+                  class="item-row"
+                >
+                  <input
+                    :value="item.texto"
+                    class="item-input"
+                    maxlength="500"
+                    @blur="onItemBlur(q.field, index, $event)"
+                  />
+                  <button type="button" class="item-remove" title="Remover" @click="removeItem(q.field, index)">
+                    ×
+                  </button>
+                </li>
+              </ul>
+              <div class="item-add">
                 <input
-                  :value="item"
-                  class="item-input"
+                  :value="getDraft(q.field, p.id)"
+                  type="text"
                   maxlength="500"
-                  @blur="onItemBlur(q.field, idx, $event)"
+                  :placeholder="`Adicionar em ${p.name}…`"
+                  @input="setDraft(q.field, p.id, ($event.target as HTMLInputElement).value)"
+                  @keydown="onDraftKeydown(q.field, p.id, $event)"
                 />
-                <button type="button" class="item-remove" title="Remover" @click="removeItem(q.field, idx)">
-                  ×
-                </button>
-              </li>
-            </ul>
-            <div class="item-add">
-              <input
-                v-model="drafts[q.field]"
-                type="text"
-                maxlength="500"
-                placeholder="Adicionar item…"
-                @keydown="onDraftKeydown(q.field, $event)"
-              />
-              <button type="button" @click="addItem(q.field)">+</button>
+                <button type="button" @click="addItem(q.field, p.id)">+</button>
+              </div>
             </div>
           </div>
         </div>
@@ -558,7 +719,7 @@ onUnmounted(() => {
             <span class="k">{{ t.key }}</span>
             <span class="qz">{{ t.quest }}</span>
             <p class="thint">{{ t.hint }}</p>
-            <div v-for="(row, idx) in form[t.field]" :key="t.field + idx" class="init-row">
+            <div v-for="(row, idx) in form[t.field]" :key="row.id || t.field + idx" class="init-row">
               <input
                 :value="row.acao"
                 class="init-acao"
@@ -650,6 +811,50 @@ onUnmounted(() => {
   gap: 16px;
   align-items: flex-start;
   margin-bottom: 22px;
+}
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.import-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--navy);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.import-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.import-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.import-ok {
+  color: #2f6e4a;
+  border-color: #bbd3b7;
+  background: #e8f0e7;
 }
 .eyebrow {
   font-size: 0.7rem;
@@ -1018,33 +1223,27 @@ onUnmounted(() => {
 .q-help-letter {
   font-family: var(--serif);
   font-weight: 700;
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   color: var(--gold);
   line-height: 1;
 }
 .q-help-letter.neg {
   color: var(--oxblood);
 }
-.q-help-head strong {
-  display: block;
-  color: var(--navy);
-  font-size: 0.95rem;
-}
 .q-help-locus {
   display: block;
-  margin-top: 2px;
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
   font-weight: 600;
+  margin-top: 2px;
 }
 .q-help-note {
   margin: 0 0 10px;
   font-size: 0.78rem;
-  line-height: 1.4;
   color: var(--muted);
-  font-style: italic;
+  line-height: 1.4;
 }
 .q-help-list {
   list-style: none;
@@ -1128,6 +1327,35 @@ onUnmounted(() => {
   line-height: 1.15;
   pointer-events: none;
 }
+.pillar-block {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(198, 161, 91, 0.18);
+}
+.pillar-block:first-of-type {
+  margin-top: 4px;
+}
+.pillar-orphan {
+  background: #faf7f0;
+  margin: 0 -6px 4px;
+  padding: 8px 6px 10px;
+  border-top: none;
+  border-radius: 2px;
+}
+.pillar-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 5px;
+}
+.q.neg .pillar-label {
+  color: var(--oxblood);
+}
+.pillar-orphan .pillar-label {
+  color: var(--muted);
+}
 .item-list {
   list-style: none;
   margin: 0;
@@ -1176,7 +1404,7 @@ onUnmounted(() => {
 .item-add {
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .item-add input {
   flex: 1;
@@ -1184,8 +1412,8 @@ onUnmounted(() => {
   border: 1px dashed var(--line);
   border-radius: 3px;
   background: #fff;
-  font-size: 12px;
-  padding: 6px 8px;
+  font-size: 11.5px;
+  padding: 5px 7px;
   font-family: inherit;
   color: var(--ink);
   outline: none;
@@ -1206,7 +1434,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .item-add button {
-  width: 30px;
+  width: 28px;
 }
 .item-add button:hover,
 .add-init:hover {
@@ -1254,25 +1482,25 @@ onUnmounted(() => {
   line-height: 1.35;
 }
 .thint {
-  font-size: 0.88rem;
-  margin: 0 0 10px;
+  font-size: 0.85rem;
+  margin: 0.2em 0 0.75em;
   line-height: 1.4;
-  color: var(--ink);
+  color: #3a3f49;
 }
 .init-row {
-  border-top: 1px solid var(--line);
-  padding: 8px 0;
+  margin-bottom: 8px;
 }
 .init-acao {
   width: 100%;
-  border: none;
-  border-bottom: 1px dotted var(--line);
-  background: transparent;
-  font-size: 13px;
-  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 12.5px;
+  padding: 6px 8px;
   font-family: inherit;
   outline: none;
-  color: var(--ink);
+}
+.init-acao:focus {
+  border-color: var(--gold);
 }
 .init-meta {
   display: flex;
@@ -1383,6 +1611,11 @@ onUnmounted(() => {
   }
   .page-header {
     flex-direction: column;
+  }
+  .header-actions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
 </style>

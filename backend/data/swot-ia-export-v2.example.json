@@ -1,0 +1,201 @@
+{
+  "format": "aegis.swot-ia",
+  "version": 2,
+  "exported_at": "2026-07-30T17:00:00Z",
+  "locale": "pt-BR",
+  "meta": {
+    "title": "SWOT de IA — Rede Aurora",
+    "organization": "Rede Aurora",
+    "source": "example",
+    "notes": "Caso ilustrativo do white paper Valorian. Itens priorizados (2–4 por quadrante) com pilares e scores."
+  },
+  "payload": {
+    "optica": "Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala, operação assistida por IA (compras, estoque, atendimento) e decisão apoiada por dados — para defender margem diante dos marketplaces.",
+
+    "forcas": [
+      {
+        "id": "f1",
+        "texto": "Base de dados proprietária ampla e integrada (vendas, CRM, estoque) — ativo transversal, não de um caso só.",
+        "pilar": "dados",
+        "impacto": 5,
+        "viabilidade": 4,
+        "evidencia": "Histórico multi-ano de vendas + CRM + estoque em data warehouse comum.",
+        "prioridade": 1
+      },
+      {
+        "id": "f2",
+        "texto": "Caixa e margem saudáveis: capacidade de investir sem depender de um único payback.",
+        "pilar": "portfolio",
+        "impacto": 4,
+        "viabilidade": 5,
+        "evidencia": "Margem e caixa suficientes para programa multi-ano sem ROI imediato de um único piloto.",
+        "prioridade": 2
+      },
+      {
+        "id": "f3",
+        "texto": "Omnichannel (lojas, e-commerce, WhatsApp) gera dados ricos e múltiplos pontos de aplicação.",
+        "pilar": "infraestrutura",
+        "impacto": 4,
+        "viabilidade": 4,
+        "evidencia": "~40 lojas + e-commerce + WhatsApp com trilhas de interação identificáveis.",
+        "prioridade": 3
+      },
+      {
+        "id": "f4",
+        "texto": "Board patrocina a IA como direção estratégica, não como iniciativa de uma área.",
+        "pilar": "cultura",
+        "impacto": 5,
+        "viabilidade": 5,
+        "evidencia": "Direção estratégica de IA formalizada pelo board.",
+        "prioridade": 4
+      }
+    ],
+
+    "fraquezas": [
+      {
+        "id": "fx1",
+        "texto": "Sem estrutura nem governança de IA corporativa: sem dono, política ou critério de portfólio.",
+        "pilar": "governanca",
+        "impacto": 5,
+        "viabilidade": 3,
+        "evidencia": "Ausência de RACI, política de IA e comité de priorização.",
+        "prioridade": 1
+      },
+      {
+        "id": "fx2",
+        "texto": "Letramento desigual: comercial engajado; operações, finanças e RH sem repertório para achar casos.",
+        "pilar": "talento",
+        "impacto": 4,
+        "viabilidade": 3,
+        "evidencia": "Engajamento concentrado no comercial; demais áreas sem repertório de casos.",
+        "prioridade": 2
+      },
+      {
+        "id": "fx3",
+        "texto": "Dados fortes em vendas, mas fracos e em silos na cadeia e no back-office — a ambição transversal esbarra aí.",
+        "pilar": "dados",
+        "impacto": 5,
+        "viabilidade": 2,
+        "evidencia": "Cobertura alta em vendas/CRM; lacunas e silos em supply e back-office.",
+        "prioridade": 3
+      },
+      {
+        "id": "fx4",
+        "texto": "Pouca capacidade interna: dependência de fornecedores para sustentar soluções no longo prazo.",
+        "pilar": "ecossistema",
+        "impacto": 4,
+        "viabilidade": 2,
+        "evidencia": "Time interno insuficiente para operar e evoluir soluções sem parceiros.",
+        "prioridade": 4
+      }
+    ],
+
+    "oportunidades": [
+      {
+        "id": "o1",
+        "texto": "Barateamento e maturação da IA reduzem a barreira para aplicá-la em várias funções ao mesmo tempo.",
+        "pilar": "ecossistema",
+        "impacto": 4,
+        "probabilidade": 5,
+        "evidencia": "Queda de custo de modelos e ferramentas; oferta crescente de soluções verticais de varejo.",
+        "prioridade": 1
+      },
+      {
+        "id": "o2",
+        "texto": "Varejo médio ainda pouco digitalizado em IA — janela para virar referência regional antes da concorrência.",
+        "pilar": "portfolio",
+        "impacto": 5,
+        "probabilidade": 4,
+        "evidencia": "Concorrentes regionais com baixa maturidade em IA aplicada.",
+        "prioridade": 2
+      },
+      {
+        "id": "o3",
+        "texto": "Ecossistema local de talento e parceiros (universidades, Porto Digital) para formar e contratar capacidade.",
+        "pilar": "talento",
+        "impacto": 3,
+        "probabilidade": 4,
+        "evidencia": "Proximidade a hubs e programas de formação em dados/IA.",
+        "prioridade": 3
+      }
+    ],
+
+    "ameacas": [
+      {
+        "id": "a1",
+        "texto": "Marketplaces e grandes players com IA madura pressionam margem e experiência — risco de ficar estruturalmente atrás.",
+        "pilar": "portfolio",
+        "impacto": 5,
+        "probabilidade": 5,
+        "evidencia": "Pressão contínua de marketplaces em preço e personalização.",
+        "prioridade": 1
+      },
+      {
+        "id": "a2",
+        "texto": "LGPD e regulação de IA elevam o custo de conformidade de uma estratégia ampla e data-intensive.",
+        "pilar": "governanca",
+        "impacto": 4,
+        "probabilidade": 4,
+        "evidencia": "Requisitos de LGPD + expectativa de marco de IA setorial.",
+        "prioridade": 2
+      },
+      {
+        "id": "a3",
+        "texto": "Guerra por talento: difícil atrair e reter capacidade de IA contra big techs e startups.",
+        "pilar": "talento",
+        "impacto": 4,
+        "probabilidade": 5,
+        "evidencia": "Mercado aquecido; dificuldade histórica de retenção de perfil técnico.",
+        "prioridade": 3
+      }
+    ],
+
+    "tows_fo": [
+      {
+        "id": "fo1",
+        "acao": "Usar dados proprietários + patrocínio do board para capturar a janela e virar referência regional de varejo com IA antes dos concorrentes locais.",
+        "dono": "CEO / Board",
+        "horizonte": "12–18 meses",
+        "itens_internos": ["f1", "f4"],
+        "itens_externos": ["o2"]
+      }
+    ],
+
+    "tows_fa": [
+      {
+        "id": "fa1",
+        "acao": "Usar caixa e omnichannel para construir capacidade e experiência que os marketplaces não replicam no território local, protegendo margem.",
+        "dono": "Diretoria Comercial + Operações",
+        "horizonte": "6–12 meses",
+        "itens_internos": ["f2", "f3"],
+        "itens_externos": ["a1"]
+      }
+    ],
+
+    "tows_fxo": [
+      {
+        "id": "fxo1",
+        "acao": "A janela só se captura com governança e letramento além do comercial — pré-condição para escalar além de pilotos.",
+        "dono": "Head de Dados / IA",
+        "horizonte": "0–6 meses",
+        "itens_internos": ["fx1", "fx2"],
+        "itens_externos": ["o1", "o2"]
+      }
+    ],
+
+    "tows_fxa": [
+      {
+        "id": "fxa1",
+        "acao": "Sem estrutura de IA, contra guerra por talento e regulação, a estratégia se dissolve em pilotos sem dono — mitigar criando estrutura mínima (dono, política, conformidade) antes de multiplicar casos.",
+        "dono": "Board",
+        "horizonte": "0–3 meses",
+        "itens_internos": ["fx1", "fx4"],
+        "itens_externos": ["a2", "a3"]
+      }
+    ],
+
+    "veredito_tipo": "fundacao",
+    "veredito_titulo": "Ambição certa, organização ainda não pronta.",
+    "veredito_texto": "A direção é legítima e a Rede Aurora tem ativos reais — dados, caixa, patrocínio — para persegui-la. Mas o gargalo não é tecnológico: é de capacidade organizacional. Sem estrutura de governança de IA, critério de portfólio e letramento distribuído além do comercial, a estratégia transversal degenera em pilotos dispersos. A recomendação não é desacelerar a ambição — é institucionalizar a IA antes de multiplicá-la: dono, política, priorização e formação de lideranças."
+  }
+}
