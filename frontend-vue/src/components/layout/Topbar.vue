@@ -49,7 +49,7 @@ function toggleMenu() {
         <RouterLink to="/agenda" class="tb-pill" @click="menuOpen = false">Agenda</RouterLink>
         <RouterLink to="/quiz-respostas" class="tb-pill" @click="menuOpen = false">Quiz</RouterLink>
         <RouterLink to="/ai-maturity" class="tb-pill" @click="menuOpen = false">Modelo de Maturidade</RouterLink>
-        <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">Projetos</RouterLink>
+        <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">AI Canvas</RouterLink>
         <RouterLink
           v-if="(auth.user?.course_slugs?.length ?? 0) > 1"
           to="/trilhas"

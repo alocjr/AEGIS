@@ -16,23 +16,51 @@ from app.schemas import (
 
 router = APIRouter(prefix="/api/canvas-projects", tags=["canvas-projects"])
 
+_LIST_FIELDS = (
+    "contexto",
+    "dores",
+    "oportunidade",
+    "dados",
+    "valor",
+    "custo",
+    "riscos",
+)
+
 _EMPTY_FIELDS = {
     "area_negocio": "",
     "responsavel": "",
     "data": "",
     "objetivo_estrategico": "",
-    "contexto": "",
-    "dores": "",
-    "oportunidade": "",
+    "contexto": [],
+    "dores": [],
+    "oportunidade": [],
     "oportunidade_tipos": [],
-    "dados": "",
-    "valor": "",
-    "custo": "",
-    "riscos": "",
+    "dados": [],
+    "valor": [],
+    "custo": [],
+    "riscos": [],
     "score_valor": None,
     "score_viabilidade": None,
     "proximo_passo": "",
 }
+
+
+def _as_item_list(value) -> list[str]:
+    """Normaliza string legada ou lista para lista de itens."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()][:40]
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    return []
+
+
+def _clean_item_list(value: list[str] | None) -> list[str]:
+    if not value:
+        return []
+    return [str(x).strip() for x in value if str(x).strip()][:40]
 
 
 def _quadrant(score_valor: int | None, score_viabilidade: int | None) -> str | None:
@@ -69,19 +97,24 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "score_viabilidade": score_viabilidade,
     }
     if summary:
-        return base
+        return {
+            **base,
+            "data": doc.get("data") or "",
+            "objetivo_estrategico": doc.get("objetivo_estrategico") or "",
+            "proximo_passo": doc.get("proximo_passo") or "",
+        }
     return {
         **base,
         "data": doc.get("data") or "",
         "objetivo_estrategico": doc.get("objetivo_estrategico") or "",
-        "contexto": doc.get("contexto") or "",
-        "dores": doc.get("dores") or "",
-        "oportunidade": doc.get("oportunidade") or "",
+        "contexto": _as_item_list(doc.get("contexto")),
+        "dores": _as_item_list(doc.get("dores")),
+        "oportunidade": _as_item_list(doc.get("oportunidade")),
         "oportunidade_tipos": list(doc.get("oportunidade_tipos") or []),
-        "dados": doc.get("dados") or "",
-        "valor": doc.get("valor") or "",
-        "custo": doc.get("custo") or "",
-        "riscos": doc.get("riscos") or "",
+        "dados": _as_item_list(doc.get("dados")),
+        "valor": _as_item_list(doc.get("valor")),
+        "custo": _as_item_list(doc.get("custo")),
+        "riscos": _as_item_list(doc.get("riscos")),
         "proximo_passo": doc.get("proximo_passo") or "",
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
     }
@@ -153,6 +186,9 @@ def update_project(
 
     for key, value in data.items():
         if key == "oportunidade_tipos":
+            continue
+        if key in _LIST_FIELDS:
+            updates[key] = _clean_item_list(value)
             continue
         if value is None and key in ("score_valor", "score_viabilidade"):
             updates[key] = None

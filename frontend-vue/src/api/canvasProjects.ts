@@ -7,11 +7,23 @@ export type CanvasQuadrant =
   | 'evitar'
   | null
 
+export type CanvasListField =
+  | 'contexto'
+  | 'dores'
+  | 'oportunidade'
+  | 'dados'
+  | 'valor'
+  | 'custo'
+  | 'riscos'
+
 export interface CanvasProjectSummary {
   id: string
   title: string
   area_negocio: string
   responsavel: string
+  data: string
+  objetivo_estrategico: string
+  proximo_passo: string
   updated_at: string | null
   created_at: string | null
   quadrant: CanvasQuadrant
@@ -20,17 +32,14 @@ export interface CanvasProjectSummary {
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
-  data: string
-  objetivo_estrategico: string
-  contexto: string
-  dores: string
-  oportunidade: string
+  contexto: string[]
+  dores: string[]
+  oportunidade: string[]
   oportunidade_tipos: string[]
-  dados: string
-  valor: string
-  custo: string
-  riscos: string
-  proximo_passo: string
+  dados: string[]
+  valor: string[]
+  custo: string[]
+  riscos: string[]
   opportunity_type_options: string[]
 }
 
@@ -40,14 +49,14 @@ export type CanvasProjectPayload = Partial<{
   responsavel: string
   data: string
   objetivo_estrategico: string
-  contexto: string
-  dores: string
-  oportunidade: string
+  contexto: string[]
+  dores: string[]
+  oportunidade: string[]
   oportunidade_tipos: string[]
-  dados: string
-  valor: string
-  custo: string
-  riscos: string
+  dados: string[]
+  valor: string[]
+  custo: string[]
+  riscos: string[]
   score_valor: number | null
   score_viabilidade: number | null
   proximo_passo: string

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   getCanvasProject,
   updateCanvasProject,
   type CanvasProject,
   type CanvasProjectPayload,
+  type CanvasListField,
   type CanvasQuadrant,
 } from '@/api/canvasProjects'
 
@@ -18,6 +19,18 @@ const error = ref<string | null>(null)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
 const project = ref<CanvasProject | null>(null)
+let saving = false
+let pendingSave = false
+
+const drafts = reactive<Record<CanvasListField, string>>({
+  contexto: '',
+  dores: '',
+  oportunidade: '',
+  dados: '',
+  valor: '',
+  custo: '',
+  riscos: '',
+})
 
 const form = ref({
   title: '',
@@ -25,14 +38,14 @@ const form = ref({
   responsavel: '',
   data: '',
   objetivo_estrategico: '',
-  contexto: '',
-  dores: '',
-  oportunidade: '',
+  contexto: [] as string[],
+  dores: [] as string[],
+  oportunidade: [] as string[],
   oportunidade_tipos: [] as string[],
-  dados: '',
-  valor: '',
-  custo: '',
-  riscos: '',
+  dados: [] as string[],
+  valor: [] as string[],
+  custo: [] as string[],
+  riscos: [] as string[],
   score_valor: null as number | null,
   score_viabilidade: null as number | null,
   proximo_passo: '',
@@ -47,9 +60,6 @@ const typeOptions = ref<string[]>([
   'Agente autônomo',
 ])
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null
-let skipWatch = true
-
 const quadrant = computed<CanvasQuadrant>(() => {
   const v = form.value.score_valor
   const f = form.value.score_viabilidade
@@ -62,23 +72,44 @@ const quadrant = computed<CanvasQuadrant>(() => {
   return 'evitar'
 })
 
+function asList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map((s) => s.trim()).filter(Boolean)
+  if (typeof value === 'string' && value.trim()) return [value.trim()]
+  return []
+}
+
+function maskDate(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8)
+  const parts: string[] = []
+  if (digits.length > 0) parts.push(digits.slice(0, 2))
+  if (digits.length > 2) parts.push(digits.slice(2, 4))
+  if (digits.length > 4) parts.push(digits.slice(4, 8))
+  return parts.join('/')
+}
+
+function onDateInput(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const masked = maskDate(input.value)
+  form.value.data = masked
+  input.value = masked
+}
+
 function applyProject(p: CanvasProject) {
-  skipWatch = true
   project.value = p
   form.value = {
     title: p.title || 'Novo projeto',
     area_negocio: p.area_negocio || '',
     responsavel: p.responsavel || '',
-    data: p.data || '',
+    data: maskDate(p.data || ''),
     objetivo_estrategico: p.objetivo_estrategico || '',
-    contexto: p.contexto || '',
-    dores: p.dores || '',
-    oportunidade: p.oportunidade || '',
+    contexto: asList(p.contexto),
+    dores: asList(p.dores),
+    oportunidade: asList(p.oportunidade),
     oportunidade_tipos: [...(p.oportunidade_tipos || [])],
-    dados: p.dados || '',
-    valor: p.valor || '',
-    custo: p.custo || '',
-    riscos: p.riscos || '',
+    dados: asList(p.dados),
+    valor: asList(p.valor),
+    custo: asList(p.custo),
+    riscos: asList(p.riscos),
     score_valor: p.score_valor,
     score_viabilidade: p.score_viabilidade,
     proximo_passo: p.proximo_passo || '',
@@ -86,9 +117,40 @@ function applyProject(p: CanvasProject) {
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
   }
-  queueMicrotask(() => {
-    skipWatch = false
-  })
+}
+
+function addItem(field: CanvasListField) {
+  const text = drafts[field].trim()
+  if (!text) return
+  if (form.value[field].length >= 40) return
+  form.value[field] = [...form.value[field], text]
+  drafts[field] = ''
+  void persist()
+}
+
+function removeItem(field: CanvasListField, index: number) {
+  form.value[field] = form.value[field].filter((_, i) => i !== index)
+  void persist()
+}
+
+function onItemBlur(field: CanvasListField, index: number, ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const next = input.value.trim()
+  const list = [...form.value[field]]
+  if (!next) {
+    list.splice(index, 1)
+  } else {
+    list[index] = next
+  }
+  form.value[field] = list
+  void persist()
+}
+
+function onDraftKeydown(field: CanvasListField, ev: KeyboardEvent) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault()
+    addItem(field)
+  }
 }
 
 function toggleType(t: string) {
@@ -96,23 +158,21 @@ function toggleType(t: string) {
   if (set.has(t)) set.delete(t)
   else set.add(t)
   form.value.oportunidade_tipos = [...set]
+  void persist()
 }
 
 function setScore(field: 'score_valor' | 'score_viabilidade', n: number) {
   form.value[field] = form.value[field] === n ? null : n
-}
-
-function scheduleSave() {
-  if (skipWatch || !projectId.value) return
-  saveState.value = 'idle'
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    void persist()
-  }, 700)
+  void persist()
 }
 
 async function persist() {
   if (!projectId.value) return
+  if (saving) {
+    pendingSave = true
+    return
+  }
+  saving = true
   saveState.value = 'saving'
   saveError.value = null
   const payload: CanvasProjectPayload = { ...form.value }
@@ -123,10 +183,14 @@ async function persist() {
   } catch (e) {
     saveState.value = 'error'
     saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
+  } finally {
+    saving = false
+    if (pendingSave) {
+      pendingSave = false
+      void persist()
+    }
   }
 }
-
-watch(form, scheduleSave, { deep: true })
 
 onMounted(async () => {
   try {
@@ -141,10 +205,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-onUnmounted(() => {
-  if (saveTimer) clearTimeout(saveTimer)
-})
 </script>
 
 <template>
@@ -155,7 +215,7 @@ onUnmounted(() => {
         <span v-if="saveState === 'saving'">Salvando…</span>
         <span v-else-if="saveState === 'saved'" class="ok">Salvo</span>
         <span v-else-if="saveState === 'error'" class="err">{{ saveError || 'Erro ao salvar' }}</span>
-        <span v-else class="muted">Alterações salvam automaticamente</span>
+        <span v-else class="muted">Salva ao sair do campo</span>
       </div>
     </div>
 
@@ -173,21 +233,30 @@ onUnmounted(() => {
           <p class="subtitle">Um canvas por área. Preencha na ordem 01 → 08: da dor real à decisão de investir.</p>
           <label class="title-field">
             <span>Nome do projeto</span>
-            <input v-model="form.title" type="text" maxlength="200" />
+            <input v-model="form.title" type="text" maxlength="200" @blur="persist" />
           </label>
         </div>
         <div class="meta">
           <label>
             <span>Área de negócio</span>
-            <input v-model="form.area_negocio" type="text" placeholder="Ex.: Comercial" maxlength="200" />
+            <input v-model="form.area_negocio" type="text" placeholder="Ex.: Comercial" maxlength="200" @blur="persist" />
           </label>
           <label>
             <span>Responsável</span>
-            <input v-model="form.responsavel" type="text" placeholder="Nome" maxlength="200" />
+            <input v-model="form.responsavel" type="text" placeholder="Nome" maxlength="200" @blur="persist" />
           </label>
           <label>
             <span>Data</span>
-            <input v-model="form.data" type="text" placeholder="__/__/____" maxlength="40" />
+            <input
+              :value="form.data"
+              type="text"
+              inputmode="numeric"
+              placeholder="dd/mm/aaaa"
+              maxlength="10"
+              autocomplete="off"
+              @input="onDateInput"
+              @blur="persist"
+            />
           </label>
           <label>
             <span>Objetivo estratégico da área</span>
@@ -196,6 +265,7 @@ onUnmounted(() => {
               type="text"
               placeholder="O que essa área precisa entregar"
               maxlength="2000"
+              @blur="persist"
             />
           </label>
         </div>
@@ -206,19 +276,79 @@ onUnmounted(() => {
           <span class="num">01</span>
           <div class="cell-title">Contexto da área</div>
           <div class="hint">KPIs e processos-chave. Onde essa área cria ou destrói valor hoje?</div>
-          <textarea v-model="form.contexto" class="write" rows="4" placeholder="Processos, indicadores, volume de trabalho…" />
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.contexto" :key="'c' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('contexto', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('contexto', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.contexto"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('contexto', $event)"
+            />
+            <button type="button" @click="addItem('contexto')">+</button>
+          </div>
         </div>
         <div class="cell c4 band-diag">
           <span class="num">02</span>
           <div class="cell-title">Dores &amp; gargalos</div>
           <div class="hint">Atrito, retrabalho, erro, custo, lentidão. <strong>Descreva a dor — não a solução.</strong></div>
-          <textarea v-model="form.dores" class="write" rows="4" placeholder="O que trava, custa ou falha hoje…" />
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.dores" :key="'d' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('dores', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('dores', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.dores"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('dores', $event)"
+            />
+            <button type="button" @click="addItem('dores')">+</button>
+          </div>
         </div>
         <div class="cell c4 band-diag cell-last">
           <span class="num">03</span>
           <div class="cell-title">Oportunidade de IA</div>
           <div class="hint">Em uma frase: o que a IA faria e qual dor do bloco 02 ela ataca.</div>
-          <textarea v-model="form.oportunidade" class="write write-sm" rows="2" placeholder="A IA faria…" />
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.oportunidade" :key="'o' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('oportunidade', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('oportunidade', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.oportunidade"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('oportunidade', $event)"
+            />
+            <button type="button" @click="addItem('oportunidade')">+</button>
+          </div>
           <div class="chips">
             <button
               v-for="t in typeOptions"
@@ -235,27 +365,107 @@ onUnmounted(() => {
 
         <div class="cell c-eval band-eval">
           <span class="num">04</span>
-          <div class="cell-title">Dados &amp; insumos</div>
-          <div class="hint">Combustível: volume, qualidade, acesso, formato. Sem dado, não sai do papel.</div>
-          <textarea v-model="form.dados" class="write" rows="4" placeholder="Que dados existem? Onde? Em que estado?" />
+          <div class="cell-title">Valor esperado</div>
+          <div class="hint">Ganho direto (tempo/custo/receita) + indireto (qualidade/risco). Como medir?</div>
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.valor" :key="'va' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('valor', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('valor', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.valor"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('valor', $event)"
+            />
+            <button type="button" @click="addItem('valor')">+</button>
+          </div>
         </div>
         <div class="cell c-eval band-eval">
           <span class="num">05</span>
-          <div class="cell-title">Valor esperado</div>
-          <div class="hint">Ganho direto (tempo/custo/receita) + indireto (qualidade/risco). Como medir?</div>
-          <textarea v-model="form.valor" class="write" rows="4" placeholder="Ganho + métrica de sucesso" />
+          <div class="cell-title">Dados &amp; insumos</div>
+          <div class="hint">Combustível: volume, qualidade, acesso, formato. Sem dado, não sai do papel.</div>
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.dados" :key="'da' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('dados', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('dados', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.dados"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('dados', $event)"
+            />
+            <button type="button" @click="addItem('dados')">+</button>
+          </div>
         </div>
         <div class="cell c-eval band-eval">
           <span class="num">06</span>
           <div class="cell-title">Custo &amp; complexidade</div>
           <div class="hint">CapEx (construir) × OpEx (operar: inferência/tokens + manutenção) + integração.</div>
-          <textarea v-model="form.custo" class="write" rows="4" placeholder="Construir, operar e integrar custa…" />
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.custo" :key="'cu' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('custo', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('custo', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.custo"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('custo', $event)"
+            />
+            <button type="button" @click="addItem('custo')">+</button>
+          </div>
         </div>
         <div class="cell c-eval band-eval cell-last">
           <span class="num">07</span>
           <div class="cell-title">Riscos &amp; governança</div>
           <div class="hint">LGPD e regras do setor, alucinação, dependência. Que supervisão humana é obrigatória?</div>
-          <textarea v-model="form.riscos" class="write" rows="4" placeholder="Riscos e nível de human-in-the-loop" />
+          <ul class="item-list">
+            <li v-for="(item, idx) in form.riscos" :key="'ri' + idx" class="item-row">
+              <input
+                :value="item"
+                class="item-input"
+                maxlength="500"
+                @blur="onItemBlur('riscos', idx, $event)"
+              />
+              <button type="button" class="item-remove" title="Remover" @click="removeItem('riscos', idx)">×</button>
+            </li>
+          </ul>
+          <div class="item-add">
+            <input
+              v-model="drafts.riscos"
+              type="text"
+              maxlength="500"
+              placeholder="Adicionar item…"
+              @keydown="onDraftKeydown('riscos', $event)"
+            />
+            <button type="button" @click="addItem('riscos')">+</button>
+          </div>
         </div>
       </div>
 
@@ -303,6 +513,7 @@ onUnmounted(() => {
               class="write write-sm"
               rows="2"
               placeholder="Ex.: PoC de 3 semanas com dados de faturamento…"
+              @blur="persist"
             />
           </div>
         </div>
@@ -534,6 +745,87 @@ h1 span {
 }
 .write-sm {
   min-height: 44px;
+}
+.item-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.item-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px dotted var(--line);
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--ink);
+  font-family: inherit;
+  padding: 4px 2px;
+  outline: none;
+}
+.item-input:focus {
+  border-bottom-color: var(--amber);
+  background: #fffef9;
+}
+.item-remove {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.item-remove:hover {
+  color: var(--danger);
+  background: #f1e1dd;
+}
+.item-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.item-add input {
+  flex: 1;
+  min-width: 0;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  padding: 6px 8px;
+  font-family: inherit;
+  color: var(--ink);
+  outline: none;
+}
+.item-add input:focus {
+  border-color: var(--amber);
+  border-style: solid;
+}
+.item-add button {
+  flex-shrink: 0;
+  width: 30px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+}
+.item-add button:hover {
+  border-color: var(--amber);
+  color: var(--amber);
 }
 .c4 {
   grid-column: span 4;
