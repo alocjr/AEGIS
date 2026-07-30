@@ -101,6 +101,12 @@ function openProject(id: string) {
   void router.push(`/projetos/${id}`)
 }
 
+function chartTitle(title: string): string {
+  const t = (title || 'Novo projeto').trim()
+  if (t.length <= 22) return t
+  return `${t.slice(0, 20)}…`
+}
+
 async function refresh() {
   const res = await listCanvasProjects()
   items.value = res.items ?? []
@@ -179,7 +185,7 @@ onMounted(async () => {
         <div class="chart-body">
           <svg
             class="quad-svg"
-            viewBox="0 0 420 340"
+            viewBox="0 0 480 360"
             role="img"
             aria-label="Matriz de valor versus viabilidade com os projetos pontuados"
           >
@@ -315,6 +321,12 @@ onMounted(async () => {
                 class="dot-label"
                 text-anchor="middle"
               >{{ p.title.slice(0, 1).toUpperCase() }}</text>
+              <text
+                class="dot-name"
+                text-anchor="start"
+                dominant-baseline="middle"
+                :transform="`translate(${p.cx + 14}, ${p.cy}) rotate(-45)`"
+              >{{ chartTitle(p.title) }}</text>
             </g>
           </svg>
 
@@ -543,6 +555,16 @@ onMounted(async () => {
   font-size: 9px;
   font-weight: 700;
   pointer-events: none;
+}
+.dot-name {
+  fill: #12232e;
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .chart-empty {
   font-size: 13px;
