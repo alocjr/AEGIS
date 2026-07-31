@@ -10,9 +10,9 @@ from app.mcp.resources import register_resources
 from app.mcp.tools_admin import register_admin_tools
 from app.mcp.tools_learner import register_learner_tools
 
+# Resetar singletons ao recarregar módulo (ex.: --reload muda MCP_PUBLIC_URL)
 _mcp: FastMCP | None = None
 _auth: AegisOAuthProvider | None = None
-
 MCP_PATH = "/mcp"
 
 

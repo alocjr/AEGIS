@@ -26,7 +26,8 @@ Cookies da SPA **não** são usados. Email precisa estar verificado. Tools `admi
 
 | Path | Função |
 |------|--------|
-| `/.well-known/oauth-authorization-server` | Metadata do AS |
+| `/.well-known/oauth-authorization-server` | Metadata do AS (inclui `token_endpoint_auth_methods_supported: none`) |
+| `/.well-known/oauth-protected-resource` | PRM raiz (Claude consulta sem `/mcp`) |
 | `/.well-known/oauth-protected-resource/mcp` | Metadata do resource |
 | `/register` | Dynamic Client Registration |
 | `/authorize` | Inicia OAuth → redirect login |

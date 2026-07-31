@@ -14,9 +14,13 @@ from mcp.server.auth.provider import (
     AuthorizationParams,
     RefreshToken,
 )
+from mcp.server.auth.routes import cors_middleware
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyHttpUrl
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
 from fastmcp.server.auth import OAuthProvider
 
@@ -35,9 +39,19 @@ DEFAULT_SCOPES = ["mcp"]
 
 
 def mcp_public_base() -> str:
-    return (settings.mcp_public_url or settings.app_base_url or "http://127.0.0.1:8000").rstrip(
-        "/"
-    )
+    """
+    URL pública onde Claude alcança /mcp e OAuth.
+    Prefer MCP_PUBLIC_URL; se for localhost e APP_BASE_URL for https, use o APP
+    (caso típico: .env de produção sem MCP_PUBLIC_URL).
+    """
+    mcp = (settings.mcp_public_url or "").strip().rstrip("/")
+    app = (settings.app_base_url or "").strip().rstrip("/")
+    local = ("http://127.0.0.1", "http://localhost")
+    if mcp and not mcp.startswith(local):
+        return mcp
+    if app.startswith("https://"):
+        return app
+    return mcp or app or "http://127.0.0.1:8000"
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -69,6 +83,75 @@ class AegisOAuthProvider(OAuthProvider):
             ),
             revocation_options=RevocationOptions(enabled=True),
             required_scopes=DEFAULT_SCOPES,
+        )
+
+    def get_routes(self, mcp_path: str | None = None) -> list[Route]:
+        """Ajustes exigidos pelo Claude Connectors (PRM raiz + auth method none + OIDC alias)."""
+        routes = super().get_routes(mcp_path)
+        base = mcp_public_base()
+        resource = f"{base}/mcp"
+        prm_body = {
+            "resource": resource,
+            "authorization_servers": [f"{base}/"],
+            "scopes_supported": DEFAULT_SCOPES + ["admin"],
+            "bearer_methods_supported": ["header"],
+        }
+
+        # Claude consulta /.well-known/oauth-protected-resource (sem /mcp) — sem isso cai no SPA HTML.
+        async def prm_root(_request: Request) -> JSONResponse:
+            return JSONResponse(prm_body, headers={"Cache-Control": "public, max-age=3600"})
+
+        routes.insert(
+            0,
+            Route(
+                "/.well-known/oauth-protected-resource",
+                endpoint=cors_middleware(prm_root, ["GET", "OPTIONS"]),
+                methods=["GET", "OPTIONS"],
+            ),
+        )
+
+        # Patch metadata AS: incluir "none" (cliente público + PKCE) e alias OIDC Discovery.
+        # Não mutar route.endpoint — o Starlette usa route.app criado no __init__.
+        as_endpoint = cors_middleware(self._as_metadata_endpoint, ["GET", "OPTIONS"])
+        for i, route in enumerate(list(routes)):
+            if not isinstance(route, Route):
+                continue
+            if route.path == "/.well-known/oauth-authorization-server":
+                methods = list(route.methods or ["GET", "OPTIONS"])
+                routes[i] = Route(
+                    "/.well-known/oauth-authorization-server",
+                    endpoint=as_endpoint,
+                    methods=methods,
+                )
+                routes.append(
+                    Route(
+                        "/.well-known/openid-configuration",
+                        endpoint=as_endpoint,
+                        methods=methods,
+                    )
+                )
+                break
+
+        return routes
+
+    async def _as_metadata_endpoint(self, request: Request) -> JSONResponse:
+        """Metadata AS com token_endpoint_auth_methods_supported incluindo none (PKCE público)."""
+        from mcp.server.auth.routes import build_metadata
+
+        assert self.base_url is not None
+        metadata = build_metadata(
+            self.base_url,
+            self.service_documentation_url,
+            self.client_registration_options or ClientRegistrationOptions(),
+            self.revocation_options or RevocationOptions(),
+        )
+        methods = list(metadata.token_endpoint_auth_methods_supported or [])
+        if "none" not in methods:
+            methods.append("none")
+        metadata.token_endpoint_auth_methods_supported = methods
+        return JSONResponse(
+            metadata.model_dump(mode="json", exclude_none=True),
+            headers={"Cache-Control": "public, max-age=3600"},
         )
 
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:

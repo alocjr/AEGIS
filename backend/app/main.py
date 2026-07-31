@@ -215,14 +215,11 @@ app.include_router(mcp_oauth_login_router)
 app.include_router(mcp_connect_page_router)
 
 # MCP + OAuth (antes do fallback SPA). SlowAPI precisa de __name__ no endpoint ASGI.
+# Starlette Route despacha via route.app (criado no __init__); mutar só .endpoint não surte efeito.
 for _route in reversed(list(mcp_asgi.routes)):
-    endpoint = getattr(_route, "endpoint", None) or getattr(_route, "app", None)
-    if endpoint is not None and not hasattr(endpoint, "__name__"):
-        wrapped = wrap_asgi_endpoint(endpoint, "mcp_http")
-        if hasattr(_route, "endpoint"):
-            _route.endpoint = wrapped  # type: ignore[attr-defined]
-        elif hasattr(_route, "app"):
-            _route.app = wrapped  # type: ignore[attr-defined]
+    asgi = getattr(_route, "app", None)
+    if asgi is not None and not hasattr(asgi, "__name__"):
+        _route.app = wrap_asgi_endpoint(asgi, "mcp_http")  # type: ignore[attr-defined]
     app.router.routes.insert(0, _route)
 
 if USE_VUE_UI:
