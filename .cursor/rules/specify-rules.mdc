@@ -17,7 +17,7 @@ Projeto **Valorian 4 Future (AEGIS)**: plataforma de mentoria executiva.
 - Clientes HTTP em `frontend-vue/src/api/*`
 - Constitution: `.specify/memory/constitution.md`
 - Spec ativa: ler `.specify/feature.json` → diretório em `specs/`
-- **Plano ativo**: `specs/002-reset-senha-ui/plan.md` (reset de senha UI)
+- **Plano ativo**: `specs/003-mcp-claude/plan.md` (MCP Claude remoto)
 - Baseline brownfield: `specs/001-aegis-baseline/spec.md`
 
 ## Coleções MongoDB

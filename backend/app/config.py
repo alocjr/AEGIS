@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     email_verification_expire_minutes: int = 1440
     # URL pública do frontend (link no email de reset)
     app_base_url: str = "http://localhost:5173"
+    # URL pública da API (OAuth/MCP Connectors). Em deploy unificado = host do app.
+    # Local: http://127.0.0.1:8000 — Connectors Claude exigem HTTPS público em produção.
+    mcp_public_url: str = "http://127.0.0.1:8000"
     # SMTP genérico (email de reset de senha)
     smtp_host: str = ""
     smtp_port: int = 587

@@ -34,6 +34,13 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 - `GET /api/health`: retorna `{"status": "ok", "mongodb": "connected"}` se o app e o MongoDB estiverem ok. Retorna 503 se o MongoDB estiver inacessível (útil para load balancer e monitoramento).
 
+## MCP (Claude remoto)
+
+- Endpoint: `http://127.0.0.1:8000/mcp` (OAuth Connectors + Streamable HTTP)
+- Instruções para o usuário: `http://127.0.0.1:8000/conectar-claude`
+- Configure `MCP_PUBLIC_URL` com a URL pública da API (HTTPS em produção)
+- Documentação: [docs/mcp.md](../docs/mcp.md)
+
 ## Reset de senha
 
 - `POST /api/auth/forgot-password` com `{ "email": "..." }`: cria token de reset e envia email (se SMTP configurado). Resposta sempre genérica.

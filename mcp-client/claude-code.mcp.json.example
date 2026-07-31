@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aegis": {
+      "type": "http",
+      "url": "${AEGIS_MCP_URL:-http://127.0.0.1:8000/mcp}"
+    }
+  }
+}

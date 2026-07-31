@@ -7,3 +7,5 @@ backend/.env
 frontend-vue/.env
 frontend-vue/dist
 node_modules/
+.mcp.json
+

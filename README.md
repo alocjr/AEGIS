@@ -27,6 +27,11 @@ Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 - Listagem e vitrine de trilhas (`/api/public/courses`)
 - Captura de leads
 
+### MCP (Claude remoto)
+- Endpoint Streamable HTTP em `/mcp` com **OAuth Connectors** (login Valorian no browser)
+- Página de onboarding: `/conectar-claude`
+- Ver [docs/mcp.md](docs/mcp.md)
+
 ## Estrutura do repositório
 
 | Caminho | Descrição |
@@ -34,7 +39,10 @@ Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 | `backend/` | API FastAPI (ver `backend/README.md`) |
 | `frontend-vue/` | SPA Vue (programa, trilhas, admin, quiz, maturidade) |
 | `backend/data/course.json` | Seed da trilha padrão (importado na primeira subida se o Mongo estiver vazio) |
+| `docs/mcp.md` | Configuração do servidor MCP Claude |
+| `mcp-client/` | Exemplos de config Claude Desktop / Code |
 | `util/create_user.py` | Script para criar ou atualizar usuário admin |
+| `util/aegis_mcp_token.py` | Obtém JWT para o cliente MCP |
 | `Dockerfile` | Build de produção: frontend + backend no mesmo container |
 | `docker-compose.yml` | Deploy do app (MongoDB externo, ex.: Atlas) |
 

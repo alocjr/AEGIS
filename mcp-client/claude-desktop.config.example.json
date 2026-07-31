@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "aegis": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://127.0.0.1:8000/mcp/",
+        "--header",
+        "Authorization:${AEGIS_AUTH_HEADER}"
+      ],
+      "env": {
+        "AEGIS_AUTH_HEADER": "Bearer COLE_SEU_ACCESS_TOKEN_AQUI"
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.limiter import limiter
+from app.mcp import mcp_http_app, wrap_asgi_endpoint
+from app.mcp.oauth_login import router as mcp_oauth_login_router
+from app.mcp.connect_page import router as mcp_connect_page_router
+from app.mcp.oauth_store import ensure_oauth_indexes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,12 +92,32 @@ _cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip(
 if not _cors_origins:
     _cors_origins = ["http://localhost:5173"]
 
+# MCP Streamable HTTP + OAuth (Claude Connectors). Rotas em /mcp, /authorize, /.well-known…
+mcp_asgi = mcp_http_app()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not settings.mongodb_uri or not settings.jwt_secret_key:
+        raise RuntimeError(
+            "Configure MONGODB_URI e JWT_SECRET_KEY no ambiente ou no arquivo .env. "
+            "Veja .env.example para referência."
+        )
+    init_indexes()
+    ensure_oauth_indexes()
+    seed_course_if_needed()
+    logger.info("Application started (MCP OAuth at %s)", settings.mcp_public_url or settings.app_base_url)
+    async with mcp_asgi.lifespan(app):
+        yield
+
+
 app = FastAPI(
     title="Valorian 4 Future API",
     version="1.0.0",
     docs_url=None if settings.environment.lower() == "production" else "/docs",
     redoc_url=None if settings.environment.lower() == "production" else "/redoc",
     openapi_url=None if settings.environment.lower() == "production" else "/openapi.json",
+    lifespan=lifespan,
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -148,18 +173,6 @@ def seed_course_if_needed() -> None:
     db.courses.insert_one({"slug": COURSE_SLUG, **course_data})
 
 
-@app.on_event("startup")
-def startup() -> None:
-    if not settings.mongodb_uri or not settings.jwt_secret_key:
-        raise RuntimeError(
-            "Configure MONGODB_URI e JWT_SECRET_KEY no ambiente ou no arquivo .env. "
-            "Veja .env.example para referência."
-        )
-    init_indexes()
-    seed_course_if_needed()
-    logger.info("Application started")
-
-
 @app.get("/lp.js")
 def lp_js():
     return _public_static_file("lp.js", "application/javascript; charset=utf-8")
@@ -198,6 +211,19 @@ app.include_router(swot_analysis_router)
 app.include_router(quiz_router)
 app.include_router(admin_router)
 app.include_router(public_router)
+app.include_router(mcp_oauth_login_router)
+app.include_router(mcp_connect_page_router)
+
+# MCP + OAuth (antes do fallback SPA). SlowAPI precisa de __name__ no endpoint ASGI.
+for _route in reversed(list(mcp_asgi.routes)):
+    endpoint = getattr(_route, "endpoint", None) or getattr(_route, "app", None)
+    if endpoint is not None and not hasattr(endpoint, "__name__"):
+        wrapped = wrap_asgi_endpoint(endpoint, "mcp_http")
+        if hasattr(_route, "endpoint"):
+            _route.endpoint = wrapped  # type: ignore[attr-defined]
+        elif hasattr(_route, "app"):
+            _route.app = wrapped  # type: ignore[attr-defined]
+    app.router.routes.insert(0, _route)
 
 if USE_VUE_UI:
     app.mount("/assets", StaticFiles(directory=FRONTEND_VUE_DIST / "assets"), name="vue_assets")
