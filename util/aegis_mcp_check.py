@@ -7,11 +7,21 @@ Uso:
     python util/aegis_mcp_check.py https://mentoria.valorian.com.br
     python util/aegis_mcp_check.py http://127.0.0.1:8000
 
+Com --email, faz login (senha pedida via prompt, nunca fica em texto/argv) e
+repete a sequência que o Claude faz DEPOIS de autorizar: initialize →
+notifications/initialized → tools/list, com um token Bearer de verdade. Use
+quando o Claude autoriza mas mostra "retornou um erro ao conectar" — os
+checks sem --email só cobrem discovery/DCR/authorize, não uma sessão MCP real.
+
+    python util/aegis_mcp_check.py https://mentoria.valorian.com.br --email voce@empresa.com
+
 Só depende de httpx (já está em backend/requirements.txt).
 """
 
 from __future__ import annotations
 
+import argparse
+import getpass
 import json
 import sys
 
@@ -32,6 +42,104 @@ def _json_or_none(resp: httpx.Response) -> dict | None:
         return resp.json()
     except json.JSONDecodeError:
         return None
+
+
+def _sse_json(resp: httpx.Response) -> dict | None:
+    """Extrai o primeiro payload JSON de uma resposta text/event-stream ou JSON puro."""
+    ctype = resp.headers.get("content-type", "")
+    if "application/json" in ctype:
+        try:
+            return resp.json()
+        except json.JSONDecodeError:
+            return None
+    for line in resp.text.splitlines():
+        if line.startswith("data: "):
+            try:
+                return json.loads(line[6:])
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
+def check_authenticated_session(base: str, email: str, password: str) -> int:
+    """Repete initialize/tools-list com um Bearer token real — o que falha
+    quando o Claude mostra 'autorizado, mas retornou um erro ao conectar'."""
+    failures = 0
+    client = httpx.Client(timeout=30, follow_redirects=False)
+
+    print(f"=== Sessão MCP autenticada: {email} ===\n")
+
+    resp = client.post(
+        base + "/api/auth/login",
+        json={"email": email, "password": password},
+        headers={"Accept": "application/json"},
+    )
+    if resp.status_code != 200:
+        print(f"{FAIL} POST /api/auth/login — HTTP {resp.status_code} {resp.text[:200]}")
+        return 1
+    token = resp.json().get("access_token")
+    if not token:
+        print(f"{FAIL} POST /api/auth/login — 200 mas sem access_token: {resp.text[:200]}")
+        return 1
+    print(f"{OK} POST /api/auth/login — token obtido")
+
+    h = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+
+    resp = client.post(
+        base + "/mcp",
+        headers=h,
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "aegis-mcp-check", "version": "1"},
+            },
+        },
+    )
+    session_id = resp.headers.get("mcp-session-id")
+    data = _sse_json(resp)
+    if resp.status_code != 200 or not data or "error" in data:
+        print(f"{FAIL} POST /mcp initialize — HTTP {resp.status_code}")
+        print(f"      body: {resp.text[:500]}")
+        return failures + 1
+    print(f"{OK} POST /mcp initialize — servidor: {data.get('result', {}).get('serverInfo')}")
+    if session_id:
+        h["mcp-session-id"] = session_id
+
+    resp = client.post(
+        base + "/mcp",
+        headers=h,
+        json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+    )
+    if resp.status_code not in (200, 202):
+        print(f"{FAIL} POST /mcp notifications/initialized — HTTP {resp.status_code} {resp.text[:300]}")
+        failures += 1
+    else:
+        print(f"{OK} POST /mcp notifications/initialized")
+
+    resp = client.post(
+        base + "/mcp",
+        headers=h,
+        json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+    )
+    data = _sse_json(resp)
+    if resp.status_code != 200 or not data or "error" in data:
+        print(f"{FAIL} POST /mcp tools/list — HTTP {resp.status_code}")
+        print(f"      body: {resp.text[:800]}")
+        failures += 1
+    else:
+        names = [t["name"] for t in data.get("result", {}).get("tools", [])]
+        print(f"{OK} POST /mcp tools/list — {len(names)} tools: {names}")
+
+    print()
+    return failures
 
 
 def check(base: str) -> int:
@@ -166,7 +274,17 @@ def check(base: str) -> int:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("base_url")
+    parser.add_argument("--email", default=None)
+    try:
+        args = parser.parse_args()
+    except SystemExit:
         print(__doc__)
-        raise SystemExit(2)
-    raise SystemExit(check(sys.argv[1]))
+        raise
+
+    rc = check(args.base_url)
+    if args.email:
+        password = getpass.getpass(f"Senha ({args.email}): ")
+        rc = check_authenticated_session(args.base_url.rstrip("/"), args.email, password) or rc
+    raise SystemExit(rc)
