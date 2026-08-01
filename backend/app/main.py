@@ -44,7 +44,8 @@ SECURITY_HEADERS = {
         "media-src 'self' https:; "
         "frame-ancestors 'self'; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self' https://claude.ai https://claude.com "
+        "http://127.0.0.1:* http://localhost:*"
     ),
     "X-Frame-Options": "SAMEORIGIN",
     "X-Content-Type-Options": "nosniff",
