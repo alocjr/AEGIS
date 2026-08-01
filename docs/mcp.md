@@ -4,14 +4,14 @@ Servidor [Model Context Protocol](https://modelcontextprotocol.io) em **`/mcp`**
 
 ## UX ideal (usuário final)
 
-1. Você envia a URL: `https://seu-dominio/mcp` (ou a página [`/conectar-claude`](/conectar-claude)).
+1. Você envia a URL: `https://mentoria.valorian.com.br/mcp` (ou a página [`/conectar-claude`](/conectar-claude)).
 2. No Claude: **Settings → Connectors → Add custom connector** → cola a URL.
 3. **Connect** → o browser abre o login Valorian (email/senha).
 4. Após autorizar, as tools AEGIS ficam disponíveis no chat.
 
 Requisitos: **HTTPS público** em produção (a nuvem da Anthropic chama o servidor). Localhost serve para Claude Code na mesma máquina.
 
-Variável de ambiente: `MCP_PUBLIC_URL` (URL pública da API, ex. `https://app.seudominio.com`). Default: `http://127.0.0.1:8000`.
+Variável de ambiente: `MCP_PUBLIC_URL` — em produção use `https://mentoria.valorian.com.br` (não `valorian.cloud`). Default local: `http://127.0.0.1:8000`.
 
 ## Autenticação
 
