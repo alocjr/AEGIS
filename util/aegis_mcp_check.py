@@ -21,9 +21,13 @@ Só depende de httpx (já está em backend/requirements.txt).
 from __future__ import annotations
 
 import argparse
+import base64
 import getpass
+import hashlib
 import json
+import secrets
 import sys
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 
@@ -137,6 +141,138 @@ def check_authenticated_session(base: str, email: str, password: str) -> int:
     else:
         names = [t["name"] for t in data.get("result", {}).get("tools", [])]
         print(f"{OK} POST /mcp tools/list — {len(names)} tools: {names}")
+
+    print()
+    return failures
+
+
+def check_oauth_flow(base: str, email: str, password: str) -> int:
+    """
+    Faz o fluxo OAuth completo que o Claude realmente usa — register → authorize
+    → POST no form de login → /token com code_verifier → POST /mcp com o token
+    OAuth opaco resultante. `check_authenticated_session` usa o Bearer JWT legado
+    (POST /api/auth/login), que passa por um branch diferente de
+    AegisOAuthProvider.load_access_token; esta função testa o branch real
+    (store.get_access_token_doc) que o Claude usa em produção.
+    """
+    failures = 0
+    client = httpx.Client(timeout=30, follow_redirects=False)
+    redirect_uri = CLAUDE_REDIRECT
+
+    print(f"=== Fluxo OAuth completo (como o Claude faz): {email} ===\n")
+
+    resp = client.post(
+        base + "/register",
+        json={
+            "client_name": "aegis-mcp-check-oauth",
+            "redirect_uris": [redirect_uri],
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+            "scope": "mcp",
+        },
+    )
+    if resp.status_code not in (200, 201):
+        print(f"{FAIL} POST /register — HTTP {resp.status_code} {resp.text[:200]}")
+        return 1
+    client_id = resp.json()["client_id"]
+    print(f"{OK} POST /register — client_id={client_id}")
+
+    verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b"=").decode()
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()
+    ).rstrip(b"=").decode()
+
+    resp = client.get(
+        base + "/authorize",
+        params={
+            "client_id": client_id,
+            "response_type": "code",
+            "redirect_uri": redirect_uri,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+            "state": "aegis-oauth-check",
+            "scope": "mcp",
+            "resource": base + "/mcp",
+        },
+    )
+    login_url = resp.headers.get("location", "")
+    if resp.status_code not in (302, 303, 307) or "/mcp-oauth/login" not in login_url:
+        print(f"{FAIL} GET /authorize — HTTP {resp.status_code} location={login_url[:150]}")
+        return 1
+    sid = parse_qs(urlparse(login_url).query).get("sid", [None])[0]
+    print(f"{OK} GET /authorize — sid={sid}")
+
+    resp = client.post(
+        base + "/mcp-oauth/login",
+        data={"sid": sid, "email": email, "password": password},
+    )
+    redirect_back = resp.headers.get("location", "")
+    if resp.status_code not in (302, 303, 307) or not redirect_back.startswith(redirect_uri):
+        print(f"{FAIL} POST /mcp-oauth/login — HTTP {resp.status_code}")
+        if resp.status_code == 200:
+            # Form re-renderizado = credenciais rejeitadas ou sessão expirada; o
+            # HTML tem a mensagem dentro de <div class="err">...</div>.
+            snippet = resp.text
+            start = snippet.find('class="err"')
+            print(f"      página de erro: {snippet[start:start+200] if start != -1 else snippet[:200]}")
+        else:
+            print(f"      location: {redirect_back[:200]}")
+        return failures + 1
+    print(f"{OK} POST /mcp-oauth/login — redireciona para {redirect_uri}")
+
+    q = parse_qs(urlparse(redirect_back).query)
+    code = q.get("code", [None])[0]
+    if not code:
+        print(f"{FAIL} redirect sem 'code': {redirect_back[:200]}")
+        return failures + 1
+
+    resp = client.post(
+        base + "/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": client_id,
+            "code_verifier": verifier,
+        },
+    )
+    if resp.status_code != 200:
+        print(f"{FAIL} POST /token — HTTP {resp.status_code} {resp.text[:400]}")
+        return failures + 1
+    token_data = resp.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        print(f"{FAIL} POST /token — 200 mas sem access_token: {resp.text[:300]}")
+        return failures + 1
+    print(f"{OK} POST /token — access_token OAuth obtido (expira em {token_data.get('expires_in')}s)")
+
+    h = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+    resp = client.post(
+        base + "/mcp",
+        headers=h,
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "aegis-mcp-check-oauth", "version": "1"},
+            },
+        },
+    )
+    data = _sse_json(resp)
+    if resp.status_code != 200 or not data or "error" in data:
+        print(f"{FAIL} POST /mcp initialize (token OAuth) — HTTP {resp.status_code}")
+        print(f"      body: {resp.text[:600]}")
+        failures += 1
+    else:
+        print(f"{OK} POST /mcp initialize (token OAuth) — servidor: {data.get('result', {}).get('serverInfo')}")
 
     print()
     return failures
@@ -286,5 +422,7 @@ if __name__ == "__main__":
     rc = check(args.base_url)
     if args.email:
         password = getpass.getpass(f"Senha ({args.email}): ")
-        rc = check_authenticated_session(args.base_url.rstrip("/"), args.email, password) or rc
+        base = args.base_url.rstrip("/")
+        rc = check_authenticated_session(base, args.email, password) or rc
+        rc = check_oauth_flow(base, args.email, password) or rc
     raise SystemExit(rc)
