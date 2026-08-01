@@ -233,7 +233,9 @@ class AegisOAuthProvider(OAuthProvider):
             token=doc["token"],
             client_id=doc["client_id"],
             scopes=doc.get("scopes") or DEFAULT_SCOPES,
-            expires_at=exp.timestamp() if exp else None,
+            # RefreshToken.expires_at é `int`; datetime.timestamp() é float
+            # (fração de ms do Mongo) e quebra a validação do pydantic.
+            expires_at=int(exp.timestamp()) if exp else None,
             subject=doc.get("subject"),
         )
 
@@ -262,7 +264,11 @@ class AegisOAuthProvider(OAuthProvider):
                 token=doc["token"],
                 client_id=doc.get("client_id") or "aegis",
                 scopes=doc.get("scopes") or DEFAULT_SCOPES,
-                expires_at=exp.timestamp() if exp else None,
+                # AccessToken.expires_at é `int`; datetime.timestamp() é float
+                # (fração de ms do Mongo) — pydantic rejeita e o /mcp cai em 500
+                # logo no initialize para todo token OAuth real (JWT legado tem
+                # exp inteiro, por isso não pegava esse bug).
+                expires_at=int(exp.timestamp()) if exp else None,
                 resource=doc.get("resource"),
                 subject=doc.get("subject"),
                 claims=doc.get("claims") or {},
