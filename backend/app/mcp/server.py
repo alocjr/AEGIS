@@ -66,8 +66,23 @@ def mcp_well_known_routes():
     return get_auth().get_well_known_routes(mcp_path=MCP_PATH)
 
 
+def apply_mcp_auth_middleware(app):
+    """
+    Reaplica o middleware de auth do FastMCP.
+
+    `mcp.http_app()` instala AuthenticationMiddleware (BearerAuthBackend) e
+    AuthContextMiddleware no app Starlette do MCP. Como o main.py levanta apenas
+    as *rotas* desse app para dentro do FastAPI, esse stack seria perdido — e o
+    RequireAuthMiddleware que envolve /mcp lê `scope["user"]`, devolvendo 401
+    "Authentication required" em toda requisição, mesmo com token válido.
+    """
+    for middleware in reversed(get_auth().get_middleware()):
+        app = middleware.cls(app, *middleware.args, **middleware.kwargs)
+    return app
+
+
 def wrap_asgi_endpoint(app, name: str = "mcp_asgi"):
-    """Dá __name__ ao ASGI app para o SlowAPI não quebrar."""
+    """Dá __name__/__module__ ao ASGI app: o SlowAPI lê `route.endpoint.__name__`."""
 
     async def endpoint(scope, receive, send):
         await app(scope, receive, send)
@@ -77,10 +92,31 @@ def wrap_asgi_endpoint(app, name: str = "mcp_asgi"):
     return endpoint
 
 
+def install_mcp_routes(fastapi_app, mcp_asgi) -> None:
+    """
+    Insere as rotas do MCP/OAuth no FastAPI antes do fallback SPA.
+
+    Para cada rota é preciso:
+      1. reaplicar o middleware de auth (perdido ao levantar rotas soltas);
+      2. dar __name__ ao ASGI e ajustar `route.app` E `route.endpoint` —
+         o Starlette despacha por `route.app`, mas o SlowAPI inspeciona
+         `route.endpoint.__name__` (sem isso: HTTP 500 em /mcp).
+    """
+    for route in reversed(list(mcp_asgi.routes)):
+        asgi = getattr(route, "app", None)
+        if asgi is not None:
+            wrapped = wrap_asgi_endpoint(apply_mcp_auth_middleware(asgi), "mcp_http")
+            route.app = wrapped  # type: ignore[attr-defined]
+            route.endpoint = wrapped  # type: ignore[attr-defined]
+        fastapi_app.router.routes.insert(0, route)
+
+
 __all__ = [
     "MCP_PATH",
+    "apply_mcp_auth_middleware",
     "create_mcp",
     "get_auth",
+    "install_mcp_routes",
     "mcp_http_app",
     "mcp_public_base",
     "mcp_well_known_routes",

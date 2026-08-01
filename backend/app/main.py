@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.limiter import limiter
-from app.mcp import mcp_http_app, wrap_asgi_endpoint
+from app.mcp import install_mcp_routes, mcp_http_app
 from app.mcp.oauth_login import router as mcp_oauth_login_router
 from app.mcp.connect_page import router as mcp_connect_page_router
 from app.mcp.oauth_store import ensure_oauth_indexes
@@ -214,13 +214,10 @@ app.include_router(public_router)
 app.include_router(mcp_oauth_login_router)
 app.include_router(mcp_connect_page_router)
 
-# MCP + OAuth (antes do fallback SPA). SlowAPI precisa de __name__ no endpoint ASGI.
-# Starlette Route despacha via route.app (criado no __init__); mutar só .endpoint não surte efeito.
-for _route in reversed(list(mcp_asgi.routes)):
-    asgi = getattr(_route, "app", None)
-    if asgi is not None and not hasattr(asgi, "__name__"):
-        _route.app = wrap_asgi_endpoint(asgi, "mcp_http")  # type: ignore[attr-defined]
-    app.router.routes.insert(0, _route)
+# MCP + OAuth (antes do fallback SPA): rotas /mcp, /authorize, /token, /register,
+# /revoke e /.well-known/*. Reaplica o middleware de auth do FastMCP e ajusta
+# route.app + route.endpoint (Starlette despacha por .app; SlowAPI lê .endpoint.__name__).
+install_mcp_routes(app, mcp_asgi)
 
 if USE_VUE_UI:
     app.mount("/assets", StaticFiles(directory=FRONTEND_VUE_DIST / "assets"), name="vue_assets")

@@ -59,6 +59,29 @@ claude mcp add --transport http aegis "${AEGIS_MCP_URL}" \
   --header "Authorization: Bearer ${AEGIS_MCP_TOKEN}"
 ```
 
+## Diagnóstico (antes de mandar a URL para alguém)
+
+```bash
+python util/aegis_mcp_check.py https://mentoria.valorian.com.br
+```
+
+O script simula o que o Claude faz ao adicionar um connector: discovery
+(`/.well-known/*`), DCR (`POST /register`), `/authorize` e `POST /mcp` sem token.
+
+## Troubleshooting
+
+| Sintoma no check / no Claude | Causa | Correção |
+|---|---|---|
+| `/.well-known/*` responde `text/html` | O fallback do SPA capturou a rota — as rotas MCP não foram registradas antes dele | `install_mcp_routes(app, mcp_asgi)` em `main.py`, **depois** dos routers e **antes** do `vue_spa_fallback` |
+| `POST /register` e `POST /mcp` → **405** | O build em produção não tem o código MCP | Rebuild + redeploy da imagem |
+| `POST /mcp` → **500** | `route.endpoint` sem `__name__`: o SlowAPI faz `route.endpoint.__name__` ao casar a rota | Ao levantar rotas do app do FastMCP, ajustar `route.app` **e** `route.endpoint` |
+| `POST /mcp` → **401** mesmo com token válido | O `AuthenticationMiddleware`/`AuthContextMiddleware` do FastMCP se perde ao levantar só as rotas; o `RequireAuthMiddleware` lê `scope["user"]` | `apply_mcp_auth_middleware()` reaplica o stack em cada rota |
+| `Task group is not initialized` | Lifespan do FastMCP não repassado | `async with mcp_asgi.lifespan(app)` no lifespan do FastAPI |
+| Claude conecta e cai no login errado | `MCP_PUBLIC_URL` apontando para localhost | `MCP_PUBLIC_URL=https://mentoria.valorian.com.br` no `.env` de produção |
+
+> Discovery e DCR só funcionam sobre **HTTPS público**: a nuvem da Anthropic é
+> quem chama o servidor, não o seu desktop.
+
 ## Tools (mentorado)
 
 | Tool | Descrição |

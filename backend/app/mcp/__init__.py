@@ -2,8 +2,10 @@
 
 from app.mcp.server import (
     MCP_PATH,
+    apply_mcp_auth_middleware,
     create_mcp,
     get_auth,
+    install_mcp_routes,
     mcp_http_app,
     mcp_public_base,
     mcp_well_known_routes,
@@ -12,8 +14,10 @@ from app.mcp.server import (
 
 __all__ = [
     "MCP_PATH",
+    "apply_mcp_auth_middleware",
     "create_mcp",
     "get_auth",
+    "install_mcp_routes",
     "mcp_http_app",
     "mcp_public_base",
     "mcp_well_known_routes",
