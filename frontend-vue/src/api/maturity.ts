@@ -101,10 +101,24 @@ export function fetchMaturityResponseById(id: string): Promise<MaturityMyRespons
 
 export function saveMaturityResponse(
   answers: Record<string, number>,
-  tier: MaturityTier = 'basico'
-): Promise<{ id: string; submitted_at: string; result: MaturityResult; tier?: string }> {
-  return post<{ id: string; submitted_at: string; result: MaturityResult; tier?: string }>(
-    '/api/maturity/my-response',
-    { answers, tier }
-  )
+  tier: MaturityTier = 'basico',
+  responseId?: string | null
+): Promise<{
+  id: string
+  submitted_at: string
+  result: MaturityResult
+  tier?: string
+  complete?: boolean
+}> {
+  return post<{
+    id: string
+    submitted_at: string
+    result: MaturityResult
+    tier?: string
+    complete?: boolean
+  }>('/api/maturity/my-response', {
+    answers,
+    tier,
+    response_id: responseId || undefined,
+  })
 }

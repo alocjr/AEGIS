@@ -189,38 +189,76 @@ def get_my_response_by_id(
 
 @router.post("/my-response")
 def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Cria uma nova autoavaliação (múltiplas respostas por aluno)."""
+    """Cria ou atualiza uma autoavaliação (aceita respostas parciais; autosave)."""
+    from bson import ObjectId
+
     model = _load_model(db)
     tier = _normalize_tier(payload.tier)
-    required = {q["id"] for q in _questions_for_tier(model, tier)}
-    if not required:
+    known = {q["id"] for d in model.get("dimensions", []) for q in d.get("questions", [])}
+    if not known:
         raise HTTPException(status_code=500, detail="Modelo de maturidade invalido")
 
     answers: dict[str, int] = {}
-    for qid in required:
-        value = int(payload.answers.get(qid, 0))
+    for qid, raw in (payload.answers or {}).items():
+        if qid not in known:
+            continue
+        value = int(raw)
         if value < 1 or value > 5:
             raise HTTPException(status_code=400, detail=f"Resposta invalida para {qid}")
         answers[qid] = value
 
+    required = {q["id"] for q in _questions_for_tier(model, tier)}
+    complete = bool(required) and required.issubset(answers.keys())
     result = _score_submission(model, answers, tier)
-    submitted_at = datetime.now(timezone.utc)
+    result["complete"] = complete
+    now = datetime.now(timezone.utc)
 
-    doc = {
-        "user_id": user["_id"],
-        "model_version": model.get("version", "1.0"),
-        "assessment_title": model.get("assessment_title") or model.get("title"),
-        "tier": tier,
-        "answers": answers,
-        "result": result,
-        "submitted_at": submitted_at,
-    }
-    ins = db.maturity_responses.insert_one(doc)
+    response_id = (payload.response_id or "").strip() or None
+    if response_id:
+        if not ObjectId.is_valid(response_id):
+            raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+        oid = ObjectId(response_id)
+        existing = db.maturity_responses.find_one({"_id": oid, "user_id": user["_id"]})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+        db.maturity_responses.update_one(
+            {"_id": oid},
+            {
+                "$set": {
+                    "tier": tier,
+                    "answers": answers,
+                    "result": result,
+                    "complete": complete,
+                    "updated_at": now,
+                    "submitted_at": now if complete else existing.get("submitted_at") or now,
+                    "assessment_title": model.get("assessment_title") or model.get("title"),
+                    "model_version": model.get("version", "1.0"),
+                }
+            },
+        )
+        doc_id = response_id
+        submitted_at = now if complete else (existing.get("submitted_at") or now)
+    else:
+        doc = {
+            "user_id": user["_id"],
+            "model_version": model.get("version", "1.0"),
+            "assessment_title": model.get("assessment_title") or model.get("title"),
+            "tier": tier,
+            "answers": answers,
+            "result": result,
+            "complete": complete,
+            "submitted_at": now,
+            "updated_at": now,
+        }
+        ins = db.maturity_responses.insert_one(doc)
+        doc_id = str(ins.inserted_id)
+        submitted_at = now
 
     return {
-        "id": str(ins.inserted_id),
+        "id": doc_id,
         "answers": answers,
         "tier": tier,
-        "submitted_at": submitted_at.isoformat(),
+        "complete": complete,
+        "submitted_at": submitted_at.isoformat() if hasattr(submitted_at, "isoformat") else submitted_at,
         "result": result,
     }

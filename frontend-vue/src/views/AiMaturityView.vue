@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   fetchMaturityModel,
   saveMaturityResponse,
@@ -10,15 +9,17 @@ import {
   type MaturityTier,
 } from '@/api/maturity'
 
-const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const model = ref<MaturityModel | null>(null)
 const answers = ref<Record<string, number>>({})
 const selectedTier = ref<MaturityTier>('basico')
-const saving = ref(false)
-const saveInfo = ref('')
+const responseId = ref<string | null>(null)
+const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+const saveError = ref<string | null>(null)
 const swotCreated = ref(false)
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+let persistSeq = 0
 
 const TIER_KEYS: MaturityTier[] = ['basico', 'completo', 'complementar']
 const TIER_ORDER: Record<MaturityTier, number> = { basico: 0, completo: 1, complementar: 2 }
@@ -141,7 +142,11 @@ function dimAvg(dim: MaturityDimension): number | null {
 }
 
 function setTier(key: MaturityTier) {
+  if (key === selectedTier.value) return
   selectedTier.value = key
+  if (responseId.value || Object.keys(answers.value).length) {
+    schedulePersist()
+  }
 }
 
 function toggleSelect(qid: string, lvl: number) {
@@ -152,6 +157,39 @@ function toggleSelect(qid: string, lvl: number) {
   } else {
     answers.value = { ...answers.value, [qid]: lvl }
   }
+  schedulePersist()
+}
+
+async function persistAnswers() {
+  if (!model.value) return
+  // Ainda sem respostas e sem documento: não cria registro vazio
+  if (!responseId.value && Object.keys(answers.value).length === 0) {
+    saveState.value = 'idle'
+    return
+  }
+
+  const seq = ++persistSeq
+  saveState.value = 'saving'
+  saveError.value = null
+  try {
+    const payload: Record<string, number> = { ...answers.value }
+    const result = await saveMaturityResponse(payload, selectedTier.value, responseId.value)
+    if (seq !== persistSeq) return
+    responseId.value = result.id
+    saveState.value = 'saved'
+  } catch (e) {
+    if (seq !== persistSeq) return
+    saveState.value = 'error'
+    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
+  }
+}
+
+function schedulePersist() {
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    void persistAnswers()
+  }, 280)
 }
 
 onMounted(async () => {
@@ -162,6 +200,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  if (persistTimer) clearTimeout(persistTimer)
 })
 
 /* ---------- SWOT / verdict ---------- */
@@ -521,28 +563,6 @@ function openSwot() {
   }
 }
 
-async function saveAnswers() {
-  if (!model.value || !isComplete.value) {
-    alert('Responda todas as perguntas da abrangência selecionada antes de salvar.')
-    return
-  }
-  saving.value = true
-  try {
-    const payload: Record<string, number> = {}
-    for (const id of visibleQuestionIds.value) {
-      const val = answers.value[id]
-      if (val != null) payload[id] = val
-    }
-    const result = await saveMaturityResponse(payload, selectedTier.value)
-    saveInfo.value = 'Salvo em ' + new Date(result.submitted_at).toLocaleString('pt-BR')
-    setTimeout(() => router.push('/ai-maturity'), 1200)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erro ao salvar.'
-  } finally {
-    saving.value = false
-  }
-}
-
 function scrollToDim(idx: number) {
   document.getElementById(`dim-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
@@ -654,6 +674,16 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
         </nav>
 
         <div class="toolbar-actions">
+          <span
+            class="save-pill"
+            :data-state="saveState"
+            :title="saveError || undefined"
+          >
+            <template v-if="saveState === 'saving'">Salvando…</template>
+            <template v-else-if="saveState === 'saved'">Salvo</template>
+            <template v-else-if="saveState === 'error'">Falha ao salvar</template>
+            <template v-else>Respostas salvas ao clicar</template>
+          </span>
           <button
             v-if="isComplete"
             type="button"
@@ -662,18 +692,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
           >
             {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
           </button>
-          <button
-            type="button"
-            class="btn-save"
-            :disabled="!isComplete || saving"
-            @click="saveAnswers"
-          >
-            {{ saving ? 'Salvando…' : 'Salvar respostas' }}
-          </button>
         </div>
       </div>
-
-      <p v-if="saveInfo" class="save-banner">{{ saveInfo }}</p>
 
       <div class="matrix-wrap">
         <div class="matrix-scroll">
@@ -754,9 +774,10 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
         <div class="footnote">
           <b>Como funciona:</b> a abrangência (Básico → Completo → Complementar) é progressiva —
           cada opção inclui todas as perguntas da anterior. Trocar a abrangência só mostra ou
-          esconde perguntas; as respostas já dadas permanecem. Em cada pergunta, escolha uma
-          alternativa na escala de maturidade 1–5. No celular, as alternativas aparecem empilhadas;
-          em telas largas, em matriz. Ao concluir, você pode gerar a SWOT e salvar na plataforma.
+          esconde perguntas; as respostas já dadas permanecem e são salvas automaticamente a cada
+          clique. Em cada pergunta, escolha uma alternativa na escala de maturidade 1–5. No celular,
+          as alternativas aparecem empilhadas; em telas largas, em matriz. Ao concluir, você pode
+          gerar a SWOT.
         </div>
 
         <details v-if="model.overlaps?.length" class="overlap-notes">
@@ -1085,8 +1106,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   flex-direction: column;
   gap: 8px;
 }
-.btn-swot,
-.btn-save {
+.btn-swot {
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 999px;
@@ -1098,8 +1118,6 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   font-family: inherit;
   transition: 0.15s;
   width: 100%;
-}
-.btn-swot {
   border: 1px solid var(--gold);
   background: var(--gold);
   color: var(--navy);
@@ -1108,28 +1126,36 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   background: var(--gold-2);
   border-color: var(--gold-2);
 }
-.btn-save {
-  border: 1px solid var(--navy);
-  background: var(--navy);
-  color: #fff;
-}
-.btn-save:hover:not(:disabled) {
-  opacity: 0.92;
-}
-.btn-save:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.save-banner {
-  margin: 0 0 14px;
-  padding: 10px 14px;
-  background: #e8f0e7;
-  border: 1px solid #bbd3b7;
-  border-radius: 4px;
-  color: #2f6e4a;
-  font-size: 12px;
-  letter-spacing: 0.04em;
+.save-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--muted);
+  width: 100%;
+}
+.save-pill[data-state='saving'] {
+  color: var(--navy);
+}
+.save-pill[data-state='saved'] {
+  color: #2f6e4a;
+  border-color: #bbd3b7;
+  background: #e8f0e7;
+}
+.save-pill[data-state='error'] {
+  color: var(--oxblood);
+  border-color: #ddbcb4;
+  background: #f1e1dd;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .matrix-wrap {
@@ -1405,9 +1431,9 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
     flex-wrap: wrap;
   }
   .btn-swot,
-  .btn-save {
+  .save-pill {
     width: auto;
-    min-width: 150px;
+    min-width: 140px;
   }
 }
 
