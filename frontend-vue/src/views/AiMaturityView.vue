@@ -881,8 +881,10 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .header-tier {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   min-width: 0;
+  text-align: center;
 }
 .header-chart {
   background: var(--ivory-2);
@@ -1004,7 +1006,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .tier-select {
   display: flex;
   align-items: stretch;
-  flex-wrap: wrap;
+  justify-content: center;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 .tier-btn {
@@ -1051,6 +1054,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   line-height: 1.45;
   color: var(--muted);
   max-width: 36ch;
+  text-align: center;
 }
 .toolbar-actions {
   display: flex;
@@ -1449,7 +1453,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
     flex: 1 1 280px;
   }
   .header-tier {
-    flex: 0 1 320px;
+    flex: 1 1 auto;
   }
   .header-chart {
     flex: 0 0 auto;
