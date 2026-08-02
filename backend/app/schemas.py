@@ -93,6 +93,7 @@ class CanvasProjectUpdateRequest(BaseModel):
     swot_id: str | None = Field(None, max_length=24)
     swot_item_ids: list[str] | None = Field(None, max_length=20)
     tows_ids: list[str] | None = Field(None, max_length=20)
+    justificativa_tows: str | None = Field(None, max_length=4000)
 
 
 class CanvasImportRequest(BaseModel):

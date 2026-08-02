@@ -230,6 +230,23 @@ export function emptyPilares(): SwotPilaresPorQuadrante {
   }
 }
 
+/** Resumo de uma SWOT na listagem. */
+export interface SwotAnalysisSummary {
+  id: string
+  maturity_response_id: string | null
+  optica: string
+  veredito_titulo: string
+  items_count: number
+  tows_count: number
+  created_at: string | null
+  updated_at: string | null
+}
+
+/** Lista as SWOTs do mentorado sem criar documento vazio. */
+export function listSwotAnalyses(): Promise<{ items: SwotAnalysisSummary[] }> {
+  return get<{ items: SwotAnalysisSummary[] }>('/api/swot-analysis/list')
+}
+
 /** SWOT mais recente (cria vazia se não houver). */
 export function getSwotAnalysis(): Promise<SwotAnalysis> {
   return get<SwotAnalysis>('/api/swot-analysis')

@@ -9,6 +9,7 @@ Auth: `Authorization: Bearer <JWT>` em todas as tools autenticadas.
 | Name | Args | Returns |
 |------|------|---------|
 | `swot_get` | — | SWOT document |
+| `swot_list` | — | `{ items }` (resumo por SWOT) |
 | `swot_import` | `document: object` | SWOT updated |
 | `canvas_list` | — | `{ items }` |
 | `canvas_get` | `project_id: str` | project |

@@ -38,6 +38,8 @@ export interface CanvasProjectSummary {
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
+  /** Justificativa de como o projeto trata as iniciativas TOWS vinculadas. */
+  justificativa_tows: string
   contexto: string[]
   dores: string[]
   oportunidade: string[]
@@ -69,6 +71,7 @@ export type CanvasProjectPayload = Partial<{
   swot_id: string | null
   swot_item_ids: string[]
   tows_ids: string[]
+  justificativa_tows: string
 }>
 
 export function listCanvasProjects(): Promise<{ items: CanvasProjectSummary[] }> {

@@ -23,6 +23,12 @@ def register_learner_tools(mcp) -> None:
         return call_route(swot_routes.get_swot, user=user, db=get_db())
 
     @mcp.tool
+    def swot_list() -> dict:
+        """Lista as SWOTs do mentorado (resumo, com contagem de itens e estratégias TOWS)."""
+        user = require_verified_user()
+        return call_route(swot_routes.list_swots, user=user, db=get_db())
+
+    @mcp.tool
     def swot_import(document: dict[str, Any] | str) -> dict:
         """Importa JSON aegis.swot-ia (v1–v3) e substitui a SWOT do mentorado."""
         user = require_verified_user()

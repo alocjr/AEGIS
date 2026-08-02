@@ -11,6 +11,15 @@ import {
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
+import {
+  getSwotAnalysisById,
+  listSwotAnalyses,
+  type SwotAnalysis,
+  type SwotAnalysisSummary,
+  type SwotInitiative,
+  type SwotListField,
+  type SwotTowsField,
+} from '@/api/swotAnalysis'
 
 const route = useRoute()
 const router = useRouter()
@@ -187,7 +196,148 @@ const form = ref({
   score_valor: null as number | null,
   score_viabilidade: null as number | null,
   proximo_passo: '',
+  justificativa_tows: '',
+  swot_id: null as string | null,
+  swot_item_ids: [] as string[],
+  tows_ids: [] as string[],
 })
+
+/** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
+const TOWS_GROUPS: { field: SwotTowsField; label: string; hint: string }[] = [
+  { field: 'tows_fo', label: 'F × O · Ofensiva', hint: 'Forças que capturam oportunidades' },
+  { field: 'tows_fa', label: 'F × A · Defesa', hint: 'Forças que neutralizam ameaças' },
+  { field: 'tows_fxo', label: 'f × O · Reforço', hint: 'Fraquezas que travam oportunidades' },
+  { field: 'tows_fxa', label: 'f × A · Sobrevivência', hint: 'Vulnerabilidade encontra risco' },
+]
+
+const SWOT_QUADRANT_LABEL: Record<SwotListField, string> = {
+  forcas: 'Força',
+  fraquezas: 'Fraqueza',
+  oportunidades: 'Oportunidade',
+  ameacas: 'Ameaça',
+}
+
+const MAX_TOWS_LINKS = 20
+
+const swotList = ref<SwotAnalysisSummary[]>([])
+const swot = ref<SwotAnalysis | null>(null)
+const swotLoading = ref(false)
+const swotError = ref<string | null>(null)
+const originOpen = ref(false)
+
+/** Itens SWOT por id, para mostrar o que cada estratégia cruza. */
+const swotItemsById = computed(() => {
+  const map = new Map<string, { texto: string; quadrant: SwotListField }>()
+  const doc = swot.value
+  if (!doc) return map
+  for (const field of ['forcas', 'fraquezas', 'oportunidades', 'ameacas'] as SwotListField[]) {
+    for (const item of doc[field] || []) {
+      map.set(item.id, { texto: item.texto, quadrant: field })
+    }
+  }
+  return map
+})
+
+const selectedInitiatives = computed(() => {
+  const doc = swot.value
+  if (!doc) return []
+  const chosen = new Set(form.value.tows_ids)
+  return TOWS_GROUPS.flatMap((group) =>
+    (doc[group.field] || [])
+      .filter((initiative) => initiative.id && chosen.has(initiative.id))
+      .map((initiative) => ({ ...initiative, groupLabel: group.label }))
+  )
+})
+
+const selectedItems = computed(() =>
+  form.value.swot_item_ids
+    .map((id) => ({ id, item: swotItemsById.value.get(id) }))
+    .filter((entry): entry is { id: string; item: { texto: string; quadrant: SwotListField } } =>
+      !!entry.item
+    )
+)
+
+/** Rótulo das contrapartes de uma iniciativa (lado interno × lado externo). */
+function crossingLabel(initiative: SwotInitiative): string {
+  const texts = [...(initiative.itens_internos || []), ...(initiative.itens_externos || [])]
+    .map((id) => swotItemsById.value.get(id)?.texto)
+    .filter((text): text is string => !!text)
+  return texts.join(' × ')
+}
+
+function isTowsSelected(initiativeId?: string): boolean {
+  return !!initiativeId && form.value.tows_ids.includes(initiativeId)
+}
+
+async function loadSwot(swotId: string) {
+  swotLoading.value = true
+  swotError.value = null
+  try {
+    swot.value = await getSwotAnalysisById(swotId)
+  } catch (e) {
+    swot.value = null
+    swotError.value = e instanceof Error ? e.message : 'Falha ao carregar a SWOT.'
+  } finally {
+    swotLoading.value = false
+  }
+}
+
+async function loadOrigin(p: CanvasProject) {
+  try {
+    const list = await listSwotAnalyses()
+    swotList.value = list.items
+  } catch (e) {
+    swotError.value = e instanceof Error ? e.message : 'Falha ao listar as SWOTs.'
+    return
+  }
+  const linked = p.swot_id && swotList.value.some((s) => s.id === p.swot_id) ? p.swot_id : null
+  if (p.swot_id && !linked) {
+    // SWOT de origem foi apagada: solta os vínculos para não travar o autosave
+    form.value.swot_id = null
+    form.value.swot_item_ids = []
+    form.value.tows_ids = []
+  }
+  const preferred = linked || swotList.value[0]?.id || null
+  if (preferred) await loadSwot(preferred)
+}
+
+async function onSelectSwot(event: Event) {
+  const nextId = (event.target as HTMLSelectElement).value
+  if (!nextId || nextId === swot.value?.id) return
+  // Vínculos pertencem à SWOT anterior — trocar de SWOT limpa a seleção
+  const had = form.value.tows_ids.length + form.value.swot_item_ids.length > 0
+  form.value.tows_ids = []
+  form.value.swot_item_ids = []
+  form.value.swot_id = null
+  await loadSwot(nextId)
+  if (had) await persist()
+}
+
+async function toggleTows(initiativeId?: string) {
+  if (!initiativeId || !swot.value) return
+  const chosen = new Set(form.value.tows_ids)
+  if (chosen.has(initiativeId)) {
+    chosen.delete(initiativeId)
+  } else {
+    if (chosen.size >= MAX_TOWS_LINKS) {
+      swotError.value = `Máximo de ${MAX_TOWS_LINKS} iniciativas por projeto.`
+      return
+    }
+    chosen.add(initiativeId)
+  }
+  swotError.value = null
+  form.value.tows_ids = [...chosen]
+  const stillLinked = form.value.tows_ids.length + form.value.swot_item_ids.length > 0
+  form.value.swot_id = stillLinked ? swot.value.id : null
+  await persist()
+}
+
+async function removeSwotItemLink(itemId: string) {
+  form.value.swot_item_ids = form.value.swot_item_ids.filter((id) => id !== itemId)
+  const stillLinked = form.value.tows_ids.length + form.value.swot_item_ids.length > 0
+  form.value.swot_id = stillLinked ? form.value.swot_id : null
+  await persist()
+}
 
 const typeOptions = ref<string[]>([
   'Automação',
@@ -251,6 +401,10 @@ function applyProject(p: CanvasProject) {
     score_valor: p.score_valor,
     score_viabilidade: p.score_viabilidade,
     proximo_passo: p.proximo_passo || '',
+    justificativa_tows: p.justificativa_tows || '',
+    swot_id: p.swot_id ?? null,
+    swot_item_ids: [...(p.swot_item_ids || [])],
+    tows_ids: [...(p.tows_ids || [])],
   }
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
@@ -410,6 +564,8 @@ onMounted(async () => {
   try {
     const p = await getCanvasProject(projectId.value)
     applyProject(p)
+    if ((p.tows_ids || []).length || (p.swot_item_ids || []).length) originOpen.value = true
+    void loadOrigin(p)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar projeto.'
     if (String(error.value).includes('nao encontrado') || String(error.value).includes('não encontrado')) {
@@ -507,7 +663,117 @@ onUnmounted(() => {
             />
           </label>
         </div>
+        <label class="head-justify">
+          <span>Como este projeto trata as estratégias TOWS</span>
+          <textarea
+            v-model="form.justificativa_tows"
+            rows="3"
+            maxlength="4000"
+            placeholder="Ex.: executa a ofensiva F×O de usar o patrocínio executivo para lançar o copiloto de atendimento antes do concorrente; e cobre parte da fraqueza de dados dispersos ao consolidar o histórico de tickets."
+            @blur="persist"
+          />
+          <em class="head-justify-hint">
+            Justifique o vínculo: que iniciativas do bloco 00 este projeto executa, até onde ele
+            entrega cada uma e o que fica de fora.
+            <template v-if="form.tows_ids.length">
+              {{ form.tows_ids.length }} iniciativa(s) vinculada(s).
+            </template>
+          </em>
+        </label>
       </header>
+
+      <section class="origin">
+        <button
+          type="button"
+          class="origin-head"
+          :aria-expanded="originOpen"
+          @click="originOpen = !originOpen"
+        >
+          <span class="num">00</span>
+          <span class="cell-title origin-title">Origem estratégica · TOWS</span>
+          <span v-if="form.tows_ids.length" class="origin-count">
+            {{ form.tows_ids.length }} iniciativa(s)
+          </span>
+          <span v-else class="origin-count muted">nenhuma iniciativa vinculada</span>
+          <span class="origin-caret" aria-hidden="true">{{ originOpen ? '−' : '+' }}</span>
+        </button>
+
+        <div v-if="!originOpen && selectedInitiatives.length" class="origin-chips">
+          <span v-for="init in selectedInitiatives" :key="init.id" class="origin-chip">
+            <b>{{ init.groupLabel }}</b>{{ init.acao }}
+          </span>
+        </div>
+
+        <div v-if="originOpen" class="origin-body">
+          <p class="hint">
+            Marque as iniciativas da matriz TOWS que este projeto executa. O vínculo aparece no
+            Mapa Estratégico ligando maturidade → SWOT → este canvas.
+          </p>
+
+          <div v-if="swotError" class="origin-err">{{ swotError }}</div>
+
+          <p v-if="swotLoading" class="origin-none">Carregando estratégias…</p>
+
+          <p v-else-if="!swotList.length" class="origin-none">
+            Nenhuma SWOT criada ainda.
+            <RouterLink to="/swot" class="origin-link">Abrir SWOT de IA</RouterLink>
+          </p>
+
+          <template v-else-if="swot">
+            <label v-if="swotList.length > 1" class="origin-select">
+              <span>SWOT de origem</span>
+              <select :value="swot.id" @change="onSelectSwot">
+                <option v-for="s in swotList" :key="s.id" :value="s.id">
+                  {{ s.veredito_titulo || 'SWOT sem veredito' }} · {{ s.tows_count }} estratégia(s)
+                </option>
+              </select>
+            </label>
+
+            <div class="origin-groups">
+              <div v-for="group in TOWS_GROUPS" :key="group.field" class="origin-group">
+                <div class="origin-group-head">
+                  <b>{{ group.label }}</b>
+                  <span>{{ group.hint }}</span>
+                </div>
+                <p v-if="!(swot[group.field] || []).length" class="origin-none">
+                  Sem estratégias neste cruzamento.
+                </p>
+                <ul v-else class="origin-list">
+                  <li v-for="(init, initIdx) in swot[group.field]" :key="init.id || initIdx">
+                    <label class="origin-item" :class="{ active: isTowsSelected(init.id) }">
+                      <input
+                        type="checkbox"
+                        :checked="isTowsSelected(init.id)"
+                        :disabled="!init.id"
+                        @change="toggleTows(init.id)"
+                      />
+                      <span class="origin-item-body">
+                        <span class="origin-acao">{{ init.acao || '—' }}</span>
+                        <span v-if="crossingLabel(init)" class="origin-cross">
+                          {{ crossingLabel(init) }}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div v-if="selectedItems.length" class="origin-items">
+              <span class="origin-items-label">Itens SWOT vinculados</span>
+              <span v-for="entry in selectedItems" :key="entry.id" class="origin-chip">
+                <b>{{ SWOT_QUADRANT_LABEL[entry.item.quadrant] }}</b>{{ entry.item.texto }}
+                <button
+                  type="button"
+                  class="origin-chip-x"
+                  title="Remover vínculo"
+                  @click="removeSwotItemLink(entry.id)"
+                >×</button>
+              </span>
+            </div>
+          </template>
+        </div>
+      </section>
 
       <div class="grid">
         <div class="cell c4 band-diag">
@@ -912,6 +1178,7 @@ h1 span {
 }
 .title-field span,
 .meta label span,
+.head-justify > span,
 .next label {
   display: block;
   font-size: 9.5px;
@@ -946,6 +1213,259 @@ h1 span {
   gap: 10px 20px;
   min-width: min(320px, 100%);
 }
+.head-justify {
+  flex-basis: 100%;
+  display: block;
+  padding-top: 14px;
+  border-top: 1px dotted var(--line);
+}
+.head-justify textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  padding: 7px 9px;
+  outline: none;
+}
+.head-justify textarea:focus {
+  border-color: var(--amber);
+  background: #fffef9;
+}
+.head-justify-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  font-style: normal;
+}
+
+.origin {
+  position: relative;
+  border-bottom: 1px solid var(--line);
+  background: #fffdf8;
+}
+.origin::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--amber);
+}
+.origin-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.origin-head .num {
+  color: var(--amber);
+}
+.origin-title {
+  margin: 0;
+  padding: 0;
+}
+.origin-count {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--amber);
+}
+.origin-count.muted {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.origin-caret {
+  margin-left: auto;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+.origin-chips,
+.origin-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+.origin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 9px;
+  border: 1px solid #e3ce9c;
+  border-radius: 20px;
+  background: var(--amber-tint);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.origin-chip b {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--amber);
+}
+.origin-chip-x {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+}
+.origin-chip-x:hover {
+  color: var(--danger);
+}
+.origin-body {
+  padding: 0 16px 16px;
+}
+.origin-body .hint {
+  max-width: 70ch;
+  margin-bottom: 10px;
+}
+.origin-err {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--danger);
+  background: #f8eee8;
+  font-size: 11.5px;
+  color: var(--ink);
+}
+.origin-none {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin: 4px 0;
+}
+.origin-link {
+  color: var(--amber);
+  text-decoration: underline;
+}
+.origin-select {
+  display: block;
+  max-width: 420px;
+  margin-bottom: 12px;
+}
+.origin-select span {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.origin-select select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  padding: 6px 8px;
+}
+.origin-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.origin-group {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  padding: 10px;
+}
+.origin-group-head b {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.origin-group-head span {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.origin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.origin-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.origin-item:hover {
+  background: #faf8f2;
+}
+.origin-item.active {
+  border-color: #e3ce9c;
+  background: var(--amber-tint);
+}
+.origin-item input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--amber);
+}
+.origin-item-body {
+  min-width: 0;
+}
+.origin-acao {
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.origin-cross {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.origin-items {
+  padding: 12px 0 0;
+}
+.origin-items-label {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);

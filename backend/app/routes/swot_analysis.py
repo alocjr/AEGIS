@@ -536,6 +536,36 @@ def get_swot(user=Depends(get_verified_user), db: Database = Depends(get_db)):
     return _to_item(doc)
 
 
+@router.get("/list")
+def list_swots(user=Depends(get_verified_user), db: Database = Depends(get_db)):
+    """Resumo das SWOTs do mentorado (não cria documento vazio)."""
+    cursor = db.swot_analyses.find({"user_id": user["_id"]}).sort(
+        [("updated_at", -1), ("_id", -1)]
+    )
+    items = []
+    for doc in cursor:
+        mid = doc.get("maturity_response_id")
+        updated_at = doc.get("updated_at")
+        created_at = doc.get("created_at")
+        items.append(
+            {
+                "id": str(doc["_id"]),
+                "maturity_response_id": str(mid) if mid else None,
+                "optica": doc.get("optica") or "",
+                "veredito_titulo": doc.get("veredito_titulo") or "",
+                "items_count": sum(
+                    len(_as_item_list(doc.get(field), field)) for field in _LIST_FIELDS
+                ),
+                "tows_count": sum(
+                    len(_as_initiatives(doc.get(field))) for field in _TOWS_FIELDS
+                ),
+                "created_at": created_at.isoformat() if created_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None,
+            }
+        )
+    return {"items": items}
+
+
 @router.get("/by-maturity/{maturity_response_id}")
 def get_swot_by_maturity(
     maturity_response_id: str,

@@ -64,6 +64,7 @@ _EMPTY_FIELDS = {
     "swot_id": None,
     "swot_item_ids": [],
     "tows_ids": [],
+    "justificativa_tows": "",
 }
 
 
@@ -155,6 +156,7 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "custo": _as_item_list(doc.get("custo")),
         "riscos": _as_item_list(doc.get("riscos")),
         "proximo_passo": doc.get("proximo_passo") or "",
+        "justificativa_tows": doc.get("justificativa_tows") or "",
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
     }
 
