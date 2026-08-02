@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from app.routes import admin as admin_routes
 from app.routes import course as course_routes
 from app.routes import progress as progress_routes
-from app.schemas import LiberarEncontroRequest
+from app.schemas import AdminCreateUserRequest, AdminUpdateUserRequest, LiberarEncontroRequest
 
 
 def _matches(doc: dict, flt: dict | None) -> bool:
@@ -226,6 +226,55 @@ class AdminLiberarEncontroTests(unittest.TestCase):
         progress = db.progress.find_one({"user_id": target["_id"], "course_slug": "trilha-a"})
         self.assertIsNotNone(progress)
         self.assertIn(1, progress.get("encontros_liberados") or [])
+
+
+class AdminCreateUserWithoutTrilhaTests(unittest.TestCase):
+    """Admin da plataforma também pode criar um usuário sem nenhuma trilha (ex.: dono de
+    organização que só vai usar as ferramentas do AI Hub)."""
+
+    def test_creates_user_with_no_course_slugs(self) -> None:
+        db = _FakeDb()
+        admin = _user(is_admin=True)
+        org_id = ObjectId()
+        db.organizations.insert_one({"_id": org_id, "name": "Empresa X"})
+
+        result = admin_routes.create_user(
+            AdminCreateUserRequest(
+                name="Sem Trilha",
+                email="semtrilha@empresa.com",
+                password="senha123",
+                course_slugs=[],
+                organization_id=str(org_id),
+            ),
+            admin=admin,
+            db=db,
+        )
+
+        self.assertEqual(result["course_slugs"], [])
+        stored = db.users.find_one({"email": "semtrilha@empresa.com"})
+        self.assertEqual(stored["course_slugs"], [])
+        self.assertNotIn("course_slug", stored)
+        self.assertEqual(db.progress.count_documents({"user_id": stored["_id"]}), 0)
+
+
+class AdminUpdateUserClearTrilhaTests(unittest.TestCase):
+    def test_clearing_course_slugs_to_empty_list_succeeds(self) -> None:
+        db = _FakeDb()
+        admin = _user(is_admin=True)
+        member = _user(course_slugs=["trilha-a"], course_slug="trilha-a")
+        db.users.insert_one(member)
+
+        updated = admin_routes.update_user(
+            str(member["_id"]),
+            AdminUpdateUserRequest(course_slugs=[]),
+            admin=admin,
+            db=db,
+        )
+
+        self.assertIsInstance(updated, dict)
+        stored = db.users.find_one({"_id": member["_id"]})
+        self.assertEqual(stored["course_slugs"], [])
+        self.assertIsNone(stored["course_slug"])
 
 
 if __name__ == "__main__":

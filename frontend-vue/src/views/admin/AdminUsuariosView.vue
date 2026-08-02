@@ -163,10 +163,6 @@ async function saveModal() {
     return
   }
   const slugs = (course_slugs ?? []).filter((s) => s?.trim())
-  if (slugs.length === 0) {
-    modalError.value = 'Selecione ao menos uma trilha.'
-    return
-  }
 
   modalSaving.value = true
   try {
@@ -377,7 +373,10 @@ onMounted(async () => {
             </div>
             <div class="form-group">
               <span class="label-block">Trilhas</span>
-              <p class="form-hint">Selecione uma ou mais trilhas para o usuário.</p>
+              <p class="form-hint">
+                Selecione uma ou mais trilhas, ou deixe sem marcar para um usuário sem mentoria
+                (acesso só às ferramentas do AI Hub).
+              </p>
               <div class="course-checkboxes">
                 <label
                   v-for="c in courses"

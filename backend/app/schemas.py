@@ -228,7 +228,7 @@ class AdminCreateUserRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
-    course_slugs: list[str] = Field(min_length=1, max_length=50)  # uma ou mais trilhas
+    course_slugs: list[str] = Field(default_factory=list, max_length=50)  # vazio = sem trilha (ex.: membro de organização)
     phone: str | None = Field(None, max_length=30)  # telefone completo para WhatsApp (ex.: 5511987654321)
     encontro_agendas: dict[str, str] | None = None  # encontro_id -> ISO datetime string (aplica à primeira trilha)
     organization_id: str | None = Field(None, max_length=24)  # se omitido, cria organização solo
@@ -238,7 +238,7 @@ class AdminUpdateUserRequest(BaseModel):
     name: str | None = Field(None, min_length=2, max_length=120)
     email: EmailStr | None = None
     password: str | None = Field(None, min_length=6, max_length=128)
-    course_slugs: list[str] | None = Field(None, min_length=1, max_length=50)  # uma ou mais trilhas
+    course_slugs: list[str] | None = Field(None, max_length=50)  # None = não altera; [] = remove trilha
     phone: str | None = Field(None, max_length=30)
     is_admin: bool | None = None
     is_org_admin: bool | None = None

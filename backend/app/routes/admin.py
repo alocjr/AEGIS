@@ -279,8 +279,6 @@ def create_user(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ja cadastrado")
 
     course_slugs = [s.strip() for s in payload.course_slugs if s and s.strip()]
-    if not course_slugs:
-        raise HTTPException(status_code=400, detail="Informe ao menos uma trilha")
     for slug in course_slugs:
         if not db.courses.find_one({"slug": slug}):
             raise HTTPException(status_code=404, detail=f"Trilha nao encontrada: {slug}")
@@ -300,7 +298,6 @@ def create_user(
         "name": payload.name.strip(),
         "email": email,
         "password_hash": hash_password(payload.password),
-        "course_slug": course_slugs[0],
         "course_slugs": course_slugs,
         "organization_id": org_id,
         "created_at": now,
@@ -486,12 +483,10 @@ def update_user(
         updates["password_hash"] = hash_password(payload.password)
     if payload.course_slugs is not None:
         course_slugs = [s.strip() for s in payload.course_slugs if s and s.strip()]
-        if not course_slugs:
-            raise HTTPException(status_code=400, detail="Informe ao menos uma trilha")
         for slug in course_slugs:
             if not db.courses.find_one({"slug": slug}):
                 raise HTTPException(status_code=404, detail=f"Trilha nao encontrada: {slug}")
-        updates["course_slug"] = course_slugs[0]
+        updates["course_slug"] = course_slugs[0] if course_slugs else None
         updates["course_slugs"] = course_slugs
     if payload.phone is not None:
         updates["phone"] = payload.phone.strip() if payload.phone.strip() else ""
