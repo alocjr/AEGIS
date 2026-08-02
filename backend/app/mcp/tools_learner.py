@@ -14,33 +14,49 @@ from app.routes import strategic_map as strategic_map_routes
 from app.routes import swot_analysis as swot_routes
 from app.schemas import CanvasImportRequest, CanvasProjectUpdateRequest, SwotImportRequest
 
+try:
+    from fastmcp.exceptions import ToolError
+except ImportError:  # pragma: no cover
+    class ToolError(Exception):
+        pass
+
+
+def _org_id(user: dict):
+    """Organizacao do usuario MCP — mesma regra de `deps.get_current_organization_id`."""
+    org_id = user.get("organization_id")
+    if not org_id:
+        raise ToolError("Usuario sem organizacao atribuida. Contate o suporte.")
+    return org_id
+
 
 def register_learner_tools(mcp) -> None:
     @mcp.tool
     def swot_get() -> dict:
-        """Retorna a SWOT de IA do mentorado autenticado (cria vazia se não existir)."""
+        """Retorna a SWOT de IA da organização do mentorado (cria vazia se não existir)."""
         user = require_verified_user()
-        return call_route(swot_routes.get_swot, user=user, db=get_db())
+        return call_route(swot_routes.get_swot, user=user, org_id=_org_id(user), db=get_db())
 
     @mcp.tool
     def swot_list() -> dict:
-        """Lista as SWOTs do mentorado (resumo, com contagem de itens e estratégias TOWS)."""
+        """Lista as SWOTs da organização (resumo, com contagem de itens e estratégias TOWS)."""
         user = require_verified_user()
-        return call_route(swot_routes.list_swots, user=user, db=get_db())
+        return call_route(swot_routes.list_swots, user=user, org_id=_org_id(user), db=get_db())
 
     @mcp.tool
     def swot_import(document: dict[str, Any] | str) -> dict:
-        """Importa JSON aegis.swot-ia (v1–v3) e substitui a SWOT do mentorado."""
+        """Importa JSON aegis.swot-ia (v1–v3) e substitui a SWOT da organização."""
         user = require_verified_user()
         raw = parse_json_object(document)
         body = validate_model(SwotImportRequest, raw)
-        return call_route(swot_routes.import_swot, body=body, user=user, db=get_db())
+        return call_route(
+            swot_routes.import_swot, body=body, user=user, org_id=_org_id(user), db=get_db()
+        )
 
     @mcp.tool
     def canvas_list() -> dict:
-        """Lista os projetos (canvas) do mentorado."""
+        """Lista os projetos (canvas) da organização."""
         user = require_verified_user()
-        return call_route(canvas_routes.list_projects, user=user, db=get_db())
+        return call_route(canvas_routes.list_projects, user=user, org_id=_org_id(user), db=get_db())
 
     @mcp.tool
     def canvas_get(project_id: str) -> dict:
@@ -50,6 +66,7 @@ def register_learner_tools(mcp) -> None:
             canvas_routes.get_project,
             project_id=project_id,
             user=user,
+            org_id=_org_id(user),
             db=get_db(),
         )
 
@@ -59,7 +76,9 @@ def register_learner_tools(mcp) -> None:
         user = require_verified_user()
         raw = parse_json_object(document)
         body = validate_model(CanvasImportRequest, raw)
-        return call_route(canvas_routes.import_projects, body=body, user=user, db=get_db())
+        return call_route(
+            canvas_routes.import_projects, body=body, user=user, org_id=_org_id(user), db=get_db()
+        )
 
     @mcp.tool
     def canvas_import_into(project_id: str, document: dict[str, Any] | str) -> dict:
@@ -72,6 +91,7 @@ def register_learner_tools(mcp) -> None:
             project_id=project_id,
             body=body,
             user=user,
+            org_id=_org_id(user),
             db=get_db(),
         )
 
@@ -86,6 +106,7 @@ def register_learner_tools(mcp) -> None:
             project_id=project_id,
             body=body,
             user=user,
+            org_id=_org_id(user),
             db=get_db(),
         )
 
@@ -108,9 +129,11 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def maturity_my_responses() -> dict:
-        """Lista as autoavaliações de maturidade do mentorado."""
+        """Lista as autoavaliações de maturidade da organização (rascunhos, só as do próprio autor)."""
         user = require_verified_user()
-        return call_route(maturity_routes.list_my_responses, user=user, db=get_db())
+        return call_route(
+            maturity_routes.list_my_responses, user=user, org_id=_org_id(user), db=get_db()
+        )
 
     @mcp.tool
     def maturity_export(response_id: str) -> dict:
@@ -120,6 +143,7 @@ def register_learner_tools(mcp) -> None:
             maturity_routes.export_my_response,
             response_id=response_id,
             user=user,
+            org_id=_org_id(user),
             db=get_db(),
         )
 
@@ -135,5 +159,6 @@ def register_learner_tools(mcp) -> None:
             maturity_response_id=maturity_response_id,
             swot_id=swot_id,
             user=user,
+            org_id=_org_id(user),
             db=get_db(),
         )

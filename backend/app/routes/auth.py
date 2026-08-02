@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pymongo.database import Database
 
 from app.config import settings
-from app.database import get_db
+from app.database import get_db, provision_solo_organization
 from app.deps import get_current_user, is_email_verified
 from app.schemas import (
     AuthResponse,
@@ -36,13 +36,17 @@ logger = logging.getLogger("aegis")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-def _user_payload(user: dict) -> dict:
+def _user_payload(user: dict, db: Database) -> dict:
+    org_id = user.get("organization_id")
+    org = db.organizations.find_one({"_id": org_id}, {"name": 1}) if org_id else None
     return {
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
         "is_admin": bool(user.get("is_admin", False)),
         "email_verified": is_email_verified(user),
+        "organization_id": str(org_id) if org_id else None,
+        "organization_name": (org or {}).get("name") or "",
     }
 
 
@@ -56,6 +60,7 @@ def register(payload: RegisterRequest, response: Response, db: Database = Depend
         "name": payload.name.strip(),
         "email": payload.email.lower(),
         "password_hash": hash_password(payload.password),
+        "organization_id": provision_solo_organization(payload.name),
         "email_verified": False,
         "created_at": datetime.now(timezone.utc),
     }
@@ -68,7 +73,7 @@ def register(payload: RegisterRequest, response: Response, db: Database = Depend
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": _user_payload(user_doc),
+        "user": _user_payload(user_doc, db),
     }
 
 
@@ -83,7 +88,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Datab
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": _user_payload(user),
+        "user": _user_payload(user, db),
     }
 
 
@@ -99,7 +104,7 @@ def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
     from_user = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
     course_slugs = list(dict.fromkeys(from_progress + from_user))
     return {
-        **_user_payload(user),
+        **_user_payload(user, db),
         "course_slugs": course_slugs,
     }
 

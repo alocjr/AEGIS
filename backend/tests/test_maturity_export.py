@@ -44,8 +44,11 @@ class MaturityExportTests(unittest.TestCase):
             if q.get("tier") == "basico"
         ]
 
-    def _fixture(self, *, skip_first_answer: bool = False) -> tuple[_FakeDb, dict, str]:
+    def _fixture(
+        self, *, skip_first_answer: bool = False
+    ) -> tuple[_FakeDb, dict, ObjectId, str]:
         user_id = ObjectId()
+        org_id = ObjectId()
         response_id = ObjectId()
         answers = {q["id"]: 4 for q in self.basic_questions}
         if skip_first_answer:
@@ -56,7 +59,8 @@ class MaturityExportTests(unittest.TestCase):
         result["complete"] = not skip_first_answer
         doc = {
             "_id": response_id,
-            "user_id": user_id,
+            "organization_id": org_id,
+            "created_by_user_id": user_id,
             "model_id": model["_id"],
             "model_version": model.get("version"),
             "assessment_title": model.get("assessment_title"),
@@ -66,12 +70,12 @@ class MaturityExportTests(unittest.TestCase):
             "complete": not skip_first_answer,
             "submitted_at": datetime(2026, 8, 1, 15, 30, tzinfo=timezone.utc),
         }
-        return _FakeDb(model, [doc]), {"_id": user_id}, str(response_id)
+        return _FakeDb(model, [doc]), {"_id": user_id}, org_id, str(response_id)
 
     def test_envelope_carries_questions_and_answers(self) -> None:
-        db, user, response_id = self._fixture()
+        db, user, org_id, response_id = self._fixture()
 
-        doc = export_my_response(response_id, user=user, db=db)
+        doc = export_my_response(response_id, user=user, org_id=org_id, db=db)
 
         self.assertEqual(doc["format"], "aegis.maturidade-ia")
         self.assertEqual(doc["version"], 1)
@@ -94,9 +98,9 @@ class MaturityExportTests(unittest.TestCase):
         self.assertEqual(match["resposta_descricao"], first["levels"]["4"])
 
     def test_scores_mirror_stored_result(self) -> None:
-        db, user, response_id = self._fixture()
+        db, user, org_id, response_id = self._fixture()
 
-        payload = export_my_response(response_id, user=user, db=db)["payload"]
+        payload = export_my_response(response_id, user=user, org_id=org_id, db=db)["payload"]
 
         stored = db.maturity_responses.docs[0]["result"]
         self.assertEqual(payload["resultado"]["pontuacao"], stored["total_score"])
@@ -106,9 +110,9 @@ class MaturityExportTests(unittest.TestCase):
             self.assertEqual(dim["pontuacao"], stored["dimension_scores"][dim["id"]]["score"])
 
     def test_unanswered_question_exports_as_null(self) -> None:
-        db, user, response_id = self._fixture(skip_first_answer=True)
+        db, user, org_id, response_id = self._fixture(skip_first_answer=True)
 
-        payload = export_my_response(response_id, user=user, db=db)["payload"]
+        payload = export_my_response(response_id, user=user, org_id=org_id, db=db)["payload"]
 
         self.assertFalse(payload["completo"])
         self.assertEqual(
@@ -119,11 +123,28 @@ class MaturityExportTests(unittest.TestCase):
         self.assertIsNone(missing["resposta"])
         self.assertEqual(missing["resposta_descricao"], "")
 
-    def test_other_users_response_is_not_exported(self) -> None:
-        db, _user, response_id = self._fixture()
+    def test_other_organizations_response_is_not_exported(self) -> None:
+        db, _user, _org_id, response_id = self._fixture()
 
         with self.assertRaises(HTTPException) as ctx:
-            export_my_response(response_id, user={"_id": ObjectId()}, db=db)
+            export_my_response(response_id, user={"_id": ObjectId()}, org_id=ObjectId(), db=db)
+        self.assertEqual(ctx.exception.status_code, 404)
+
+    def test_teammates_can_export_a_completed_response(self) -> None:
+        """Resposta completa é compartilhada — qualquer membro da organização pode exportá-la."""
+        db, _user, org_id, response_id = self._fixture()
+        teammate = {"_id": ObjectId()}
+
+        payload = export_my_response(response_id, user=teammate, org_id=org_id, db=db)["payload"]
+        self.assertTrue(payload["completo"])
+
+    def test_draft_response_is_isolated_to_its_author(self) -> None:
+        """Rascunho (complete=False) só é visível para quem o criou, mesmo na mesma org."""
+        db, _user, org_id, response_id = self._fixture(skip_first_answer=True)
+        teammate = {"_id": ObjectId()}
+
+        with self.assertRaises(HTTPException) as ctx:
+            export_my_response(response_id, user=teammate, org_id=org_id, db=db)
         self.assertEqual(ctx.exception.status_code, 404)
 
 

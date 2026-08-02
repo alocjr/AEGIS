@@ -6,6 +6,38 @@
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
 
+/** Erro de API — `code` vem preenchido quando o backend usa o formato
+ * `detail: { code, message }` (erros de validação de negócio com código estável). */
+export class ApiError extends Error {
+  code?: string
+
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+  }
+}
+
+function parseErrorBody(text: string, fallback: string): ApiError {
+  try {
+    const json = JSON.parse(text) as {
+      detail?: string | unknown[] | { code?: string; message?: string }
+    }
+    const detail = json.detail
+    if (Array.isArray(detail)) {
+      const message = detail.map((d: unknown) => (d as { msg?: string }).msg ?? String(d)).join(', ')
+      return new ApiError(message || fallback)
+    }
+    if (detail && typeof detail === 'object') {
+      const d = detail as { code?: string; message?: string }
+      return new ApiError(d.message || fallback, d.code)
+    }
+    return new ApiError((detail as string) || fallback)
+  } catch {
+    return new ApiError(text || fallback)
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {}
@@ -21,16 +53,7 @@ export async function apiRequest<T>(
   })
   if (!res.ok) {
     const text = await res.text()
-    let detail: string
-    try {
-      const json = JSON.parse(text) as { detail?: string | unknown[] }
-      detail = Array.isArray(json.detail)
-        ? json.detail.map((d: unknown) => (d as { msg?: string }).msg ?? String(d)).join(', ')
-        : (json.detail as string) ?? text
-    } catch {
-      detail = text || res.statusText
-    }
-    throw new Error(detail)
+    throw parseErrorBody(text, res.statusText)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -50,16 +73,7 @@ export async function postFormData<T>(path: string, formData: FormData): Promise
   })
   if (!res.ok) {
     const text = await res.text()
-    let detail: string
-    try {
-      const json = JSON.parse(text) as { detail?: string | unknown[] }
-      detail = Array.isArray(json.detail)
-        ? json.detail.map((d: unknown) => (d as { msg?: string }).msg ?? String(d)).join(', ')
-        : (json.detail as string) ?? text
-    } catch {
-      detail = text || res.statusText
-    }
-    throw new Error(detail)
+    throw parseErrorBody(text, res.statusText)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>

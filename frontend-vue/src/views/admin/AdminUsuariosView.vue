@@ -8,8 +8,10 @@ import {
   updateUser,
   deleteUser,
   fetchCourseList,
+  listOrganizations,
+  createOrganization,
 } from '@/api/admin'
-import type { AdminUser, AdminUserDetail, CourseListItem } from '@/api/admin'
+import type { AdminUser, AdminUserDetail, CourseListItem, AdminOrganization } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -19,7 +21,10 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const users = ref<AdminUser[]>([])
 const courses = ref<CourseListItem[]>([])
+const organizations = ref<AdminOrganization[]>([])
 const searchQuery = ref('')
+const newOrgName = ref('')
+const newOrgSaving = ref(false)
 
 const filteredUsers = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -49,6 +54,7 @@ const form = ref<{
   course_slugs: string[]
   phone: string
   is_admin: boolean
+  organization_id: string
 }>({
   name: '',
   email: '',
@@ -56,6 +62,7 @@ const form = ref<{
   course_slugs: [],
   phone: '',
   is_admin: false,
+  organization_id: '',
 })
 
 const deleteTarget = ref<AdminUser | null>(null)
@@ -70,6 +77,7 @@ function resetForm() {
     course_slugs: courses.value[0]?.slug ? [courses.value[0].slug] : [],
     phone: '',
     is_admin: false,
+    organization_id: '',
   }
   editingId.value = null
   modalError.value = null
@@ -105,6 +113,7 @@ async function openEdit(user: AdminUser) {
       course_slugs: [...slugs],
       phone: detail.phone || '',
       is_admin: detail.is_admin,
+      organization_id: detail.organization_id || '',
     }
   } catch (e) {
     modalError.value = e instanceof Error ? e.message : 'Erro ao carregar usuário.'
@@ -164,6 +173,7 @@ async function saveModal() {
         password: password,
         course_slugs: slugs,
         phone: phone.trim() || undefined,
+        organization_id: form.value.organization_id || undefined,
       })
       users.value = await listUsers()
       closeModal()
@@ -177,6 +187,7 @@ async function saveModal() {
         is_admin,
       }
       if (password.trim()) body.password = password
+      if (form.value.organization_id) body.organization_id = form.value.organization_id
       await updateUser(id, body)
       users.value = await listUsers()
       closeModal()
@@ -219,14 +230,32 @@ async function confirmDelete() {
   }
 }
 
+async function createOrgInline() {
+  const name = newOrgName.value.trim()
+  if (!name) return
+  newOrgSaving.value = true
+  try {
+    const org = await createOrganization(name)
+    organizations.value = [...organizations.value, { id: org.id, name: org.name, member_count: 0 }]
+    form.value.organization_id = org.id
+    newOrgName.value = ''
+  } catch (e) {
+    modalError.value = e instanceof Error ? e.message : 'Erro ao criar organização.'
+  } finally {
+    newOrgSaving.value = false
+  }
+}
+
 onMounted(async () => {
   try {
-    const [usersList, coursesList] = await Promise.all([
+    const [usersList, coursesList, organizationsList] = await Promise.all([
       listUsers(),
       fetchCourseList(),
+      listOrganizations(),
     ])
     users.value = Array.isArray(usersList) ? usersList : []
     courses.value = Array.isArray(coursesList) ? coursesList : []
+    organizations.value = Array.isArray(organizationsList) ? organizationsList : []
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar usuários.'
   } finally {
@@ -264,6 +293,7 @@ onMounted(async () => {
             <th>Nome</th>
             <th>E-mail</th>
             <th>Telefone</th>
+            <th>Organização</th>
             <th>Trilha</th>
             <th>Admin</th>
             <th>Criado em</th>
@@ -275,6 +305,7 @@ onMounted(async () => {
             <td class="name-cell">{{ u?.name ?? '—' }}</td>
             <td>{{ u?.email ?? '—' }}</td>
             <td>{{ u?.phone || '—' }}</td>
+            <td>{{ u?.organization_name || '—' }}</td>
             <td class="slug-cell">
               <span v-if="(u?.course_slugs?.length ?? 0) > 0">{{ (u?.course_slugs ?? []).join(', ') }}</span>
               <code v-else>{{ u?.course_slug || '—' }}</code>
@@ -354,6 +385,36 @@ onMounted(async () => {
                   />
                   {{ c.titulo || c.slug }}
                 </label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="user-org">Organização</label>
+              <p class="form-hint">
+                Usuários da mesma organização compartilham SWOT, Canvas e Maturidade.
+                Deixe em branco ao criar para gerar uma organização solo.
+              </p>
+              <select id="user-org" v-model="form.organization_id" class="input">
+                <option value="">— Nova organização solo —</option>
+                <option v-for="o in organizations" :key="o.id" :value="o.id">
+                  {{ o.name }} ({{ o.member_count }})
+                </option>
+              </select>
+              <div class="org-inline-create">
+                <input
+                  v-model="newOrgName"
+                  type="text"
+                  class="input"
+                  placeholder="Nome da nova organização"
+                  @keydown.enter.prevent="createOrgInline"
+                />
+                <button
+                  type="button"
+                  class="btn-secondary btn-sm"
+                  :disabled="newOrgSaving || !newOrgName.trim()"
+                  @click="createOrgInline"
+                >
+                  {{ newOrgSaving ? 'Criando…' : 'Criar' }}
+                </button>
               </div>
             </div>
             <div class="form-group">
@@ -593,6 +654,16 @@ onMounted(async () => {
 .course-checkboxes input[type="checkbox"] {
   width: auto;
   accent-color: var(--k0);
+}
+
+.org-inline-create {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.org-inline-create .input {
+  flex: 1;
 }
 
 /* Botões e formulário (mesmo padrão do AdminTrilhasView) */

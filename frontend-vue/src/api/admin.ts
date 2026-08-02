@@ -11,6 +11,9 @@ export interface AdminUser {
   course_slugs: string[]
   is_admin: boolean
   created_at: string | null
+  /** Organização (time) à qual o usuário pertence — SWOT/Canvas/Maturidade são compartilhados nela. */
+  organization_id: string | null
+  organization_name: string
 }
 
 export interface AdminUserDetail extends AdminUser {
@@ -32,6 +35,7 @@ export function createUser(body: {
   course_slugs: string[]
   phone?: string
   encontro_agendas?: Record<string, string>
+  organization_id?: string
 }): Promise<{ message: string; user_id: string; email: string; course_slugs: string[] }> {
   return post('/api/admin/users', body)
 }
@@ -46,6 +50,7 @@ export function updateUser(
     phone?: string
     is_admin?: boolean
     encontro_agendas?: Record<string, string>
+    organization_id?: string
   }
 ): Promise<{ message: string; id: string }> {
   return put(`/api/admin/users/${encodeURIComponent(userId)}`, body)
@@ -55,9 +60,26 @@ export function deleteUser(userId: string): Promise<{ message: string; id: strin
   return del(`/api/admin/users/${encodeURIComponent(userId)}`)
 }
 
+// ——— Organizações ———
+
+export interface AdminOrganization {
+  id: string
+  name: string
+  member_count: number
+}
+
+export function listOrganizations(): Promise<AdminOrganization[]> {
+  return get<AdminOrganization[]>('/api/admin/organizations')
+}
+
+export function createOrganization(name: string): Promise<{ id: string; name: string }> {
+  return post('/api/admin/organizations', { name })
+}
+
 // ——— Dashboard ———
 
-export interface DashboardStudent {
+/** Progresso de trilha/quiz — individual por membro. */
+export interface DashboardMember {
   id: string
   name: string
   email: string
@@ -70,15 +92,22 @@ export interface DashboardStudent {
   material_total: number
   quiz_done: number
   quiz_total: number
+  next_meeting_iso: string | null
+}
+
+/** Organização — SWOT/Canvas/Maturidade são compartilhados por todos os membros. */
+export interface DashboardOrganization {
+  id: string | null
+  name: string
   maturity_done: number
   maturity_total: number
   swot_filled: boolean
   canvas_count: number
-  next_meeting_iso: string | null
+  members: DashboardMember[]
 }
 
-export function fetchDashboard(): Promise<DashboardStudent[]> {
-  return get<DashboardStudent[]>('/api/admin/dashboard')
+export function fetchDashboard(): Promise<DashboardOrganization[]> {
+  return get<DashboardOrganization[]>('/api/admin/dashboard')
 }
 
 export interface UserCourseAndProgress {

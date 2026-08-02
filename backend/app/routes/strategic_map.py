@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_verified_user
+from app.deps import get_current_organization_id, get_verified_user
 from app.routes.canvas_projects import _to_item as _project_to_item
 from app.routes.swot_analysis import _get_latest as _latest_swot
 from app.routes.swot_analysis import _require_owned as _owned_swot
@@ -34,11 +34,11 @@ def _visible(question_tier: str, selected_tier: str) -> bool:
     return _TIER_ORDER.get(question_tier, 99) <= _TIER_ORDER.get(selected_tier, 0)
 
 
-def _list_sources(db: Database, user_id) -> list[dict]:
-    """Autoavaliações do mentorado (mais recentes primeiro) com a SWOT vinculada."""
+def _list_sources(db: Database, org_id) -> list[dict]:
+    """Autoavaliações da organização (mais recentes primeiro) com a SWOT vinculada."""
     swots = list(
         db.swot_analyses.find(
-            {"user_id": user_id}, {"maturity_response_id": 1, "updated_at": 1}
+            {"organization_id": org_id}, {"maturity_response_id": 1, "updated_at": 1}
         ).sort([("updated_at", -1), ("_id", -1)])
     )
     swot_by_maturity: dict[str, str] = {}
@@ -48,7 +48,7 @@ def _list_sources(db: Database, user_id) -> list[dict]:
             swot_by_maturity.setdefault(str(mid), str(doc["_id"]))
 
     out: list[dict] = []
-    cursor = db.maturity_responses.find({"user_id": user_id}).sort(
+    cursor = db.maturity_responses.find({"organization_id": org_id, "complete": True}).sort(
         [("submitted_at", -1), ("_id", -1)]
     )
     for doc in cursor:
@@ -91,16 +91,16 @@ def _list_sources(db: Database, user_id) -> list[dict]:
 
 def _resolve_target(
     db: Database,
-    user_id,
+    org_id,
     maturity_response_id: str | None,
     swot_id: str | None,
 ) -> tuple[dict | None, dict | None]:
     """Resolve o par (resposta de maturidade, SWOT) a exibir no mapa."""
     if swot_id:
-        swot_doc = _owned_swot(db, user_id, swot_id)
+        swot_doc = _owned_swot(db, org_id, swot_id)
         mid = swot_doc.get("maturity_response_id")
         maturity_doc = (
-            db.maturity_responses.find_one({"_id": mid, "user_id": user_id}) if mid else None
+            db.maturity_responses.find_one({"_id": mid, "organization_id": org_id}) if mid else None
         )
         return maturity_doc, swot_doc
 
@@ -108,22 +108,22 @@ def _resolve_target(
         if not ObjectId.is_valid(maturity_response_id):
             raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
         mid = ObjectId(maturity_response_id)
-        maturity_doc = db.maturity_responses.find_one({"_id": mid, "user_id": user_id})
+        maturity_doc = db.maturity_responses.find_one({"_id": mid, "organization_id": org_id})
         if not maturity_doc:
             raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
-        swot_doc = db.swot_analyses.find_one({"user_id": user_id, "maturity_response_id": mid})
+        swot_doc = db.swot_analyses.find_one({"organization_id": org_id, "maturity_response_id": mid})
         return maturity_doc, swot_doc
 
-    swot_doc = _latest_swot(db, user_id)
+    swot_doc = _latest_swot(db, org_id)
     if swot_doc:
         mid = swot_doc.get("maturity_response_id")
         maturity_doc = (
-            db.maturity_responses.find_one({"_id": mid, "user_id": user_id}) if mid else None
+            db.maturity_responses.find_one({"_id": mid, "organization_id": org_id}) if mid else None
         )
         return maturity_doc, swot_doc
 
     maturity_doc = db.maturity_responses.find_one(
-        {"user_id": user_id, "complete": True}, sort=[("submitted_at", -1), ("_id", -1)]
+        {"organization_id": org_id, "complete": True}, sort=[("submitted_at", -1), ("_id", -1)]
     )
     return maturity_doc, None
 
@@ -215,12 +215,12 @@ def get_strategic_map(
     maturity_response_id: str | None = Query(None),
     swot_id: str | None = Query(None),
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Árvore de rastreabilidade: resposta de maturidade → itens SWOT → TOWS → projetos."""
-    user_id = user["_id"]
-    maturity_doc, swot_doc = _resolve_target(db, user_id, maturity_response_id, swot_id)
-    sources = _list_sources(db, user_id)
+    maturity_doc, swot_doc = _resolve_target(db, org_id, maturity_response_id, swot_id)
+    sources = _list_sources(db, org_id)
 
     swot = _swot_to_item(swot_doc) if swot_doc else None
     result = (maturity_doc or {}).get("result") or {}
@@ -235,7 +235,7 @@ def get_strategic_map(
 
     projects = [
         _project_to_item(doc, summary=True)
-        for doc in db.canvas_projects.find({"user_id": user_id}).sort([("updated_at", -1)])
+        for doc in db.canvas_projects.find({"organization_id": org_id}).sort([("updated_at", -1)])
     ]
     items_by_id: dict[str, dict] = {}
     items_by_question: dict[str, list[dict]] = {}

@@ -22,6 +22,9 @@ export interface AuthUser {
   email_verified?: boolean
   /** Trilhas (course_slug) em que o aluno tem progresso. Só presente quando carregado por /me. */
   course_slugs?: string[]
+  /** Organização (time) do usuário — SWOT/Canvas/Maturidade são compartilhados dentro dela. */
+  organization_id?: string | null
+  organization_name?: string
 }
 
 export interface AuthResponse {

@@ -10,3 +10,6 @@ passlib[bcrypt]>=1.7.4,<2
 slowapi>=0.1.9,<0.2
 python-multipart>=0.0.9,<1
 fastmcp>=2.12,<3
+# Já vinha transitivo (via jsonschema-path); fixado direto pois o motor de regras de
+# Governança (R4) agora lê rules/config/r4_map.yaml explicitamente.
+PyYAML>=6.0,<7

@@ -64,6 +64,7 @@ async function goSwot(ev: Event) {
         <a href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
         <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">AI Canvas</RouterLink>
         <RouterLink to="/mapa-estrategico" class="tb-pill" @click="menuOpen = false">Mapa Estratégico</RouterLink>
+        <RouterLink to="/governanca/inventario" class="tb-pill" @click="menuOpen = false">Governança</RouterLink>
         <RouterLink
           v-if="(auth.user?.course_slugs?.length ?? 0) > 1"
           to="/trilhas"

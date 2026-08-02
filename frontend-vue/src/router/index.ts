@@ -32,6 +32,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/MapaEstrategicoView.vue'),
         meta: { title: 'Mapa Estratégico' },
       },
+      {
+        path: 'governanca/dashboard',
+        name: 'GovernanceDashboard',
+        component: () => import('@/views/governanca/GovernanceDashboardView.vue'),
+        meta: { title: 'Governança · Dashboard' },
+      },
+      {
+        path: 'governanca/inventario',
+        name: 'GovernanceInventory',
+        component: () => import('@/views/governanca/GovernanceInventoryView.vue'),
+        meta: { title: 'Governança · Inventário' },
+      },
+      {
+        path: 'governanca/sistemas/:id',
+        name: 'GovernanceSystem',
+        component: () => import('@/views/governanca/GovernanceSystemView.vue'),
+        meta: { title: 'Governança · Sistema' },
+      },
+      {
+        path: 'governanca/gate/:id',
+        name: 'GovernanceGate',
+        component: () => import('@/views/governanca/GovernanceGateView.vue'),
+        meta: { title: 'Governança · Gate' },
+      },
       { path: 'quiz-respostas', name: 'QuizRespostas', component: () => import('@/views/QuizRespostasView.vue'), meta: { title: 'Quiz Respostas' } },
       { path: 'quiz/q/:quizId', name: 'QuizById', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
       { path: 'quiz/:encontroId(\\d+)', name: 'Quiz', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
@@ -65,7 +89,7 @@ const router = createRouter({
   routes,
 })
 
-const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico']
+const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico', '/governanca']
 const adminPathPrefix = '/admin'
 
 router.beforeEach(async (to, _from, next) => {
@@ -86,7 +110,8 @@ router.beforeEach(async (to, _from, next) => {
       to.path.startsWith('/quiz/') ||
       to.path.startsWith('/ai-maturity') ||
       to.path.startsWith('/projetos') ||
-      to.path.startsWith('/swot')
+      to.path.startsWith('/swot') ||
+      to.path.startsWith('/governanca')
   )
   if (isProtected && !auth.isLoggedIn) {
     next('/')

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { fetchDashboard } from '@/api/admin'
-import type { DashboardStudent } from '@/api/admin'
+import type { DashboardOrganization } from '@/api/admin'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
-const students = ref<DashboardStudent[]>([])
+const organizations = ref<DashboardOrganization[]>([])
 
 function pct(done: number, total: number): number {
   if (total <= 0) return 0
@@ -55,7 +55,7 @@ function formatPhoneDisplay(phone: string): string {
 
 onMounted(async () => {
   try {
-    students.value = await fetchDashboard()
+    organizations.value = await fetchDashboard()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar dashboard.'
   } finally {
@@ -67,97 +67,98 @@ onMounted(async () => {
 <template>
   <div class="dashboard">
     <h1 class="dashboard-title">Dashboard</h1>
-    <p class="dashboard-sub">Alunos e progresso por trilha</p>
+    <p class="dashboard-sub">Organizações, jornada de estratégia e progresso por trilha</p>
 
     <div v-if="loading" class="loading">Carregando...</div>
     <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="students.length === 0" class="empty">Nenhum aluno cadastrado.</div>
+    <div v-else-if="organizations.length === 0" class="empty">Nenhum aluno cadastrado.</div>
 
-    <div v-else class="card-grid">
-      <article
-        v-for="s in students"
-        :key="s.id"
-        class="student-card"
-        role="button"
-        tabindex="0"
-        @click="$router.push(`/admin/progresso/${s.id}`)"
-        @keydown.enter="$router.push(`/admin/progresso/${s.id}`)"
-      >
-        <div class="card-header">
-          <div class="card-header-inner">
-            <h2 class="card-name">{{ s.name }}</h2>
-            <span class="card-trilha">{{ s.course_titulo || s.course_slug || '—' }}</span>
-          </div>
-          <div class="card-contacts">
-            <a :href="`mailto:${s.email}`" class="card-email" @click.stop title="Enviar e-mail">{{ s.email }}</a>
-            <a
-              v-if="whatsAppUrl(s.phone)"
-              :href="whatsAppUrl(s.phone)!"
-              target="_blank"
-              rel="noopener"
-              class="card-phone"
-              title="Abrir WhatsApp"
-            >
-              {{ formatPhoneDisplay(s.phone) }}
-            </a>
-          </div>
-        </div>
-
-        <div class="card-progress">
-          <div class="progress-row">
-            <span class="progress-label">Encontros</span>
-            <div class="progress-bar-wrap">
-              <div
-                class="progress-bar-fill"
-                :style="{ width: pct(s.encontros_done, s.encontros_total) + '%' }"
-              />
+    <div v-else class="org-list">
+      <section v-for="org in organizations" :key="org.id ?? '—'" class="org-group">
+        <header class="org-header">
+          <h2 class="org-name">{{ org.name || 'Sem organização' }}</h2>
+          <div class="card-extras org-extras">
+            <div class="extra-chip" :class="org.swot_filled ? 'extra-chip--ok' : 'extra-chip--pending'">
+              <span class="extra-chip-label">SWOT</span>
+              <span class="extra-chip-value">{{ org.swot_filled ? 'Preenchido' : 'Pendente' }}</span>
             </div>
-            <span class="progress-pct">{{ s.encontros_done }}/{{ s.encontros_total }}</span>
-          </div>
-          <div class="progress-row">
-            <span class="progress-label">Quiz</span>
-            <div class="progress-bar-wrap">
-              <div
-                class="progress-bar-fill progress-bar-quiz"
-                :style="{ width: pct(s.quiz_done, s.quiz_total) + '%' }"
-              />
+            <div class="extra-chip" :class="org.canvas_count > 0 ? 'extra-chip--ok' : 'extra-chip--pending'">
+              <span class="extra-chip-label">Canvas</span>
+              <span class="extra-chip-value">
+                {{ org.canvas_count }} {{ org.canvas_count === 1 ? 'projeto' : 'projetos' }}
+              </span>
             </div>
-            <span class="progress-pct">{{ s.quiz_done }}/{{ s.quiz_total }}</span>
-          </div>
-          <div class="progress-row">
-            <span class="progress-label">Modelo de Maturidade</span>
-            <div class="progress-bar-wrap">
-              <div
-                class="progress-bar-fill progress-bar-maturity"
-                :style="{ width: pct(s.maturity_done, s.maturity_total) + '%' }"
-              />
+            <div class="extra-chip" :class="org.maturity_done > 0 ? 'extra-chip--ok' : 'extra-chip--pending'">
+              <span class="extra-chip-label">Maturidade</span>
+              <span class="extra-chip-value">{{ org.maturity_done }}/{{ org.maturity_total }}</span>
             </div>
-            <span class="progress-pct">{{ s.maturity_done }}/{{ s.maturity_total }}</span>
           </div>
-        </div>
+        </header>
 
-        <div class="card-extras">
-          <div class="extra-chip" :class="s.swot_filled ? 'extra-chip--ok' : 'extra-chip--pending'">
-            <span class="extra-chip-label">SWOT</span>
-            <span class="extra-chip-value">{{ s.swot_filled ? 'Preenchido' : 'Pendente' }}</span>
-          </div>
-          <div class="extra-chip" :class="s.canvas_count > 0 ? 'extra-chip--ok' : 'extra-chip--pending'">
-            <span class="extra-chip-label">Canvas</span>
-            <span class="extra-chip-value">
-              {{ s.canvas_count }} {{ s.canvas_count === 1 ? 'projeto' : 'projetos' }}
-            </span>
-          </div>
-        </div>
+        <div class="card-grid">
+          <article
+            v-for="s in org.members"
+            :key="s.id"
+            class="student-card"
+            role="button"
+            tabindex="0"
+            @click="$router.push(`/admin/progresso/${s.id}`)"
+            @keydown.enter="$router.push(`/admin/progresso/${s.id}`)"
+          >
+            <div class="card-header">
+              <div class="card-header-inner">
+                <h2 class="card-name">{{ s.name }}</h2>
+                <span class="card-trilha">{{ s.course_titulo || s.course_slug || '—' }}</span>
+              </div>
+              <div class="card-contacts">
+                <a :href="`mailto:${s.email}`" class="card-email" @click.stop title="Enviar e-mail">{{ s.email }}</a>
+                <a
+                  v-if="whatsAppUrl(s.phone)"
+                  :href="whatsAppUrl(s.phone)!"
+                  target="_blank"
+                  rel="noopener"
+                  class="card-phone"
+                  title="Abrir WhatsApp"
+                >
+                  {{ formatPhoneDisplay(s.phone) }}
+                </a>
+              </div>
+            </div>
 
-        <div v-if="s.next_meeting_iso" class="card-next">
-          <span class="card-next-label">Próximo encontro</span>
-          <span class="card-next-date">{{ formatNext(s.next_meeting_iso) }}</span>
+            <div class="card-progress">
+              <div class="progress-row">
+                <span class="progress-label">Encontros</span>
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar-fill"
+                    :style="{ width: pct(s.encontros_done, s.encontros_total) + '%' }"
+                  />
+                </div>
+                <span class="progress-pct">{{ s.encontros_done }}/{{ s.encontros_total }}</span>
+              </div>
+              <div class="progress-row">
+                <span class="progress-label">Quiz</span>
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar-fill progress-bar-quiz"
+                    :style="{ width: pct(s.quiz_done, s.quiz_total) + '%' }"
+                  />
+                </div>
+                <span class="progress-pct">{{ s.quiz_done }}/{{ s.quiz_total }}</span>
+              </div>
+            </div>
+
+            <div v-if="s.next_meeting_iso" class="card-next">
+              <span class="card-next-label">Próximo encontro</span>
+              <span class="card-next-date">{{ formatNext(s.next_meeting_iso) }}</span>
+            </div>
+            <div class="card-cta">
+              <span>Ver detalhes</span>
+              <span class="card-cta-arrow">→</span>
+            </div>
+          </article>
         </div>
-        <div class="card-cta">
-          <span>Ver detalhes</span>
-          <span class="card-cta-arrow">→</span>
-        </div>
-      </article>
+      </section>
     </div>
   </div>
 </template>
@@ -186,6 +187,39 @@ onMounted(async () => {
 }
 .error-msg {
   color: #8f2b2b;
+}
+
+.org-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.org-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.org-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.org-name {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--k0);
+  margin: 0;
+}
+
+.org-extras {
+  padding: 0;
 }
 
 .card-grid {

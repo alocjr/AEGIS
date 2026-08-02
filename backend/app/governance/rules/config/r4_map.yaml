@@ -1,0 +1,94 @@
+# Mapeamento evidência (aegis.evidencia-governanca) -> pergunta GR* do modelo de maturidade
+# ativo. Cada regra tem "tiers" ordenados do mais exigente para o menos exigente; a primeira
+# combinação de condições satisfeita (todas em AND) vence. R4 nunca grava nota — só sugere;
+# quem confirma é humano, no formulário de maturidade.
+#
+# Adaptação: o prompt original falava em CSFs "R*"/"D4" de um modelo de 6 dimensões que não
+# existe neste repo. Usamos as perguntas GR1..GR11 da dimensão real Governança & Risco
+# (mesma decisão do R1) — cada pergunta abaixo foi escolhida pelo enunciado mais próximo do
+# indicador de evidência correspondente (ver backend/app/governance/rules/r4_evidencias.py).
+
+rules:
+  - question_id: GR2
+    # "Monitoramos e auditamos ativamente Shadow AI..." — inventário completo e rápido é o
+    # oposto de Shadow AI (sistemas de IA não documentados).
+    tiers:
+      - nota: 5
+        conditions:
+          - {metric: pct_sistemas_inventariados, op: ">=", value: 0.9}
+          - {metric: tempo_medio_registro_dias, op: "<=", value: 1}
+      - nota: 4
+        conditions:
+          - {metric: pct_sistemas_inventariados, op: ">=", value: 0.7}
+          - {metric: tempo_medio_registro_dias, op: "<=", value: 3}
+      - nota: 3
+        conditions:
+          - {metric: pct_sistemas_inventariados, op: ">=", value: 0.4}
+
+  - question_id: GR6
+    # "Existe um papel ou comitê formalmente nomeado... pela governança de risco" — um
+    # processo de classificação de risco funcionando com lead time baixo evidencia isso.
+    tiers:
+      - nota: 5
+        conditions:
+          - {metric: pct_sistemas_classificados, op: ">=", value: 0.9}
+          - {metric: lead_time_avaliacao_dias, op: "<=", value: 5}
+      - nota: 4
+        conditions:
+          - {metric: pct_sistemas_classificados, op: ">=", value: 0.7}
+          - {metric: lead_time_avaliacao_dias, op: "<=", value: 10}
+      - nota: 3
+        conditions:
+          - {metric: pct_sistemas_classificados, op: ">=", value: 0.4}
+
+  - question_id: GR9
+    # "Está definido e documentado quem responde por decisões automatizadas..." — HITL alto
+    # em ações críticas é a prática desse princípio, não só o papel no documento.
+    tiers:
+      - nota: 5
+        conditions:
+          - {metric: pct_acoes_criticas_com_hitl, op: ">=", value: 0.95}
+      - nota: 4
+        conditions:
+          - {metric: pct_acoes_criticas_com_hitl, op: ">=", value: 0.8}
+      - nota: 3
+        conditions:
+          - {metric: pct_acoes_criticas_com_hitl, op: ">=", value: 0.5}
+
+  - question_id: GR4
+    # "Mantemos registro documentado e recuperável de decisões automatizadas, suficiente
+    # para responder a uma auditoria regulatória" — reconstruir uma decisão rápido é essa
+    # capacidade na prática.
+    tiers:
+      - nota: 5
+        conditions:
+          - {metric: tempo_reconstrucao_decisao_horas, op: "<=", value: 1}
+      - nota: 4
+        conditions:
+          - {metric: tempo_reconstrucao_decisao_horas, op: "<=", value: 4}
+      - nota: 3
+        conditions:
+          - {metric: tempo_reconstrucao_decisao_horas, op: "<=", value: 24}
+
+  - question_id: GR10
+    # "Existe um rito periódico institucional para revisar e ajustar a prática de IA" —
+    # fichas de sistema atualizadas com frequência evidenciam o rito acontecendo de fato.
+    tiers:
+      - nota: 5
+        conditions:
+          - {metric: pct_fichas_atualizadas_6m, op: ">=", value: 0.9}
+      - nota: 4
+        conditions:
+          - {metric: pct_fichas_atualizadas_6m, op: ">=", value: 0.7}
+      - nota: 3
+        conditions:
+          - {metric: pct_fichas_atualizadas_6m, op: ">=", value: 0.4}
+
+  - question_id: GR8
+    # "Nossa política interna de uso de IA foi criada de forma proativa e é revisada
+    # periodicamente, independentemente da ocorrência de incidentes" — um guardrail que
+    # bloqueia de fato prova que a política está em uso real, não só no papel.
+    tiers:
+      - nota: 3
+        conditions:
+          - {metric: bloqueios_guardrail_periodo, op: ">=", value: 1}

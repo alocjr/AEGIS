@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_verified_user
+from app.deps import get_current_organization_id, get_verified_user
+from app.governance import repository as gov_repo
+from app.governance.rules.r3_canvas import (
+    canvas_para_risco_preliminar,
+    opportunity_input_from_canvas_project,
+)
 from app.schemas import (
     OPPORTUNITY_TYPE_OPTIONS,
     CanvasImportRequest,
@@ -65,7 +70,13 @@ _EMPTY_FIELDS = {
     "swot_item_ids": [],
     "tows_ids": [],
     "justificativa_tows": "",
+    "dados_estruturado": {"descricao": "", "sensibilidade": None},
+    "riscos_estruturado": {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
+    "status": "rascunho",
+    "ai_system_id": None,
 }
+
+_SENSIBILIDADE_OPTIONS = frozenset({"publico", "interno", "pessoal", "sensivel"})
 
 
 def _as_item_list(value) -> list[str]:
@@ -135,6 +146,8 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "swot_id": str(doc["swot_id"]) if doc.get("swot_id") else None,
         "swot_item_ids": _clean_ref_ids(doc.get("swot_item_ids")),
         "tows_ids": _clean_ref_ids(doc.get("tows_ids")),
+        "status": doc.get("status") or "rascunho",
+        "ai_system_id": str(doc["ai_system_id"]) if doc.get("ai_system_id") else None,
     }
     if summary:
         return {
@@ -158,28 +171,32 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "proximo_passo": doc.get("proximo_passo") or "",
         "justificativa_tows": doc.get("justificativa_tows") or "",
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
+        "dados_estruturado": doc.get("dados_estruturado")
+        or {"descricao": "", "sensibilidade": None},
+        "riscos_estruturado": doc.get("riscos_estruturado")
+        or {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
     }
 
 
-def _owned_swot_id(db: Database, user_id, raw) -> str | None:
-    """Valida que a SWOT de origem existe e pertence ao mentorado."""
+def _owned_swot_id(db: Database, org_id, raw) -> str | None:
+    """Valida que a SWOT de origem existe e pertence a organizacao."""
     swot_id = str(raw or "").strip()
     if not swot_id:
         return None
     if not ObjectId.is_valid(swot_id):
         raise HTTPException(status_code=400, detail="SWOT de origem invalida")
     exists = db.swot_analyses.find_one(
-        {"_id": ObjectId(swot_id), "user_id": user_id}, {"_id": 1}
+        {"_id": ObjectId(swot_id), "organization_id": org_id}, {"_id": 1}
     )
     if not exists:
         raise HTTPException(status_code=404, detail="SWOT de origem nao encontrada")
     return swot_id
 
 
-def _get_owned(db: Database, user_id, project_id: str) -> dict:
+def _get_owned(db: Database, org_id, project_id: str) -> dict:
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="ID invalido")
-    doc = db.canvas_projects.find_one({"_id": ObjectId(project_id), "user_id": user_id})
+    doc = db.canvas_projects.find_one({"_id": ObjectId(project_id), "organization_id": org_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Projeto nao encontrado")
     return doc
@@ -279,14 +296,29 @@ def _opportunity_to_fields(area: dict, opp: dict, projeto_meta: dict | None) -> 
     riscos: list[str] = []
     _push(riscos, riscos_obj.get("descricao"))
     reg = riscos_obj.get("regulatorio")
+    regs_estruturado: list[str] = []
     if isinstance(reg, list):
-        regs = [str(x).strip() for x in reg if str(x).strip()]
-        if regs:
-            _push(riscos, f"Regulatório: {', '.join(regs)}.")
+        regs_estruturado = [str(x).strip() for x in reg if str(x).strip()][:20]
+        if regs_estruturado:
+            _push(riscos, f"Regulatório: {', '.join(regs_estruturado)}.")
     hitl_raw = str(riscos_obj.get("human_in_the_loop") or "").strip().lower()
     hitl = _HITL.get(hitl_raw, hitl_raw)
     if hitl:
         _push(riscos, f"Human-in-the-loop: {hitl}.")
+    hitl_estruturado = hitl_raw if hitl_raw in _HITL else None
+
+    # Campos estruturados aditivos — preservam o que o texto livre acima perde, para a R3
+    # (canvas_para_risco_preliminar). `sensibilidade` é aditivo no próprio JSON de origem.
+    sensibilidade_raw = str(dados_obj.get("sensibilidade") or "").strip().lower()
+    dados_estruturado = {
+        "descricao": _clip(str(dados_obj.get("descricao") or ""), 1000),
+        "sensibilidade": sensibilidade_raw if sensibilidade_raw in _SENSIBILIDADE_OPTIONS else None,
+    }
+    riscos_estruturado = {
+        "descricao": _clip(str(riscos_obj.get("descricao") or ""), 1000),
+        "regulatorio": regs_estruturado,
+        "human_in_the_loop": hitl_estruturado,
+    }
 
     premissa = str(opp.get("premissa") or "").strip()
     if premissa:
@@ -325,6 +357,8 @@ def _opportunity_to_fields(area: dict, opp: dict, projeto_meta: dict | None) -> 
         "score_valor": score_valor,
         "score_viabilidade": score_viabilidade,
         "proximo_passo": _clip(proximo, 4000),
+        "dados_estruturado": dados_estruturado,
+        "riscos_estruturado": riscos_estruturado,
     }
 
 
@@ -369,9 +403,13 @@ def _projects_from_import(body: CanvasImportRequest) -> list[dict]:
 
 
 @router.get("")
-def list_projects(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Lista projetos (canvas) do mentorado — mais recentes primeiro."""
-    cursor = db.canvas_projects.find({"user_id": user["_id"]}).sort("updated_at", -1)
+def list_projects(
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Lista projetos (canvas) da organização — mais recentes primeiro."""
+    cursor = db.canvas_projects.find({"organization_id": org_id}).sort("updated_at", -1)
     return {"items": [_to_item(d, summary=True) for d in cursor]}
 
 
@@ -379,13 +417,15 @@ def list_projects(user=Depends(get_verified_user), db: Database = Depends(get_db
 def create_project(
     body: CanvasProjectCreateRequest,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Cria um novo projeto/canvas vazio."""
     now = datetime.now(timezone.utc)
     title = (body.title or "Novo projeto").strip() or "Novo projeto"
     doc = {
-        "user_id": user["_id"],
+        "organization_id": org_id,
+        "created_by_user_id": user["_id"],
         "title": title,
         **_EMPTY_FIELDS,
         "created_at": now,
@@ -400,6 +440,7 @@ def create_project(
 def import_projects(
     body: CanvasImportRequest,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Importa aegis.canvas-oportunidades e cria um projeto por oportunidade."""
@@ -409,7 +450,8 @@ def import_projects(
     for fields in mapped:
         docs.append(
             {
-                "user_id": user["_id"],
+                "organization_id": org_id,
+                "created_by_user_id": user["_id"],
                 **fields,
                 "created_at": now,
                 "updated_at": now,
@@ -429,18 +471,19 @@ def import_into_project(
     project_id: str,
     body: CanvasImportRequest,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Importa o JSON e substitui o conteúdo do projeto aberto (1ª oportunidade)."""
-    _get_owned(db, user["_id"], project_id)
+    _get_owned(db, org_id, project_id)
     mapped = _projects_from_import(body)
     fields = mapped[0]
     updates = {**fields, "updated_at": datetime.now(timezone.utc)}
     db.canvas_projects.update_one(
-        {"_id": ObjectId(project_id), "user_id": user["_id"]},
+        {"_id": ObjectId(project_id), "organization_id": org_id},
         {"$set": updates},
     )
-    doc = _get_owned(db, user["_id"], project_id)
+    doc = _get_owned(db, org_id, project_id)
     return {
         "applied": 1,
         "available": len(mapped),
@@ -448,13 +491,113 @@ def import_into_project(
     }
 
 
+@router.post("/{project_id}/aprovar-portfolio")
+def aprovar_portfolio(
+    project_id: str,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Hook Canvas → Inventário (Seção 5.1 do plano): aprova a oportunidade para o
+    portfólio, cria (ou reaproveita, se já existir) o sistema de IA correspondente no
+    módulo de Governança e roda a R3 para uma classificação de risco preliminar.
+    Idempotente — reexecutar não duplica o sistema de IA."""
+    project = _get_owned(db, org_id, project_id)
+    project_oid = ObjectId(project_id)
+    now = datetime.now(timezone.utc)
+
+    existing_system = gov_repo.find_ai_system_by_canvas_project(
+        db, org_id=org_id, canvas_project_id=project_oid
+    )
+    if existing_system:
+        if project.get("status") != "aprovado_portfolio" or not project.get("ai_system_id"):
+            db.canvas_projects.update_one(
+                {"_id": project_oid},
+                {
+                    "$set": {
+                        "status": "aprovado_portfolio",
+                        "ai_system_id": existing_system["_id"],
+                        "updated_at": now,
+                    }
+                },
+            )
+        return {
+            "ai_system_id": str(existing_system["_id"]),
+            "status": existing_system.get("status"),
+            "risco_preliminar": (existing_system.get("classificacao_risco") or {}).get("nivel"),
+            "created": False,
+        }
+
+    dados_estruturado = project.get("dados_estruturado") or {}
+    riscos_estruturado = project.get("riscos_estruturado") or {}
+    risco = canvas_para_risco_preliminar(opportunity_input_from_canvas_project(project))
+
+    finalidade = project.get("objetivo_estrategico") or ""
+    if not finalidade:
+        oportunidade = project.get("oportunidade") or []
+        finalidade = oportunidade[0] if oportunidade else ""
+
+    hitl_valor = riscos_estruturado.get("human_in_the_loop")
+    hitl_obrigatorio = bool(hitl_valor) and hitl_valor != "nenhum"
+
+    system = gov_repo.create_ai_system(
+        db,
+        org_id=org_id,
+        actor_user_id=user["_id"],
+        data={
+            "nome": project.get("title") or "Sistema sem nome",
+            "area_negocio": project.get("area_negocio") or "",
+            "finalidade": finalidade,
+            "descricao_dados": dados_estruturado.get("descricao") or "",
+            "sensibilidade_dados": dados_estruturado.get("sensibilidade") or "interno",
+            "origem_ia": "interno",
+            "hitl_obrigatorio": hitl_obrigatorio,
+            "hitl_descricao": "",
+            "canvas_project_id": str(project_oid),
+        },
+    )
+    gov_repo.set_ai_system_risk(
+        db,
+        org_id=org_id,
+        system_id=system["_id"],
+        nivel=risco["nivel_preliminar"],
+        fonte="preliminar_r3",
+    )
+    system = gov_repo.update_ai_system(
+        db,
+        org_id=org_id,
+        actor_user_id=user["_id"],
+        system_id=str(system["_id"]),
+        updates={"status": "aguardando_avaliacao"},
+    )
+
+    db.canvas_projects.update_one(
+        {"_id": project_oid},
+        {
+            "$set": {
+                "status": "aprovado_portfolio",
+                "ai_system_id": system["_id"],
+                "updated_at": now,
+            }
+        },
+    )
+
+    return {
+        "ai_system_id": str(system["_id"]),
+        "status": system.get("status"),
+        "risco_preliminar": risco["nivel_preliminar"],
+        "created": True,
+    }
+
+
 @router.get("/{project_id}")
 def get_project(
     project_id: str,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    doc = _get_owned(db, user["_id"], project_id)
+    doc = _get_owned(db, org_id, project_id)
     return _to_item(doc)
 
 
@@ -463,10 +606,11 @@ def update_project(
     project_id: str,
     body: CanvasProjectUpdateRequest,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Salva preenchimento do canvas."""
-    _get_owned(db, user["_id"], project_id)
+    _get_owned(db, org_id, project_id)
     updates: dict = {"updated_at": datetime.now(timezone.utc)}
     data = body.model_dump(exclude_unset=True)
 
@@ -476,7 +620,7 @@ def update_project(
         updates["oportunidade_tipos"] = cleaned
 
     if "swot_id" in data:
-        updates["swot_id"] = _owned_swot_id(db, user["_id"], data["swot_id"])
+        updates["swot_id"] = _owned_swot_id(db, org_id, data["swot_id"])
     for key in ("swot_item_ids", "tows_ids"):
         if key in data:
             updates[key] = _clean_ref_ids(data[key])
@@ -505,10 +649,10 @@ def update_project(
             updates["title"] = area[:200]
 
     db.canvas_projects.update_one(
-        {"_id": ObjectId(project_id), "user_id": user["_id"]},
+        {"_id": ObjectId(project_id), "organization_id": org_id},
         {"$set": updates},
     )
-    doc = _get_owned(db, user["_id"], project_id)
+    doc = _get_owned(db, org_id, project_id)
     return _to_item(doc)
 
 
@@ -516,12 +660,13 @@ def update_project(
 def delete_project(
     project_id: str,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="ID invalido")
     result = db.canvas_projects.delete_one(
-        {"_id": ObjectId(project_id), "user_id": user["_id"]}
+        {"_id": ObjectId(project_id), "organization_id": org_id}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Projeto nao encontrado")

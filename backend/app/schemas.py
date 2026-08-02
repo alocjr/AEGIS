@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -72,6 +72,22 @@ class CanvasProjectCreateRequest(BaseModel):
     title: str = Field(default="Novo projeto", min_length=1, max_length=200)
 
 
+class CanvasDadosEstruturado(BaseModel):
+    """Campo aditivo — preserva a estrutura de `dados` do aegis.canvas-oportunidades
+    (perdida ao virar texto livre) para a regra R3 (canvas_para_risco_preliminar)."""
+
+    descricao: str = Field(default="", max_length=1000)
+    sensibilidade: Literal["publico", "interno", "pessoal", "sensivel"] | None = None
+
+
+class CanvasRiscosEstruturado(BaseModel):
+    """Campo aditivo — idem para `riscos` (regulatorio[] / human_in_the_loop)."""
+
+    descricao: str = Field(default="", max_length=1000)
+    regulatorio: list[str] = Field(default_factory=list, max_length=20)
+    human_in_the_loop: Literal["nenhum", "sugerir", "aprovar", "supervisionar"] | None = None
+
+
 class CanvasProjectUpdateRequest(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=200)
     area_negocio: str | None = Field(None, max_length=200)
@@ -89,6 +105,8 @@ class CanvasProjectUpdateRequest(BaseModel):
     score_valor: int | None = Field(None, ge=1, le=5)
     score_viabilidade: int | None = Field(None, ge=1, le=5)
     proximo_passo: str | None = Field(None, max_length=4000)
+    dados_estruturado: CanvasDadosEstruturado | None = None
+    riscos_estruturado: CanvasRiscosEstruturado | None = None
     # Origem estratégica: SWOT (e itens/iniciativas TOWS) que motivou o projeto
     swot_id: str | None = Field(None, max_length=24)
     swot_item_ids: list[str] | None = Field(None, max_length=20)
@@ -213,6 +231,7 @@ class AdminCreateUserRequest(BaseModel):
     course_slugs: list[str] = Field(min_length=1, max_length=50)  # uma ou mais trilhas
     phone: str | None = Field(None, max_length=30)  # telefone completo para WhatsApp (ex.: 5511987654321)
     encontro_agendas: dict[str, str] | None = None  # encontro_id -> ISO datetime string (aplica à primeira trilha)
+    organization_id: str | None = Field(None, max_length=24)  # se omitido, cria organização solo
 
 
 class AdminUpdateUserRequest(BaseModel):
@@ -223,6 +242,11 @@ class AdminUpdateUserRequest(BaseModel):
     phone: str | None = Field(None, max_length=30)
     is_admin: bool | None = None
     encontro_agendas: dict[str, str] | None = None
+    organization_id: str | None = Field(None, max_length=24)  # move o usuário para outra organização
+
+
+class OrganizationCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
 
 
 # Limite razoável para payload de curso (evita DoS por body gigante)

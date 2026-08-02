@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_verified_user
+from app.deps import get_current_organization_id, get_verified_user
 from app.schemas import (
     SwotAnalysisUpdateRequest,
     SwotImportRequest,
@@ -361,18 +361,19 @@ def _to_item(doc: dict) -> dict:
     }
 
 
-def _get_latest(db: Database, user_id) -> dict | None:
-    return db.swot_analyses.find_one({"user_id": user_id}, sort=[("updated_at", -1), ("_id", -1)])
+def _get_latest(db: Database, org_id) -> dict | None:
+    return db.swot_analyses.find_one({"organization_id": org_id}, sort=[("updated_at", -1), ("_id", -1)])
 
 
-def _get_or_create_latest(db: Database, user_id) -> dict:
-    """SWOT mais recente do usuário; cria documento vazio se não houver nenhum."""
-    doc = _get_latest(db, user_id)
+def _get_or_create_latest(db: Database, org_id, created_by_user_id) -> dict:
+    """SWOT mais recente da organização; cria documento vazio se não houver nenhum."""
+    doc = _get_latest(db, org_id)
     if doc:
         return doc
     now = datetime.now(timezone.utc)
     doc = {
-        "user_id": user_id,
+        "organization_id": org_id,
+        "created_by_user_id": created_by_user_id,
         **_EMPTY_FIELDS,
         "created_at": now,
         "updated_at": now,
@@ -382,28 +383,28 @@ def _get_or_create_latest(db: Database, user_id) -> dict:
     return doc
 
 
-def _require_owned(db: Database, user_id, swot_id: str) -> dict:
+def _require_owned(db: Database, org_id, swot_id: str) -> dict:
     if not ObjectId.is_valid(swot_id):
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
-    doc = db.swot_analyses.find_one({"_id": ObjectId(swot_id), "user_id": user_id})
+    doc = db.swot_analyses.find_one({"_id": ObjectId(swot_id), "organization_id": org_id})
     if not doc:
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
     return doc
 
 
-def _get_by_maturity(db: Database, user_id, maturity_response_id: ObjectId) -> dict | None:
+def _get_by_maturity(db: Database, org_id, maturity_response_id: ObjectId) -> dict | None:
     return db.swot_analyses.find_one(
-        {"user_id": user_id, "maturity_response_id": maturity_response_id}
+        {"organization_id": org_id, "maturity_response_id": maturity_response_id}
     )
 
 
-def _model_for_swot(db: Database, doc: dict, user_id) -> dict | None:
+def _model_for_swot(db: Database, doc: dict, org_id) -> dict | None:
     """Modelo de maturidade ligado à SWOT (via maturity_response), senão o ativo."""
     from app.routes.maturity import _load_model, _serialize_model
 
     mid = doc.get("maturity_response_id")
     if mid:
-        mat = db.maturity_responses.find_one({"_id": mid, "user_id": user_id})
+        mat = db.maturity_responses.find_one({"_id": mid, "organization_id": org_id})
         if mat and mat.get("model_id"):
             model_doc = db.ai_maturity_model.find_one({"_id": mat["model_id"]})
             if model_doc and model_doc.get("dimensions"):
@@ -414,9 +415,9 @@ def _model_for_swot(db: Database, doc: dict, user_id) -> dict | None:
         return None
 
 
-def _rebuild_tows_on_doc(doc: dict, db: Database, user_id) -> dict:
+def _rebuild_tows_on_doc(doc: dict, db: Database, org_id) -> dict:
     """Recalcula TOWS a partir dos itens SWOT com tows=True e persiste."""
-    model = _model_for_swot(db, doc, user_id)
+    model = _model_for_swot(db, doc, org_id)
     tows = build_tows_from_swot(
         forcas=doc.get("forcas") or [],
         fraquezas=doc.get("fraquezas") or [],
@@ -530,16 +531,24 @@ def _migrate_doc_to_v2(doc: dict, db: Database) -> dict:
 
 
 @router.get("")
-def get_swot(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Retorna a SWOT mais recente do mentorado (cria vazia se ainda não existir)."""
-    doc = _migrate_doc_to_v2(_get_or_create_latest(db, user["_id"]), db)
+def get_swot(
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Retorna a SWOT mais recente da organização (cria vazia se ainda não existir)."""
+    doc = _migrate_doc_to_v2(_get_or_create_latest(db, org_id, user["_id"]), db)
     return _to_item(doc)
 
 
 @router.get("/list")
-def list_swots(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Resumo das SWOTs do mentorado (não cria documento vazio)."""
-    cursor = db.swot_analyses.find({"user_id": user["_id"]}).sort(
+def list_swots(
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Resumo das SWOTs da organização (não cria documento vazio)."""
+    cursor = db.swot_analyses.find({"organization_id": org_id}).sort(
         [("updated_at", -1), ("_id", -1)]
     )
     items = []
@@ -570,12 +579,13 @@ def list_swots(user=Depends(get_verified_user), db: Database = Depends(get_db)):
 def get_swot_by_maturity(
     maturity_response_id: str,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Retorna a SWOT vinculada a uma resposta de maturidade (404 se não existir)."""
     if not ObjectId.is_valid(maturity_response_id):
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
-    doc = _get_by_maturity(db, user["_id"], ObjectId(maturity_response_id))
+    doc = _get_by_maturity(db, org_id, ObjectId(maturity_response_id))
     if not doc:
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
     return _to_item(_migrate_doc_to_v2(doc, db))
@@ -585,13 +595,14 @@ def get_swot_by_maturity(
 def create_swot_from_maturity(
     maturity_response_id: str,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Cria ou atualiza a SWOT gerada a partir de uma resposta do Modelo de Maturidade."""
     if not ObjectId.is_valid(maturity_response_id):
         raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
     mid = ObjectId(maturity_response_id)
-    maturity = db.maturity_responses.find_one({"_id": mid, "user_id": user["_id"]})
+    maturity = db.maturity_responses.find_one({"_id": mid, "organization_id": org_id})
     if not maturity:
         raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
 
@@ -634,13 +645,14 @@ def create_swot_from_maturity(
     )
     full = SwotAnalysisUpdateRequest(**fields)
     now = datetime.now(timezone.utc)
-    existing = _get_by_maturity(db, user["_id"], mid)
+    existing = _get_by_maturity(db, org_id, mid)
     if existing:
         refreshed = _apply_updates(existing, full, db)
         return _to_item(refreshed)
 
     doc = {
-        "user_id": user["_id"],
+        "organization_id": org_id,
+        "created_by_user_id": user["_id"],
         "maturity_response_id": mid,
         **_EMPTY_FIELDS,
         "created_at": now,
@@ -656,10 +668,11 @@ def create_swot_from_maturity(
 def get_swot_by_id(
     swot_id: str,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Retorna uma SWOT específica do mentorado."""
-    doc = _migrate_doc_to_v2(_require_owned(db, user["_id"], swot_id), db)
+    """Retorna uma SWOT específica da organização."""
+    doc = _migrate_doc_to_v2(_require_owned(db, org_id, swot_id), db)
     return _to_item(doc)
 
 
@@ -668,13 +681,14 @@ def update_swot(
     body: SwotAnalysisUpdateRequest,
     rebuild_tows: bool = Query(False, description="Recalcular TOWS a partir dos itens marcados"),
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Atualiza a SWOT mais recente do mentorado."""
-    doc = _get_or_create_latest(db, user["_id"])
+    """Atualiza a SWOT mais recente da organização."""
+    doc = _get_or_create_latest(db, org_id, user["_id"])
     refreshed = _apply_updates(doc, body, db)
     if rebuild_tows:
-        refreshed = _rebuild_tows_on_doc(refreshed, db, user["_id"])
+        refreshed = _rebuild_tows_on_doc(refreshed, db, org_id)
     return _to_item(refreshed)
 
 
@@ -684,13 +698,14 @@ def update_swot_by_id(
     body: SwotAnalysisUpdateRequest,
     rebuild_tows: bool = Query(False, description="Recalcular TOWS a partir dos itens marcados"),
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Atualiza uma SWOT específica."""
-    doc = _require_owned(db, user["_id"], swot_id)
+    doc = _require_owned(db, org_id, swot_id)
     refreshed = _apply_updates(doc, body, db)
     if rebuild_tows:
-        refreshed = _rebuild_tows_on_doc(refreshed, db, user["_id"])
+        refreshed = _rebuild_tows_on_doc(refreshed, db, org_id)
     return _to_item(refreshed)
 
 
@@ -698,6 +713,7 @@ def update_swot_by_id(
 def import_swot(
     body: SwotImportRequest,
     user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
     """Importa um documento aegis.swot-ia (v1–v3) e substitui o conteúdo da SWOT mais recente."""
@@ -719,6 +735,6 @@ def import_swot(
         veredito_titulo=payload.veredito_titulo if payload.veredito_titulo is not None else "",
         veredito_texto=payload.veredito_texto if payload.veredito_texto is not None else "",
     )
-    doc = _get_or_create_latest(db, user["_id"])
+    doc = _get_or_create_latest(db, org_id, user["_id"])
     refreshed = _apply_updates(doc, full, db)
     return _to_item(refreshed)

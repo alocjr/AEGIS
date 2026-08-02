@@ -6,6 +6,7 @@ import {
   createCanvasProject,
   deleteCanvasProject,
   importCanvasProjects,
+  aprovarPortfolio,
   type CanvasProjectSummary,
   type CanvasQuadrant,
   type CanvasImportDocument,
@@ -187,6 +188,25 @@ function askDelete(item: CanvasProjectSummary, ev: Event) {
 function cancelDelete() {
   deleteTarget.value = null
   deleteError.value = null
+}
+
+const approvingId = ref<string | null>(null)
+const approveError = ref<string | null>(null)
+
+async function onApprovePortfolio(item: CanvasProjectSummary, ev: Event) {
+  ev.preventDefault()
+  ev.stopPropagation()
+  approvingId.value = item.id
+  approveError.value = null
+  try {
+    const result = await aprovarPortfolio(item.id)
+    item.status = 'aprovado_portfolio'
+    item.ai_system_id = result.ai_system_id
+  } catch (e) {
+    approveError.value = e instanceof Error ? e.message : 'Erro ao aprovar para o portfólio.'
+  } finally {
+    approvingId.value = null
+  }
 }
 
 async function confirmDelete() {
@@ -457,16 +477,37 @@ onMounted(async () => {
             </div>
             <span class="list-arrow">Abrir canvas →</span>
           </RouterLink>
-          <button
-            type="button"
-            class="btn-del"
-            title="Excluir projeto"
-            @click="askDelete(item, $event)"
-          >
-            Excluir
-          </button>
+          <div class="list-actions">
+            <RouterLink
+              v-if="item.status === 'aprovado_portfolio' && item.ai_system_id"
+              :to="`/governanca/sistemas/${item.ai_system_id}`"
+              class="badge-portfolio"
+              title="Ver na Governança de IA"
+              @click.stop
+            >
+              No portfólio ✓
+            </RouterLink>
+            <button
+              v-else
+              type="button"
+              class="btn-approve"
+              :disabled="approvingId === item.id"
+              @click="onApprovePortfolio(item, $event)"
+            >
+              {{ approvingId === item.id ? 'Aprovando…' : 'Aprovar para portfólio' }}
+            </button>
+            <button
+              type="button"
+              class="btn-del"
+              title="Excluir projeto"
+              @click="askDelete(item, $event)"
+            >
+              Excluir
+            </button>
+          </div>
         </li>
       </ul>
+      <p v-if="approveError" class="error-msg">{{ approveError }}</p>
     </template>
 
     <Teleport to="body">
@@ -846,6 +887,10 @@ onMounted(async () => {
     display: none;
   }
 }
+.list-actions {
+  display: flex;
+  align-items: center;
+}
 .btn-del {
   border: none;
   background: transparent;
@@ -857,6 +902,36 @@ onMounted(async () => {
 }
 .btn-del:hover {
   background: #faf2f1;
+}
+.btn-approve {
+  border: none;
+  background: transparent;
+  color: var(--k4);
+  padding: 0 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-left: 1px solid var(--bd);
+  white-space: nowrap;
+}
+.btn-approve:hover:not(:disabled) {
+  background: var(--k9);
+}
+.btn-approve:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.badge-portfolio {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--k0);
+  background: var(--golddim);
+  border-left: 1px solid var(--bd);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.badge-portfolio:hover {
+  background: var(--goldbd);
 }
 .modal-backdrop {
   position: fixed;

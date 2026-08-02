@@ -53,12 +53,13 @@ class _FakeDb:
             setattr(self, name, _Collection(docs))
 
 
-def _map_for(db: _FakeDb, user: dict) -> dict:
+def _map_for(db: _FakeDb, user: dict, org_id: ObjectId) -> dict:
     """Chama a rota fora do FastAPI (os defaults `Query` precisam ser explícitos)."""
     return get_strategic_map(
         maturity_response_id=None,
         swot_id=None,
         user=user,
+        org_id=org_id,
         db=db,
     )
 
@@ -71,9 +72,10 @@ class StrategicMapTests(unittest.TestCase):
             q["id"]: q for dim in cls.model["dimensions"] for q in dim["questions"]
         }
 
-    def _fixture(self, *, drop_question_id: bool = False) -> tuple[_FakeDb, dict, dict, dict]:
+    def _fixture(self, *, drop_question_id: bool = False) -> tuple[_FakeDb, dict, ObjectId, dict, dict]:
         """Autoavaliação completa + SWOT gerada + um projeto vinculado."""
         user_id = ObjectId()
+        org_id = ObjectId()
         model_id = ObjectId()
         maturity_id = ObjectId()
         swot_id = ObjectId()
@@ -107,7 +109,8 @@ class StrategicMapTests(unittest.TestCase):
         )
         project = {
             "_id": ObjectId(),
-            "user_id": user_id,
+            "organization_id": org_id,
+            "created_by_user_id": user_id,
             "title": "Copiloto de atendimento",
             "swot_id": str(swot_id),
             "swot_item_ids": [force["id"]],
@@ -119,7 +122,8 @@ class StrategicMapTests(unittest.TestCase):
         }
         orphan_project = {
             "_id": ObjectId(),
-            "user_id": user_id,
+            "organization_id": org_id,
+            "created_by_user_id": user_id,
             "title": "Projeto solto",
             "created_at": now,
             "updated_at": now,
@@ -130,7 +134,8 @@ class StrategicMapTests(unittest.TestCase):
             maturity_responses=[
                 {
                     "_id": maturity_id,
-                    "user_id": user_id,
+                    "organization_id": org_id,
+                    "created_by_user_id": user_id,
                     "model_id": model_id,
                     "assessment_title": "Diagnóstico",
                     "tier": "basico",
@@ -143,7 +148,8 @@ class StrategicMapTests(unittest.TestCase):
             swot_analyses=[
                 {
                     "_id": swot_id,
-                    "user_id": user_id,
+                    "organization_id": org_id,
+                    "created_by_user_id": user_id,
                     "maturity_response_id": maturity_id,
                     **fields,
                     "created_at": now,
@@ -152,11 +158,11 @@ class StrategicMapTests(unittest.TestCase):
             ],
             canvas_projects=[project, orphan_project],
         )
-        return db, {"_id": user_id}, project, initiative
+        return db, {"_id": user_id}, org_id, project, initiative
 
     def test_tree_links_question_to_swot_item_to_project(self) -> None:
-        db, user, project, initiative = self._fixture()
-        payload = _map_for(db, user)
+        db, user, org_id, project, initiative = self._fixture()
+        payload = _map_for(db, user, org_id)
 
         self.assertTrue(payload["dimensions"], "árvore sem dimensões")
         question = next(
@@ -181,8 +187,8 @@ class StrategicMapTests(unittest.TestCase):
 
     def test_external_items_report_tows_usage(self) -> None:
         """Oportunidade/ameaça entra no TOWS como contraparte — `used_in` sustenta o filtro."""
-        db, user, _project, _initiative = self._fixture()
-        payload = _map_for(db, user)
+        db, user, org_id, _project, _initiative = self._fixture()
+        payload = _map_for(db, user, org_id)
         items = {
             item["id"]: item
             for dim in payload["dimensions"]
@@ -195,8 +201,8 @@ class StrategicMapTests(unittest.TestCase):
         self.assertEqual(items["f_ev1"]["used_in"], 0)
 
     def test_question_id_falls_back_to_item_id_convention(self) -> None:
-        db, user, _project, _initiative = self._fixture(drop_question_id=True)
-        payload = _map_for(db, user)
+        db, user, org_id, _project, _initiative = self._fixture(drop_question_id=True)
+        payload = _map_for(db, user, org_id)
         question = next(
             q
             for dim in payload["dimensions"]
@@ -207,8 +213,8 @@ class StrategicMapTests(unittest.TestCase):
         self.assertEqual(payload["unlinked"]["swot_items"], [])
 
     def test_stats_and_unlinked_projects(self) -> None:
-        db, user, project, _initiative = self._fixture()
-        payload = _map_for(db, user)
+        db, user, org_id, project, _initiative = self._fixture()
+        payload = _map_for(db, user, org_id)
 
         stats = payload["stats"]
         self.assertEqual(stats["projects_total"], 2)
@@ -222,8 +228,8 @@ class StrategicMapTests(unittest.TestCase):
         self.assertNotIn(str(project["_id"]), [o["id"] for o in orphans])
 
     def test_source_head_and_sources_list(self) -> None:
-        db, user, _project, _initiative = self._fixture()
-        payload = _map_for(db, user)
+        db, user, org_id, _project, _initiative = self._fixture()
+        payload = _map_for(db, user, org_id)
         head = payload["source"]
         self.assertEqual(head["tier"], "basico")
         self.assertEqual(head["tier_label"], "Básico")
@@ -234,9 +240,9 @@ class StrategicMapTests(unittest.TestCase):
         self.assertEqual(payload["sources"][0]["swot_id"], head["swot_id"])
 
     def test_maturity_without_swot_keeps_questions(self) -> None:
-        db, user, _project, _initiative = self._fixture()
+        db, user, org_id, _project, _initiative = self._fixture()
         db.swot_analyses = _Collection([])
-        payload = _map_for(db, user)
+        payload = _map_for(db, user, org_id)
         self.assertIsNone(payload["source"]["swot_id"])
         self.assertTrue(payload["dimensions"])
         for dim in payload["dimensions"]:

@@ -68,6 +68,7 @@ from app.routes.admin import router as admin_router
 from app.routes.auth import router as auth_router
 from app.routes.canvas_projects import router as canvas_projects_router
 from app.routes.course import router as course_router
+from app.routes.governance import router as governance_router
 from app.routes.maturity import router as maturity_router
 from app.routes.progress import router as progress_router
 from app.routes.quiz import router as quiz_router
@@ -209,6 +210,7 @@ app.include_router(course_router)
 app.include_router(progress_router)
 app.include_router(maturity_router)
 app.include_router(canvas_projects_router)
+app.include_router(governance_router)
 app.include_router(swot_analysis_router)
 app.include_router(strategic_map_router)
 app.include_router(quiz_router)

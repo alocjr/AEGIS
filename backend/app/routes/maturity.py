@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_verified_user
+from app.deps import get_current_organization_id, get_verified_user
 from app.schemas import MaturityAnswersRequest
 
 
@@ -121,11 +121,14 @@ def _score_submission(model: dict, answers: dict[str, int], tier: str) -> dict:
     }
 
 
-def _owned_response(db: Database, user_id, response_id: str) -> dict:
+def _owned_response(db: Database, org_id, user_id, response_id: str) -> dict:
+    """Resposta completa: visível para toda a organização. Rascunho: só o autor."""
     if not ObjectId.is_valid(response_id):
         raise HTTPException(status_code=404, detail="Resposta nao encontrada")
-    doc = db.maturity_responses.find_one({"_id": ObjectId(response_id), "user_id": user_id})
+    doc = db.maturity_responses.find_one({"_id": ObjectId(response_id), "organization_id": org_id})
     if not doc:
+        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    if not doc.get("complete") and doc.get("created_by_user_id") != user_id:
         raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     return doc
 
@@ -177,12 +180,23 @@ def get_model(user=Depends(get_verified_user), db: Database = Depends(get_db)):
 
 
 @router.get("/my-responses")
-def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Lista autoavaliações do aluno para o modelo ativo (mais recentes primeiro)."""
+def list_my_responses(
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Lista autoavaliações da organização para o modelo ativo (mais recentes primeiro).
+
+    Rascunhos (complete=False) só aparecem para quem os criou.
+    """
     model = _load_model(db)
     model_oid = ObjectId(model["id"])
     cursor = db.maturity_responses.find(
-        {"user_id": user["_id"], "model_id": model_oid}
+        {
+            "organization_id": org_id,
+            "model_id": model_oid,
+            "$or": [{"complete": True}, {"created_by_user_id": user["_id"]}],
+        }
     ).sort("submitted_at", -1)
     items = []
     for doc in cursor:
@@ -208,10 +222,13 @@ def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(ge
 
 @router.get("/my-responses/{response_id}")
 def get_my_response_by_id(
-    response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
+    response_id: str,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
 ):
     """Retorna uma resposta específica (para visualizar detalhes)."""
-    doc = _owned_response(db, user["_id"], response_id)
+    doc = _owned_response(db, org_id, user["_id"], response_id)
     submitted_at = doc.get("submitted_at")
     return {
         "id": str(doc["_id"]),
@@ -226,10 +243,13 @@ def get_my_response_by_id(
 
 @router.get("/my-responses/{response_id}/export")
 def export_my_response(
-    response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
+    response_id: str,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
 ):
     """Autoavaliação em JSON (envelope `aegis.maturidade-ia`): respostas com o texto das perguntas."""
-    doc = _owned_response(db, user["_id"], response_id)
+    doc = _owned_response(db, org_id, user["_id"], response_id)
     model = _model_of_response(db, doc)
     tier = _normalize_tier(doc.get("tier"))
     answers = _answers_of(doc)
@@ -306,7 +326,12 @@ def export_my_response(
 
 
 @router.post("/my-response")
-def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
+def save_my_response(
+    payload: MaturityAnswersRequest,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
     """Cria ou atualiza uma autoavaliação vinculada ao modelo ativo no banco."""
     model = _load_model(db)
     model_oid = ObjectId(model["id"])
@@ -346,16 +371,22 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
     if response_id:
         if not ObjectId.is_valid(response_id):
             raise HTTPException(status_code=404, detail="Resposta nao encontrada")
-        existing = db.maturity_responses.find_one({"_id": ObjectId(response_id), "user_id": user["_id"]})
-        if not existing:
+        existing = db.maturity_responses.find_one(
+            {"_id": ObjectId(response_id), "organization_id": org_id}
+        )
+        if not existing or (
+            not existing.get("complete") and existing.get("created_by_user_id") != user["_id"]
+        ):
             raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     else:
-        # Autosave sem id: reutiliza o rascunho incompleto mais recente do mesmo modelo
-        # (evita duplicar registros quando o cliente ainda não recebeu o response_id).
+        # Autosave sem id: reutiliza o rascunho incompleto mais recente do mesmo autor/modelo
+        # (evita duplicar registros quando o cliente ainda não recebeu o response_id, e evita
+        # que dois membros da mesma organização colidam no mesmo rascunho em edição).
         existing = db.maturity_responses.find_one(
             {
-                "user_id": user["_id"],
+                "organization_id": org_id,
                 "model_id": model_oid,
+                "created_by_user_id": user["_id"],
                 "complete": {"$ne": True},
             },
             sort=[("updated_at", -1), ("submitted_at", -1)],
@@ -376,7 +407,8 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
         submitted_at = now if complete else (existing.get("submitted_at") or now)
     else:
         doc = {
-            "user_id": user["_id"],
+            "organization_id": org_id,
+            "created_by_user_id": user["_id"],
             **common_fields,
             "submitted_at": now,
         }

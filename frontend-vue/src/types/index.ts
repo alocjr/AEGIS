@@ -70,7 +70,3 @@ export interface ProgramaFormacaoExecutiva {
   }
   entregaveis_resumo?: EntregavelResumo[]
 }
-
-export interface ApiError {
-  detail: string | { msg: string; loc?: string[] }[]
-}

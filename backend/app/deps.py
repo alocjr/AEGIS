@@ -62,3 +62,14 @@ def get_current_admin(user=Depends(get_verified_user)):
     if not user.get("is_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a administradores")
     return {**user, "is_admin": True}
+
+
+def get_current_organization_id(user=Depends(get_verified_user)) -> ObjectId:
+    """Organizacao do usuario logado — chave de escopo para dados compartilhados pelo time."""
+    org_id = user.get("organization_id")
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Usuario sem organizacao atribuida. Contate o suporte.",
+        )
+    return org_id

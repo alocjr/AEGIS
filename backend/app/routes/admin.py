@@ -7,7 +7,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo.database import Database
 
-from app.database import get_db
+from app.database import get_db, provision_solo_organization
 from app.deps import get_current_admin
 from app.routes.course import COURSE_SLUG, _progress_with_quiz_effect
 from app.utils.course_payload import payload_for_json
@@ -32,6 +32,7 @@ from app.schemas import (
     AdminUpdateProgressRequest,
     AdminUpdateUserRequest,
     LiberarEncontroRequest,
+    OrganizationCreateRequest,
 )
 from app.security import hash_password
 
@@ -154,11 +155,16 @@ def _swot_is_filled(doc: dict | None) -> bool:
 
 @router.get("/dashboard")
 def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
-    """Lista alunos com progresso (encontros, material, quiz) e data do próximo encontro. Ordenado pela data do próximo encontro (mais próximo primeiro). Apenas admin."""
+    """Lista organizações com seus membros e progresso (encontros, material, quiz).
+
+    SWOT/Canvas/Maturidade são fatos da organização (jornada compartilhada pelo time) e
+    aparecem uma vez por organização; progresso de trilha/quiz continua por membro.
+    Organizações ordenadas pelo próximo encontro mais próximo entre seus membros. Apenas admin.
+    """
     users = list(
         db.users.find(
             {"$or": [{"is_admin": {"$ne": True}}, {"is_admin": {"$exists": False}}]},
-            {"_id": 1, "name": 1, "email": 1, "course_slug": 1, "course_slugs": 1, "phone": 1},
+            {"_id": 1, "name": 1, "email": 1, "course_slug": 1, "course_slugs": 1, "phone": 1, "organization_id": 1},
         )
     )
     progress_by_user_slug = {(p["user_id"], p["course_slug"]): p for p in db.progress.find({})}
@@ -167,25 +173,29 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
     for r in db.quiz_responses.aggregate([{"$group": {"_id": "$user_id", "count": {"$sum": 1}}}]):
         quiz_responses_by_user[r["_id"]] = r["count"]
 
-    maturity_responded_user_ids = set()
-    for doc in db.maturity_responses.find({}, {"user_id": 1}):
-        maturity_responded_user_ids.add(doc["user_id"])
+    maturity_responded_org_ids = set()
+    for doc in db.maturity_responses.find({}, {"organization_id": 1}):
+        maturity_responded_org_ids.add(doc.get("organization_id"))
 
-    swot_filled_by_user: dict = {}
+    swot_filled_by_org: dict = {}
     for doc in db.swot_analyses.find(
         {},
-        {"user_id": 1, "forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1},
+        {"organization_id": 1, "forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1},
     ):
-        swot_filled_by_user[doc["user_id"]] = _swot_is_filled(doc)
+        org_id = doc.get("organization_id")
+        swot_filled_by_org[org_id] = swot_filled_by_org.get(org_id, False) or _swot_is_filled(doc)
 
-    canvas_count_by_user: dict = {}
-    for r in db.canvas_projects.aggregate([{"$group": {"_id": "$user_id", "count": {"$sum": 1}}}]):
-        canvas_count_by_user[r["_id"]] = int(r["count"])
+    canvas_count_by_org: dict = {}
+    for r in db.canvas_projects.aggregate([{"$group": {"_id": "$organization_id", "count": {"$sum": 1}}}]):
+        canvas_count_by_org[r["_id"]] = int(r["count"])
+
+    org_names = {o["_id"]: o.get("name") or "" for o in db.organizations.find({}, {"name": 1})}
 
     courses_cache: dict = {}  # slug -> (pfe, titulo)
-    rows = []
+    orgs: dict = {}  # organization_id -> group dict
     for u in users:
         uid = u["_id"]
+        org_id = u.get("organization_id")
         primary_slug = (u.get("course_slugs") or [u.get("course_slug")])[0] if (u.get("course_slugs") or u.get("course_slug")) else u.get("course_slug") or ""
         progress = progress_by_user_slug.get((uid, primary_slug)) or {}
         course_slug = progress.get("course_slug") or primary_slug
@@ -206,8 +216,6 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
         material_checked = sum(len(v) if isinstance(v, dict) else 0 for v in material_checks.values())
 
         quiz_done = quiz_responses_by_user.get(uid, 0)
-        maturity_done = 1 if uid in maturity_responded_user_ids else 0
-        maturity_total = 1
 
         next_iso = encontro_agendas.get(str(ativo)) if ativo else None
         next_ts = None
@@ -218,7 +226,7 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
             except Exception:
                 pass
 
-        rows.append({
+        member = {
             "id": str(uid),
             "name": u.get("name", ""),
             "email": u.get("email", ""),
@@ -231,19 +239,32 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
             "material_total": total_materiais,
             "quiz_done": quiz_done,
             "quiz_total": quiz_count,
-            "maturity_done": maturity_done,
-            "maturity_total": maturity_total,
-            "swot_filled": bool(swot_filled_by_user.get(uid, False)),
-            "canvas_count": canvas_count_by_user.get(uid, 0),
             "next_meeting_iso": next_iso,
-            "_next_ts": next_ts,
-        })
+        }
 
-    rows.sort(key=lambda x: (x["_next_ts"] is None, x["_next_ts"] or 0))
-    for r in rows:
-        del r["_next_ts"]
+        group = orgs.setdefault(
+            org_id,
+            {
+                "id": str(org_id) if org_id else None,
+                "name": org_names.get(org_id, "") if org_id else "—",
+                "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
+                "maturity_total": 1,
+                "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
+                "canvas_count": canvas_count_by_org.get(org_id, 0),
+                "members": [],
+                "_next_ts": None,
+            },
+        )
+        group["members"].append(member)
+        if next_ts is not None and (group["_next_ts"] is None or next_ts < group["_next_ts"]):
+            group["_next_ts"] = next_ts
 
-    return rows
+    result = list(orgs.values())
+    result.sort(key=lambda g: (g["_next_ts"] is None, g["_next_ts"] or 0))
+    for g in result:
+        del g["_next_ts"]
+
+    return result
 
 
 @router.post("/users")
@@ -264,6 +285,16 @@ def create_user(
         if not db.courses.find_one({"slug": slug}):
             raise HTTPException(status_code=404, detail=f"Trilha nao encontrada: {slug}")
 
+    org_id: ObjectId
+    if payload.organization_id:
+        if not ObjectId.is_valid(payload.organization_id):
+            raise HTTPException(status_code=400, detail="Organizacao invalida")
+        org_id = ObjectId(payload.organization_id)
+        if not db.organizations.find_one({"_id": org_id}, {"_id": 1}):
+            raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
+    else:
+        org_id = provision_solo_organization(payload.name)
+
     now = datetime.now(timezone.utc)
     user_doc = {
         "name": payload.name.strip(),
@@ -271,6 +302,7 @@ def create_user(
         "password_hash": hash_password(payload.password),
         "course_slug": course_slugs[0],
         "course_slugs": course_slugs,
+        "organization_id": org_id,
         "created_at": now,
         "updated_at": now,
         "email_verified": True,
@@ -307,6 +339,37 @@ def create_user(
     }
 
 
+@router.get("/organizations")
+def list_organizations(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
+    """Lista organizações (para atribuição/realocação de usuários). Apenas admin."""
+    member_counts: dict = {}
+    for r in db.users.aggregate([{"$group": {"_id": "$organization_id", "count": {"$sum": 1}}}]):
+        if r["_id"] is not None:
+            member_counts[r["_id"]] = int(r["count"])
+    out = []
+    for org in db.organizations.find({}).sort("name", 1):
+        out.append({
+            "id": str(org["_id"]),
+            "name": org.get("name") or "",
+            "member_count": member_counts.get(org["_id"], 0),
+        })
+    return out
+
+
+@router.post("/organizations")
+def create_organization(
+    payload: OrganizationCreateRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Cria uma organização vazia (para depois mover usuários para ela). Apenas admin."""
+    now = datetime.now(timezone.utc)
+    result = db.organizations.insert_one(
+        {"name": payload.name.strip(), "created_at": now, "updated_at": now}
+    )
+    return {"id": str(result.inserted_id), "name": payload.name.strip()}
+
+
 def _serialize_created_at(doc: dict) -> str | None:
     """Serializa created_at para JSON (datetime -> isoformat ou None)."""
     val = doc.get("created_at")
@@ -323,12 +386,30 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
     users = list(
         db.users.find(
             {},
-            {"_id": 1, "name": 1, "email": 1, "course_slug": 1, "course_slugs": 1, "is_admin": 1, "created_at": 1, "phone": 1},
+            {
+                "_id": 1,
+                "name": 1,
+                "email": 1,
+                "course_slug": 1,
+                "course_slugs": 1,
+                "is_admin": 1,
+                "created_at": 1,
+                "phone": 1,
+                "organization_id": 1,
+            },
         )
     )
+    org_names = {
+        o["_id"]: o.get("name") or ""
+        for o in db.organizations.find(
+            {"_id": {"$in": [u["organization_id"] for u in users if u.get("organization_id")]}},
+            {"name": 1},
+        )
+    }
     out = []
     for u in users:
         slugs = u.get("course_slugs") or ([u.get("course_slug")] if u.get("course_slug") else [])
+        org_id = u.get("organization_id")
         out.append({
             "id": str(u["_id"]),
             "name": u.get("name", ""),
@@ -338,6 +419,8 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
             "course_slugs": slugs,
             "is_admin": u.get("is_admin", False),
             "created_at": _serialize_created_at(u),
+            "organization_id": str(org_id) if org_id else None,
+            "organization_name": org_names.get(org_id, "") if org_id else "",
         })
     return out
 
@@ -355,6 +438,8 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         {"user_id": ObjectId(user_id)},
         {"course_slug": 1, "encontro_agendas": 1},
     )
+    org_id = user.get("organization_id")
+    org = db.organizations.find_one({"_id": org_id}, {"name": 1}) if org_id else None
     return {
         "id": str(user["_id"]),
         "name": user.get("name", ""),
@@ -365,6 +450,8 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         "is_admin": user.get("is_admin", False),
         "created_at": _serialize_created_at(user),
         "encontro_agendas": progress.get("encontro_agendas", {}) if progress else {},
+        "organization_id": str(org_id) if org_id else None,
+        "organization_name": (org or {}).get("name") or "",
     }
 
 
@@ -407,6 +494,13 @@ def update_user(
         updates["phone"] = payload.phone.strip() if payload.phone.strip() else ""
     if payload.is_admin is not None:
         updates["is_admin"] = payload.is_admin
+    if payload.organization_id is not None:
+        if not ObjectId.is_valid(payload.organization_id):
+            raise HTTPException(status_code=400, detail="Organizacao invalida")
+        new_org_id = ObjectId(payload.organization_id)
+        if not db.organizations.find_one({"_id": new_org_id}, {"_id": 1}):
+            raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
+        updates["organization_id"] = new_org_id
 
     if updates:
         db.users.update_one({"_id": uid}, {"$set": updates})
@@ -470,7 +564,8 @@ def delete_user(
     db.users.delete_one({"_id": uid})
     db.progress.delete_many({"user_id": uid})
     db.quiz_responses.delete_many({"user_id": uid})
-    db.maturity_responses.delete_many({"user_id": uid})
+    # SWOT/Canvas/Maturidade são compartilhados pela organização — não são apagados
+    # ao remover um único membro (poderia destruir o histórico dos demais).
     return {"message": "Usuario excluido", "id": user_id}
 
 
@@ -485,7 +580,10 @@ def get_user_course_and_progress(
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     uid = ObjectId(user_id)
-    user = db.users.find_one({"_id": uid}, {"course_slug": 1, "course_slugs": 1, "name": 1, "email": 1})
+    user = db.users.find_one(
+        {"_id": uid},
+        {"course_slug": 1, "course_slugs": 1, "name": 1, "email": 1, "organization_id": 1},
+    )
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     slugs = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
@@ -540,13 +638,14 @@ def get_user_course_and_progress(
             "total": resp.get("total"),
         }
 
+    org_id = user.get("organization_id")
     swot_doc = db.swot_analyses.find_one(
-        {"user_id": uid},
+        {"organization_id": org_id},
         {"forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1, "updated_at": 1},
         sort=[("updated_at", -1)],
     )
     swot_updated = swot_doc.get("updated_at") if swot_doc else None
-    canvas_count = db.canvas_projects.count_documents({"user_id": uid})
+    canvas_count = db.canvas_projects.count_documents({"organization_id": org_id})
 
     return {
         "user": {"id": user_id, "name": user.get("name", ""), "email": user.get("email", "")},

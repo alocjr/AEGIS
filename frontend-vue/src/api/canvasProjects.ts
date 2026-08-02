@@ -35,6 +35,10 @@ export interface CanvasProjectSummary {
   swot_item_ids: string[]
   /** Iniciativas TOWS que motivaram o projeto. */
   tows_ids: string[]
+  /** `aprovado_portfolio` após o hook de Governança (ver aprovarPortfolio). */
+  status: 'rascunho' | 'aprovado_portfolio'
+  /** Sistema de IA criado no módulo de Governança, se aprovado para o portfólio. */
+  ai_system_id: string | null
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
@@ -145,4 +149,17 @@ export function importIntoCanvasProject(
     `/api/canvas-projects/${encodeURIComponent(id)}/import`,
     body
   )
+}
+
+export interface AprovarPortfolioResult {
+  ai_system_id: string
+  status: string
+  risco_preliminar: 'baixo' | 'medio' | 'alto' | 'critico' | null
+  created: boolean
+}
+
+/** Hook Canvas → Inventário: aprova a oportunidade e cria o sistema de IA correspondente
+ * no módulo de Governança (idempotente — reexecutar não duplica). */
+export function aprovarPortfolio(id: string): Promise<AprovarPortfolioResult> {
+  return post<AprovarPortfolioResult>(`/api/canvas-projects/${encodeURIComponent(id)}/aprovar-portfolio`)
 }
