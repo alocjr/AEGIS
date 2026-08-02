@@ -173,6 +173,7 @@ def get_my_response_by_id(
         "model_id": str(doc["model_id"]) if doc.get("model_id") else None,
         "answers": doc.get("answers", {}),
         "tier": doc.get("tier"),
+        "complete": bool(doc.get("complete")),
         "submitted_at": submitted_at.isoformat() if submitted_at else None,
         "result": doc.get("result"),
     }

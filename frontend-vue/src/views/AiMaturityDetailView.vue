@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   fetchMaturityModel,
   fetchMaturityResponseById,
@@ -8,8 +8,13 @@ import {
   type MaturityResult,
   type MaturityTier,
 } from '@/api/maturity'
+import {
+  createSwotFromMaturity,
+  getSwotByMaturityResponse,
+} from '@/api/swotAnalysis'
 
 const route = useRoute()
+const router = useRouter()
 const responseId = route.params.id as string
 
 const loading = ref(true)
@@ -17,6 +22,10 @@ const error = ref<string | null>(null)
 const model = ref<MaturityModel | null>(null)
 const displayedResult = ref<MaturityResult | null>(null)
 const submittedAt = ref<string | null>(null)
+const swotId = ref<string | null>(null)
+const swotBusy = ref(false)
+const swotError = ref<string | null>(null)
+const isComplete = ref(false)
 
 const TIER_LABELS: Record<string, string> = {
   basico: 'Básico',
@@ -181,6 +190,25 @@ const radarPolygon = computed(() => {
 
 const gridRings = [0.2, 0.4, 0.6, 0.8, 1]
 
+async function openSwot() {
+  if (!responseId || swotBusy.value) return
+  swotBusy.value = true
+  swotError.value = null
+  try {
+    if (swotId.value) {
+      await router.push({ name: 'SwotAnalysis', params: { id: swotId.value } })
+      return
+    }
+    const created = await createSwotFromMaturity(responseId)
+    swotId.value = created.id
+    await router.push({ name: 'SwotAnalysis', params: { id: created.id } })
+  } catch (e) {
+    swotError.value = e instanceof Error ? e.message : 'Falha ao criar SWOT.'
+  } finally {
+    swotBusy.value = false
+  }
+}
+
 onMounted(async () => {
   if (!responseId) {
     error.value = 'Resposta não encontrada.'
@@ -195,7 +223,16 @@ onMounted(async () => {
     model.value = mod
     displayedResult.value = resp.result ?? null
     submittedAt.value = resp.submitted_at ?? null
+    isComplete.value = resp.complete === true
     error.value = null
+    if (isComplete.value) {
+      try {
+        const existing = await getSwotByMaturityResponse(responseId)
+        swotId.value = existing.id
+      } catch {
+        swotId.value = null
+      }
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Resposta não encontrada.'
   } finally {
@@ -375,8 +412,18 @@ onMounted(async () => {
       </section>
 
       <div class="actions">
-        <RouterLink to="/ai-maturity/new" class="btn-primary">Nova autoavaliação</RouterLink>
+        <button
+          v-if="isComplete"
+          type="button"
+          class="btn-primary"
+          :disabled="swotBusy"
+          @click="openSwot"
+        >
+          {{ swotBusy ? 'Gerando…' : swotId ? 'Abrir SWOT' : 'Criar SWOT' }}
+        </button>
+        <RouterLink to="/ai-maturity/new" class="btn-ghost">Nova autoavaliação</RouterLink>
         <RouterLink to="/ai-maturity" class="btn-ghost">Ver todas</RouterLink>
+        <p v-if="swotError" class="swot-error">{{ swotError }}</p>
       </div>
     </template>
   </div>
@@ -789,9 +836,21 @@ onMounted(async () => {
   background: var(--k0);
   color: var(--wh);
   border: 1px solid var(--k0);
+  cursor: pointer;
+  font-family: inherit;
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   opacity: 0.92;
+}
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.swot-error {
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: #8f2b2b;
 }
 .btn-ghost {
   background: var(--wh);

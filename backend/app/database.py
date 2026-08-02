@@ -151,7 +151,17 @@ def init_indexes() -> None:
     db.landing_prompts.create_index("created_at")
     _seed_landing_prompts_if_empty()
     db.canvas_projects.create_index([("user_id", 1), ("updated_at", -1)])
-    db.swot_analyses.create_index("user_id", unique=True)
+    # SWOT: vários docs por usuário (um por resposta de maturidade + manuais)
+    try:
+        db.swot_analyses.drop_index("user_id_1")
+    except Exception:
+        pass
+    db.swot_analyses.create_index([("user_id", 1), ("updated_at", -1)])
+    db.swot_analyses.create_index(
+        [("user_id", 1), ("maturity_response_id", 1)],
+        unique=True,
+        partialFilterExpression={"maturity_response_id": {"$exists": True}},
+    )
     purge_legacy_swot_analyses()
     db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)
     db.auth_rate_limits.create_index([("email", 1), ("scope", 1), ("at", -1)])

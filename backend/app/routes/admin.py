@@ -543,6 +543,7 @@ def get_user_course_and_progress(
     swot_doc = db.swot_analyses.find_one(
         {"user_id": uid},
         {"forcas": 1, "fraquezas": 1, "oportunidades": 1, "ameacas": 1, "updated_at": 1},
+        sort=[("updated_at", -1)],
     )
     swot_updated = swot_doc.get("updated_at") if swot_doc else None
     canvas_count = db.canvas_projects.count_documents({"user_id": uid})

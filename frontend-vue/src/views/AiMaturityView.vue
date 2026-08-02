@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   fetchMaturityModel,
   saveMaturityResponse,
@@ -8,7 +9,12 @@ import {
   type MaturityQuestion,
   type MaturityTier,
 } from '@/api/maturity'
+import {
+  createSwotFromMaturity,
+  getSwotByMaturityResponse,
+} from '@/api/swotAnalysis'
 
+const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const model = ref<MaturityModel | null>(null)
@@ -17,7 +23,9 @@ const selectedTier = ref<MaturityTier>('basico')
 const responseId = ref<string | null>(null)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
-const swotCreated = ref(false)
+const swotId = ref<string | null>(null)
+const swotBusy = ref(false)
+const swotError = ref<string | null>(null)
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let persisting = false
 let pendingPersist = false
@@ -41,8 +49,6 @@ const DIMENSION_ABBR: Record<string, string> = {
   people_culture: 'Pes',
   gov_risk: 'Gov',
 }
-const QUAD_LABEL = { s: 'Força', w: 'Fraqueza', o: 'Oportunidade', t: 'Ameaça' } as const
-
 type EnrichedQuestion = MaturityQuestion & { dimId: string; dimName: string }
 
 const questionIndex = computed(() => {
@@ -216,48 +222,6 @@ onUnmounted(() => {
   if (persistTimer) clearTimeout(persistTimer)
 })
 
-/* ---------- SWOT / verdict ---------- */
-type BucketItem = {
-  code: string
-  lvl: number
-  title: string
-  dimLabel: string
-  evidence: string
-  why: string
-}
-type Buckets = Record<'s' | 'w' | 'o' | 't', BucketItem[]>
-
-function buildBuckets(): Buckets {
-  const buckets: Buckets = { s: [], w: [], o: [], t: [] }
-  for (const code of Object.keys(answers.value)) {
-    const q = questionIndex.value[code]
-    if (!q || !isVisibleTier(q.tier)) continue
-    const lvl = Number(answers.value[code])
-    const evidence = q.levels[String(lvl)] ?? ''
-    const isExternal = !!(q.csfId && q.csfId.startsWith('R'))
-    let quad: keyof Buckets
-    let why: string
-    if (isExternal) {
-      quad = lvl >= 4 ? 'o' : 't'
-      why =
-        quad === 'o'
-          ? `Requisito regulatório (${q.dimName}) em nível ${lvl}: cenário já favorável — dá para explorar essa vantagem.`
-          : `Requisito regulatório (${q.dimName}) em nível ${lvl}: exposição a risco externo — precisa de plano de mitigação.`
-    } else {
-      quad = lvl >= 4 ? 's' : 'w'
-      why =
-        quad === 's'
-          ? `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade já madura e controlável pela empresa — pode virar alavanca.`
-          : `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade ainda imatura, mas está sob controle da empresa corrigir.`
-    }
-    buckets[quad].push({ code, lvl, title: q.text, dimLabel: q.dimName, evidence, why })
-  }
-  ;(['s', 'w', 'o', 't'] as const).forEach((k) =>
-    buckets[k].sort((a, b) => naturalCompare(a.code, b.code))
-  )
-  return buckets
-}
-
 function computeVerdict() {
   const visibleAnswered = Object.keys(answers.value).filter((id) => {
     const q = questionIndex.value[id]
@@ -277,301 +241,56 @@ function computeVerdict() {
       break
     }
   }
-  const dimAverages = (model.value?.dimensions ?? [])
-    .map((dim) => {
-      const answered = dimAnswered(dim)
-      const avg = answered.length
-        ? answered.reduce((a, q) => a + Number(answers.value[q.id]), 0) / answered.length
-        : 0
-      return { label: dim.name, avg, answeredCount: answered.length }
-    })
-    .filter((d) => d.answeredCount > 0)
-  const strongest = dimAverages.length
-    ? dimAverages.reduce((a, b) => (b.avg > a.avg ? b : a))
-    : null
-  const weakest = dimAverages.length
-    ? dimAverages.reduce((a, b) => (b.avg < a.avg ? b : a))
-    : null
-  return { sum, maxScore, band, strongest, weakest }
+  return { sum, maxScore, band }
 }
 
-function escapeHtml(str: string): string {
-  return String(str).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
-  )
-}
-
-function pairSentences(
-  listA: BucketItem[],
-  listB: BucketItem[],
-  template: (a: BucketItem, b: BucketItem) => string,
-  capacity: number
-): string[] {
-  if (!listA.length || !listB.length) return []
-  const n = Math.min(capacity, Math.max(listA.length, listB.length))
-  const out: string[] = []
-  for (let i = 0; i < n; i++) {
-    const a = listA[i % listA.length]!
-    const b = listB[i % listB.length]!
-    out.push(template(a, b))
+async function refreshSwotLink() {
+  swotError.value = null
+  if (!responseId.value || !isComplete.value) {
+    swotId.value = null
+    return
   }
-  return [...new Set(out)]
-}
-
-function buildTowsCells(buckets: Buckets) {
-  return {
-    so: pairSentences(
-      buckets.s,
-      buckets.o,
-      (a, b) =>
-        `Usar «${a.title}» (força ${a.code}) para aproveitar «${b.title}» (oportunidade ${b.code}).`,
-      4
-    ),
-    st: pairSentences(
-      buckets.s,
-      buckets.t,
-      (a, b) =>
-        `Usar «${a.title}» (força ${a.code}) para conter o risco de «${b.title}» (ameaça ${b.code}).`,
-      4
-    ),
-    wo: pairSentences(
-      buckets.w,
-      buckets.o,
-      (a, b) =>
-        `Aproveitar «${b.title}» (oportunidade ${b.code}) como janela para corrigir «${a.title}» (fraqueza ${a.code}).`,
-      4
-    ),
-    wt: pairSentences(
-      buckets.w,
-      buckets.t,
-      (a, b) =>
-        `Plano defensivo: tratar «${a.title}» (fraqueza ${a.code}) antes que «${b.title}» (ameaça ${b.code}) vire problema real.`,
-      4
-    ),
+  try {
+    const existing = await getSwotByMaturityResponse(responseId.value)
+    swotId.value = existing.id
+  } catch {
+    swotId.value = null
   }
 }
 
-function quadItemsHtml(items: BucketItem[], q: keyof typeof QUAD_LABEL): string {
-  if (!items.length) return `<li class="empty">Nenhuma pergunta classificada aqui.</li>`
-  return items
-    .map(
-      (item) => `
-      <li>
-        <span class="code">${item.code} · N${item.lvl}</span>
-        <span class="lbl">
-          <span class="item-title">${escapeHtml(item.title)}</span>
-          <span class="pillar-tag">${escapeHtml(item.dimLabel)}</span>
-          <span class="why"><b>Por quê ${QUAD_LABEL[q].toLowerCase()}:</b> "${escapeHtml(item.evidence)}" — ${escapeHtml(item.why)}</span>
-        </span>
-      </li>`
-    )
-    .join('')
-}
-
-function towsItemsHtml(sentences: string[]): string {
-  if (!sentences.length) return `<li class="empty">Sem itens suficientes para cruzar nesta combinação.</li>`
-  return sentences.map((s) => `<li>${escapeHtml(s)}</li>`).join('')
-}
-
-const SWOT_PAGE_CSS = `
-  :root{
-    --navy:#0e1b33; --ink:#242a33; --gold:#c6a15b; --gold-2:#e3cb93;
-    --ivory:#f6f1e7; --ivory-2:#fbf8f1; --muted:#6e6a60;
-    --line:rgba(198,161,91,.32); --serif:Cambria,'Hoefler Text',Georgia,'Times New Roman',serif;
-    --lvl1:#b6543f; --lvl5:#3f8563; --dim-data:#3d6fa8; --radius:4px;
-  }
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
-  body{
-    background:#f8f8f6; color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .page-header{ background:var(--ivory-2); border-bottom:1px solid var(--line); padding:28px 18px; }
-  .page-header .inner{ max-width:920px; margin:0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-  .page-header .eyebrow{
-    font-size:.7rem; letter-spacing:.22em; text-transform:uppercase; color:var(--gold);
-    font-weight:600; margin:0 0 6px;
-  }
-  .page-header h1{
-    font-family:var(--serif); font-weight:600; font-size:clamp(22px,4.5vw,32px);
-    margin:0 0 6px; color:var(--navy);
-  }
-  .page-header .meta{ font-size:13px; color:var(--muted); margin:0; }
-  .print-btn{
-    font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-    padding:9px 16px; border-radius:99px; border:1px solid var(--line);
-    background:#fff; color:var(--navy); cursor:pointer; flex:0 0 auto;
-  }
-  .print-btn:hover{ border-color:var(--gold); color:var(--gold); }
-  main{ max-width:920px; margin:0 auto; padding:26px 18px 60px; }
-  .swot-section{ margin-bottom:30px; }
-  .swot-section-title{
-    font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
-    font-weight:600; margin:0 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line);
-  }
-  .swot-rule{ font-size:13px; line-height:1.6; color:var(--muted); max-width:760px; margin:0 0 14px; }
-  .swot-rule strong{ color:var(--navy); }
-  .swot-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-  .swot-quad{
-    background:var(--ivory-2); border:1px solid var(--line); border-radius:var(--radius);
-    border-top:4px solid; padding:14px 16px 16px; break-inside:avoid;
-  }
-  .swot-quad[data-q="s"]{ border-top-color:var(--lvl5); }
-  .swot-quad[data-q="w"]{ border-top-color:var(--lvl1); }
-  .swot-quad[data-q="o"]{ border-top-color:var(--dim-data); }
-  .swot-quad[data-q="t"]{ border-top-color:var(--gold); }
-  .swot-quad h3{
-    font-family:var(--serif); font-weight:600; font-size:16px; margin:0 0 10px;
-    display:flex; align-items:center; gap:8px; color:var(--navy);
-  }
-  .swot-quad[data-q="s"] h3{ color:var(--lvl5); }
-  .swot-quad[data-q="w"] h3{ color:var(--lvl1); }
-  .swot-quad[data-q="o"] h3{ color:var(--dim-data); }
-  .swot-quad[data-q="t"] h3{ color:var(--gold); }
-  .swot-count{
-    font-size:11px; font-weight:700; color:var(--muted);
-    background:#fff; border:1px solid var(--line); border-radius:99px; padding:1px 8px;
-  }
-  .swot-quad ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-  .swot-quad li{ display:flex; align-items:flex-start; gap:8px; padding:9px 10px; background:#fff; border-radius:3px; border:1px solid rgba(14,27,51,.06); }
-  .swot-quad li .code{
-    font-size:10.5px; font-weight:700; flex:0 0 auto;
-    padding:1px 6px; border-radius:3px; background:var(--ivory); border:1px solid var(--line); margin-top:1px; color:var(--navy);
-  }
-  .swot-quad li .lbl{ color:var(--ink); flex:1; min-width:0; }
-  .swot-quad li .lbl .item-title{ font-size:12.5px; font-weight:600; line-height:1.35; display:block; }
-  .swot-quad li .lbl .pillar-tag{ display:block; font-size:10px; color:var(--muted); font-style:italic; margin-top:2px; }
-  .swot-quad li .lbl .why{
-    display:block; font-size:11.5px; line-height:1.45; color:var(--muted);
-    margin-top:5px; padding-top:5px; border-top:1px dashed var(--line);
-  }
-  .swot-quad li .lbl .why b{ color:var(--navy); font-weight:600; }
-  .swot-quad .empty{ font-size:12px; color:var(--muted); font-style:italic; }
-  .tows-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-  .tows-cell{ background:var(--ivory-2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px 16px; break-inside:avoid; }
-  .tows-cell h4{ font-family:var(--serif); font-weight:600; font-size:14.5px; margin:0 0 10px; color:var(--navy); display:flex; flex-direction:column; gap:2px; }
-  .tows-cell h4 span{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
-  .tows-cell[data-t="so"]{ border-left:4px solid var(--lvl5); }
-  .tows-cell[data-t="st"]{ border-left:4px solid var(--dim-data); }
-  .tows-cell[data-t="wo"]{ border-left:4px solid var(--gold); }
-  .tows-cell[data-t="wt"]{ border-left:4px solid var(--lvl1); }
-  .tows-cell ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
-  .tows-cell li{ font-size:12px; line-height:1.45; color:var(--ink); padding:8px 10px; background:#fff; border-radius:3px; }
-  .tows-cell .empty{ font-size:12px; color:var(--muted); font-style:italic; }
-  .verdict-card{ display:flex; flex-direction:column; gap:14px; background:var(--navy); color:#fff; border-radius:6px; padding:22px; break-inside:avoid; }
-  .verdict-score{ display:flex; align-items:baseline; gap:4px; font-family:var(--serif); font-weight:700; }
-  .verdict-number{ font-size:44px; color:var(--gold); line-height:1; }
-  .verdict-max{ font-size:16px; color:rgba(255,255,255,.65); }
-  .verdict-band{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-2); margin:0; font-weight:700; }
-  .verdict-text{ font-size:13.5px; line-height:1.6; color:rgba(255,255,255,.78); margin:0; }
-  .verdict-text b{ color:#fff; }
-  @media (min-width: 700px){
-    .swot-grid{ grid-template-columns:1fr 1fr; }
-    .tows-grid{ grid-template-columns:1fr 1fr; }
-    .verdict-card{ flex-direction:row; align-items:center; gap:26px; }
-    .verdict-score{ flex:0 0 auto; }
-  }
-  @media print{ .print-btn{ display:none; } body{ background:#fff; } }
-`
-
-function buildSwotPageHtml(
-  buckets: Buckets,
-  cells: ReturnType<typeof buildTowsCells>,
-  verdict: ReturnType<typeof computeVerdict>
-): string {
-  const stamp = new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })
-  const title = model.value?.assessment_title || model.value?.title || 'Diagnóstico de Maturidade em IA'
-  const total = totalForTier(selectedTier.value)
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Matriz SWOT — ${escapeHtml(title)}</title>
-<style>${SWOT_PAGE_CSS}</style>
-</head>
-<body>
-  <header class="page-header">
-    <div class="inner">
-      <div>
-        <p class="eyebrow">Gerado a partir de ${total} respostas · abrangência ${TIER_LABEL_SHORT[selectedTier.value]} · ${escapeHtml(stamp)}</p>
-        <h1>Matriz SWOT — ${escapeHtml(title)}</h1>
-        <p class="meta">Página independente — pode ser impressa, salva ou compartilhada separadamente do formulário.</p>
-      </div>
-      <button type="button" class="print-btn" onclick="window.print()">Imprimir / salvar PDF</button>
-    </div>
-  </header>
-  <main>
-    <section class="swot-section">
-      <h2 class="swot-section-title">1 · Como lemos suas respostas</h2>
-      <p class="swot-rule">
-        Perguntas das dimensões internas <strong>(Estratégia e Visão, Dados e Infraestrutura, Pessoas e Cultura, e Governança e Risco — exceto requisitos regulatórios)</strong> com maturidade 4–5 viram <strong>Força</strong>; com 1–3, <strong>Fraqueza</strong>. Perguntas ligadas a requisitos regulatórios <strong>(CSFs de origem "R")</strong> com maturidade 4–5 viram <strong>Oportunidade</strong>; com 1–3, <strong>Ameaça</strong>. Cada item traz a evidência (sua resposta) e a regra aplicada.
-      </p>
-    </section>
-    <section class="swot-section">
-      <h2 class="swot-section-title">2 · Matriz SWOT</h2>
-      <div class="swot-grid">
-        <div class="swot-quad" data-q="s"><h3>Forças <span class="swot-count">${buckets.s.length}</span></h3><ul>${quadItemsHtml(buckets.s, 's')}</ul></div>
-        <div class="swot-quad" data-q="o"><h3>Oportunidades <span class="swot-count">${buckets.o.length}</span></h3><ul>${quadItemsHtml(buckets.o, 'o')}</ul></div>
-        <div class="swot-quad" data-q="w"><h3>Fraquezas <span class="swot-count">${buckets.w.length}</span></h3><ul>${quadItemsHtml(buckets.w, 'w')}</ul></div>
-        <div class="swot-quad" data-q="t"><h3>Ameaças <span class="swot-count">${buckets.t.length}</span></h3><ul>${quadItemsHtml(buckets.t, 't')}</ul></div>
-      </div>
-    </section>
-    <section class="swot-section">
-      <h2 class="swot-section-title">3 · Cruzamento TOWS</h2>
-      <p class="swot-rule">Combina os quadrantes para sugerir movimentos: usar forças para capturar oportunidades ou conter ameaças, e decidir o que fazer com as fraquezas.</p>
-      <div class="tows-grid">
-        <div class="tows-cell" data-t="so"><h4>SO — Ofensiva <span>Força + Oportunidade</span></h4><ul>${towsItemsHtml(cells.so)}</ul></div>
-        <div class="tows-cell" data-t="st"><h4>ST — Confronto <span>Força + Ameaça</span></h4><ul>${towsItemsHtml(cells.st)}</ul></div>
-        <div class="tows-cell" data-t="wo"><h4>WO — Reforço <span>Fraqueza + Oportunidade</span></h4><ul>${towsItemsHtml(cells.wo)}</ul></div>
-        <div class="tows-cell" data-t="wt"><h4>WT — Defesa <span>Fraqueza + Ameaça</span></h4><ul>${towsItemsHtml(cells.wt)}</ul></div>
-      </div>
-    </section>
-    <section class="swot-section">
-      <h2 class="swot-section-title">4 · Veredito</h2>
-      <div class="verdict-card">
-        <div class="verdict-score">
-          <span class="verdict-number">${verdict.sum}</span>
-          <span class="verdict-max">/${verdict.maxScore} pts</span>
-        </div>
-        <div class="verdict-body">
-          <p class="verdict-band">${escapeHtml(verdict.band.label)}</p>
-          <p class="verdict-text">
-            ${escapeHtml(verdict.band.description)}
-            ${
-              verdict.strongest && verdict.weakest
-                ? ` A dimensão mais madura é <b>${escapeHtml(verdict.strongest.label)}</b> (média ${verdict.strongest.avg.toFixed(1)}) — é aí que a empresa tem mais margem para alavancar resultado agora. A dimensão mais frágil é <b>${escapeHtml(verdict.weakest.label)}</b> (média ${verdict.weakest.avg.toFixed(1)}) — é a primeira candidata a plano de ação, antes que vire gargalo para as demais.`
-                : ''
-            }
-            No total: <b>${buckets.s.length} força(s)</b>, <b>${buckets.w.length} fraqueza(s)</b>, <b>${buckets.o.length} oportunidade(s)</b> e <b>${buckets.t.length} ameaça(s)</b>.
-          </p>
-        </div>
-      </div>
-    </section>
-  </main>
-</body>
-</html>`
-}
-
-function openSwot() {
-  if (!isComplete.value) return
-  swotCreated.value = true
-  const buckets = buildBuckets()
-  const cells = buildTowsCells(buckets)
-  const verdict = computeVerdict()
-  const html = buildSwotPageHtml(buckets, cells, verdict)
-  const blob = new Blob([html], { type: 'text/html' })
-  const url = URL.createObjectURL(blob)
-  const win = window.open(url, '_blank')
-  if (!win) {
-    alert('O navegador bloqueou a abertura da nova aba. Permita pop-ups para este site e tente novamente.')
-  } else {
-    setTimeout(() => URL.revokeObjectURL(url), 30000)
+async function openSwot() {
+  if (!isComplete.value || !responseId.value || swotBusy.value) return
+  swotBusy.value = true
+  swotError.value = null
+  try {
+    // Garante o rascunho salvo antes de gerar a SWOT
+    if (persisting || pendingPersist || persistTimer) {
+      if (persistTimer) {
+        clearTimeout(persistTimer)
+        persistTimer = null
+      }
+      await persistAnswers()
+    }
+    if (!responseId.value) {
+      throw new Error('Salve as respostas antes de criar a SWOT.')
+    }
+    if (swotId.value) {
+      await router.push({ name: 'SwotAnalysis', params: { id: swotId.value } })
+      return
+    }
+    const created = await createSwotFromMaturity(responseId.value)
+    swotId.value = created.id
+    await router.push({ name: 'SwotAnalysis', params: { id: created.id } })
+  } catch (e) {
+    swotError.value = e instanceof Error ? e.message : 'Falha ao criar SWOT.'
+  } finally {
+    swotBusy.value = false
   }
 }
+
+watch([isComplete, responseId], () => {
+  void refreshSwotLink()
+})
 
 function scrollToDim(idx: number) {
   document.getElementById(`dim-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -673,10 +392,18 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
             v-if="isComplete"
             type="button"
             class="btn-swot"
+            :disabled="swotBusy || !responseId"
             @click="openSwot"
           >
-            {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
+            {{
+              swotBusy
+                ? 'Gerando…'
+                : swotId
+                  ? 'Abrir SWOT'
+                  : 'Criar SWOT'
+            }}
           </button>
+          <span v-if="swotError" class="swot-error" :title="swotError">{{ swotError }}</span>
         </div>
 
         <div class="scale-legend" title="Escala de resposta por pergunta">
@@ -1152,9 +879,19 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   background: var(--gold);
   color: var(--navy);
 }
-.btn-swot:hover {
+.btn-swot:hover:not(:disabled) {
   background: var(--gold-2);
   border-color: var(--gold-2);
+}
+.btn-swot:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.swot-error {
+  font-size: 11px;
+  color: var(--lvl1, #b6543f);
+  max-width: 220px;
+  line-height: 1.3;
 }
 .save-pill {
   display: inline-flex;

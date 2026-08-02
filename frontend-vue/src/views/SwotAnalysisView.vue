@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, onMounted, onUnmounted, reactive, computed, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   getSwotAnalysis,
+  getSwotAnalysisById,
   updateSwotAnalysis,
   importSwotAnalysis,
   SWOT_PILLARS,
@@ -22,6 +23,8 @@ import {
   type SwotImportDocument,
 } from '@/api/swotAnalysis'
 
+const route = useRoute()
+const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -34,6 +37,8 @@ const openHelp = ref<SwotListField | null>(null)
 const addingPillarFor = ref<SwotListField | null>(null)
 const customPillarDraft = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const currentSwotId = ref<string | null>(null)
+const maturityResponseId = ref<string | null>(null)
 let saving = false
 let pendingSave = false
 
@@ -371,6 +376,8 @@ function setDraft(field: SwotListField, pilar: string, value: string) {
 }
 
 function applyDoc(doc: SwotAnalysis) {
+  currentSwotId.value = doc.id
+  maturityResponseId.value = doc.maturity_response_id || null
   form.value = {
     optica: doc.optica || '',
     pilares: normalizePilares(doc.pilares),
@@ -386,6 +393,24 @@ function applyDoc(doc: SwotAnalysis) {
     veredito_titulo: doc.veredito_titulo || '',
     veredito_texto: doc.veredito_texto || '',
   }
+  const routeId = typeof route.params.id === 'string' ? route.params.id : ''
+  if (doc.id && routeId !== doc.id) {
+    void router.replace({ name: 'SwotAnalysis', params: { id: doc.id } })
+  }
+}
+
+async function loadSwot() {
+  loading.value = true
+  error.value = null
+  try {
+    const routeId = typeof route.params.id === 'string' ? route.params.id : ''
+    const doc = routeId ? await getSwotAnalysisById(routeId) : await getSwotAnalysis()
+    applyDoc(doc)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erro ao carregar SWOT.'
+  } finally {
+    loading.value = false
+  }
 }
 
 async function persist() {
@@ -398,7 +423,7 @@ async function persist() {
   saveError.value = null
   const payload: SwotAnalysisPayload = { ...form.value }
   try {
-    const updated = await updateSwotAnalysis(payload)
+    const updated = await updateSwotAnalysis(payload, currentSwotId.value)
     applyDoc(updated)
     saveState.value = 'saved'
     window.setTimeout(() => {
@@ -626,17 +651,20 @@ async function onImportFile(ev: Event) {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('pointerdown', onDocPointerDown)
-  try {
-    const doc = await getSwotAnalysis()
-    applyDoc(doc)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erro ao carregar SWOT.'
-  } finally {
-    loading.value = false
-  }
+  void loadSwot()
 })
+
+watch(
+  () => route.params.id,
+  (next, prev) => {
+    if (next === prev) return
+    // Evita reload quando só sincronizamos a URL com o id carregado
+    if (typeof next === 'string' && next === currentSwotId.value) return
+    void loadSwot()
+  }
+)
 
 onUnmounted(() => {
   document.removeEventListener('pointerdown', onDocPointerDown)
@@ -653,6 +681,13 @@ onUnmounted(() => {
           Traduz a prontidão do
           <RouterLink class="inline-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
           em FOFA estratégica — sob a ótica da estratégia de IA, da matriz ao veredito.
+        </p>
+        <p v-if="maturityResponseId" class="page-desc maturity-origin">
+          Gerada a partir do
+          <RouterLink class="inline-link" :to="`/ai-maturity/${maturityResponseId}`">
+            diagnóstico de maturidade
+          </RouterLink>
+          · esta é a SWOT em edição (a barra SWOT abre sempre a mais recente).
         </p>
       </div>
       <div class="header-actions">
@@ -1115,6 +1150,10 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.5;
   max-width: 52ch;
+}
+.page-desc.maturity-origin {
+  margin-top: 8px;
+  font-size: 13px;
 }
 .inline-link {
   color: var(--navy);

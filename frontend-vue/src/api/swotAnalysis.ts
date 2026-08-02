@@ -48,6 +48,7 @@ export interface SwotInitiative {
 
 export interface SwotAnalysis {
   id: string
+  maturity_response_id?: string | null
   optica: string
   pilares: SwotPilaresPorQuadrante
   forcas: SwotItem[]
@@ -212,11 +213,35 @@ export function emptyPilares(): SwotPilaresPorQuadrante {
   }
 }
 
+/** SWOT mais recente (cria vazia se não houver). */
 export function getSwotAnalysis(): Promise<SwotAnalysis> {
   return get<SwotAnalysis>('/api/swot-analysis')
 }
 
-export function updateSwotAnalysis(body: SwotAnalysisPayload): Promise<SwotAnalysis> {
+export function getSwotAnalysisById(id: string): Promise<SwotAnalysis> {
+  return get<SwotAnalysis>(`/api/swot-analysis/${encodeURIComponent(id)}`)
+}
+
+export function getSwotByMaturityResponse(maturityResponseId: string): Promise<SwotAnalysis> {
+  return get<SwotAnalysis>(
+    `/api/swot-analysis/by-maturity/${encodeURIComponent(maturityResponseId)}`
+  )
+}
+
+export function createSwotFromMaturity(maturityResponseId: string): Promise<SwotAnalysis> {
+  return post<SwotAnalysis>(
+    `/api/swot-analysis/from-maturity/${encodeURIComponent(maturityResponseId)}`,
+    {}
+  )
+}
+
+export function updateSwotAnalysis(
+  body: SwotAnalysisPayload,
+  swotId?: string | null
+): Promise<SwotAnalysis> {
+  if (swotId) {
+    return put<SwotAnalysis>(`/api/swot-analysis/${encodeURIComponent(swotId)}`, body)
+  }
   return put<SwotAnalysis>('/api/swot-analysis', body)
 }
 

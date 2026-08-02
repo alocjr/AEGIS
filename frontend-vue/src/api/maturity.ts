@@ -65,6 +65,7 @@ export interface MaturityMyResponse {
   tier?: MaturityTier | string
   submitted_at: string | null
   result: MaturityResult | null
+  complete?: boolean
 }
 
 /** Item resumido na lista de autoavaliações */
