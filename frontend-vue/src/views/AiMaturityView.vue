@@ -839,7 +839,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   font-weight: 600;
   font-size: clamp(1.9rem, 5.5vw, 2.6rem);
   line-height: 1.05;
-  color: var(--navy);
+  color: var(--ink);
   margin: 0 0 8px;
 }
 .page-title em {
@@ -884,13 +884,13 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   font-family: var(--serif);
   font-size: 12px;
   font-weight: 600;
-  color: var(--navy);
+  color: var(--ink);
   min-height: 14px;
 }
 .chart-bar-track {
   width: 10px;
   height: 52px;
-  background: rgba(14, 27, 51, 0.08);
+  background: rgba(198, 161, 91, 0.16);
   border-radius: 99px;
   display: flex;
   align-items: flex-end;
