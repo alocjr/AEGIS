@@ -653,6 +653,14 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
               <template v-else-if="saveState === 'error'">Falha ao salvar</template>
               <template v-else>Respostas salvas ao clicar</template>
             </span>
+            <button
+              v-if="isComplete"
+              type="button"
+              class="btn-swot"
+              @click="openSwot"
+            >
+              {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
+            </button>
           </div>
           <p v-if="selectedTierDescription" class="tier-hint">{{ selectedTierDescription }}</p>
         </div>
@@ -682,16 +690,6 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
             <span class="n">{{ dimAnswered(dim).length }}/{{ dimVisibleQuestions(dim).length }}</span>
           </button>
         </nav>
-
-        <div v-if="isComplete" class="toolbar-actions">
-          <button
-            type="button"
-            class="btn-swot"
-            @click="openSwot"
-          >
-            {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
-          </button>
-        </div>
       </div>
 
       <div class="matrix-wrap">
@@ -1104,23 +1102,23 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   opacity: 0.7;
 }
 
-.toolbar-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .btn-swot {
-  min-height: 44px;
-  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 8px 14px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
   font-family: inherit;
   transition: 0.15s;
-  width: 100%;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.2;
   border: 1px solid var(--gold);
   background: var(--gold);
   color: var(--navy);
@@ -1431,14 +1429,6 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   .chart-bars {
     height: 100px;
     gap: 16px;
-  }
-  .toolbar-actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .btn-swot {
-    width: auto;
-    min-width: 150px;
   }
 }
 
