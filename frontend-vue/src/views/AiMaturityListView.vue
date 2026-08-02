@@ -189,6 +189,14 @@ onMounted(async () => {
               <span class="list-pts-label"> pts</span>
             </div>
           </RouterLink>
+          <div class="list-actions">
+            <RouterLink :to="`/ai-maturity/${item.id}/edit`" class="btn-edit" @click.stop>
+              Editar respostas
+            </RouterLink>
+            <RouterLink :to="`/ai-maturity/${item.id}`" class="btn-result" @click.stop>
+              Ver resultado
+            </RouterLink>
+          </div>
         </li>
       </ul>
     </template>
@@ -263,23 +271,57 @@ onMounted(async () => {
   margin: 0;
 }
 .list-item {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  overflow: hidden;
 }
 .list-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px;
-  background: var(--wh);
-  border: 1px solid var(--bd);
-  border-radius: 8px;
   text-decoration: none;
   color: inherit;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.2s;
 }
 .list-link:hover {
   background: var(--k9);
-  border-color: var(--goldbd);
+}
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--bd);
+  padding-top: 12px;
+  margin-top: 0;
+}
+.btn-edit,
+.btn-result {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.btn-edit {
+  background: var(--k0);
+  color: var(--wh);
+  border: 1px solid var(--k0);
+}
+.btn-result {
+  background: #fff;
+  color: var(--k0);
+  border: 1px solid var(--bd);
+}
+.btn-edit:hover,
+.btn-result:hover {
+  opacity: 0.9;
 }
 .list-main {
   display: flex;

@@ -16,6 +16,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'agenda', name: 'Agenda', component: () => import('@/views/AgendaView.vue'), meta: { title: 'Agenda' } },
       { path: 'ai-maturity', name: 'AiMaturityList', component: () => import('@/views/AiMaturityListView.vue'), meta: { title: 'Maturidade IA' } },
       { path: 'ai-maturity/new', name: 'AiMaturityNew', component: () => import('@/views/AiMaturityView.vue'), meta: { title: 'Nova autoavaliação' } },
+      {
+        path: 'ai-maturity/:id/edit',
+        name: 'AiMaturityEdit',
+        component: () => import('@/views/AiMaturityView.vue'),
+        meta: { title: 'Editar autoavaliação' },
+      },
       { path: 'ai-maturity/:id', name: 'AiMaturityDetail', component: () => import('@/views/AiMaturityDetailView.vue'), meta: { title: 'Resultado · Maturidade IA' } },
       { path: 'projetos', name: 'ProjetosList', component: () => import('@/views/ProjetosListView.vue'), meta: { title: 'Projetos' } },
       { path: 'projetos/:id', name: 'ProjetoCanvas', component: () => import('@/views/ProjetoCanvasView.vue'), meta: { title: 'Canvas · Projeto' } },

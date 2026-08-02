@@ -412,10 +412,13 @@ onMounted(async () => {
       </section>
 
       <div class="actions">
+        <RouterLink :to="`/ai-maturity/${responseId}/edit`" class="btn-primary">
+          Editar respostas
+        </RouterLink>
         <button
           v-if="isComplete"
           type="button"
-          class="btn-primary"
+          class="btn-ghost"
           :disabled="swotBusy"
           @click="openSwot"
         >
@@ -856,10 +859,16 @@ onMounted(async () => {
   background: var(--wh);
   color: var(--k0);
   border: 1px solid var(--bd);
+  cursor: pointer;
+  font-family: inherit;
 }
-.btn-ghost:hover {
+.btn-ghost:hover:not(:disabled) {
   border-color: var(--goldbd);
   background: var(--k9);
+}
+.btn-ghost:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 /* —— Tablet+ —— */

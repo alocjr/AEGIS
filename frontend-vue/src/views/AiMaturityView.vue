@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   fetchMaturityModel,
+  fetchMaturityResponseById,
   saveMaturityResponse,
   type MaturityDimension,
   type MaturityModel,
@@ -14,6 +15,7 @@ import {
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
 
+const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -21,6 +23,10 @@ const model = ref<MaturityModel | null>(null)
 const answers = ref<Record<string, number>>({})
 const selectedTier = ref<MaturityTier>('basico')
 const responseId = ref<string | null>(null)
+const isEditingExisting = computed(() => route.name === 'AiMaturityEdit')
+const editResponseId = computed(() =>
+  isEditingExisting.value && typeof route.params.id === 'string' ? route.params.id : null
+)
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
 const swotId = ref<string | null>(null)
@@ -187,6 +193,10 @@ async function persistAnswers() {
     const payload: Record<string, number> = { ...answers.value }
     const result = await saveMaturityResponse(payload, selectedTier.value, responseId.value)
     responseId.value = result.id
+    // Nova avaliação: após o 1º save, passa a editar o mesmo registro na URL
+    if (route.name === 'AiMaturityNew' && result.id) {
+      await router.replace({ name: 'AiMaturityEdit', params: { id: result.id } })
+    }
     saveState.value = 'saved'
   } catch (e) {
     saveState.value = 'error'
@@ -211,6 +221,20 @@ function schedulePersist() {
 onMounted(async () => {
   try {
     model.value = await fetchMaturityModel()
+    const existingId = editResponseId.value
+    if (existingId) {
+      const resp = await fetchMaturityResponseById(existingId)
+      responseId.value = resp.id
+      const tier = (resp.tier || 'basico') as MaturityTier
+      selectedTier.value = TIER_KEYS.includes(tier) ? tier : 'basico'
+      const loaded: Record<string, number> = {}
+      for (const [qid, raw] of Object.entries(resp.answers || {})) {
+        const n = Number(raw)
+        if (Number.isFinite(n) && n >= 1 && n <= 5) loaded[qid] = n
+      }
+      answers.value = loaded
+      await refreshSwotLink()
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar modelo.'
   } finally {
@@ -274,10 +298,7 @@ async function openSwot() {
     if (!responseId.value) {
       throw new Error('Salve as respostas antes de criar a SWOT.')
     }
-    if (swotId.value) {
-      await router.push({ name: 'SwotAnalysis', params: { id: swotId.value } })
-      return
-    }
+    // Cria ou regenera a partir das respostas atuais (upsert no backend)
     const created = await createSwotFromMaturity(responseId.value)
     swotId.value = created.id
     await router.push({ name: 'SwotAnalysis', params: { id: created.id } })
@@ -310,14 +331,26 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
     <div v-else-if="error" class="state-card error">{{ error }}</div>
 
     <template v-else-if="model">
+      <nav v-if="isEditingExisting && responseId" class="edit-nav">
+        <RouterLink :to="`/ai-maturity/${responseId}`" class="edit-back">← Ver resultado</RouterLink>
+        <RouterLink to="/ai-maturity" class="edit-back muted">Todas as autoavaliações</RouterLink>
+      </nav>
       <header class="page-header">
         <div class="header-main">
-          <p class="eyebrow">Instrumento diagnóstico · Valorian</p>
+          <p class="eyebrow">
+            {{ isEditingExisting ? 'Editando autoavaliação · Valorian' : 'Instrumento diagnóstico · Valorian' }}
+          </p>
           <h1 class="page-title">Maturidade em <em>IA</em></h1>
           <p class="page-desc">
-            Avalie a organização em quatro dimensões. Escolha a abrangência do diagnóstico
-            (Básico, Completo ou Complementar) e, em cada pergunta, selecione a alternativa
-            na escala de maturidade de 1 a 5 que melhor descreve a realidade da empresa.
+            <template v-if="isEditingExisting">
+              Suas respostas foram carregadas. Altere o que precisar — o salvamento continua automático
+              e o resultado (e a SWOT, se existir) acompanham as mudanças.
+            </template>
+            <template v-else>
+              Avalie a organização em quatro dimensões. Escolha a abrangência do diagnóstico
+              (Básico, Completo ou Complementar) e, em cada pergunta, selecione a alternativa
+              na escala de maturidade de 1 a 5 que melhor descreve a realidade da empresa.
+            </template>
           </p>
         </div>
 
@@ -399,7 +432,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
               swotBusy
                 ? 'Gerando…'
                 : swotId
-                  ? 'Abrir SWOT'
+                  ? 'Atualizar SWOT'
                   : 'Criar SWOT'
             }}
           </button>
@@ -535,6 +568,25 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 </template>
 
 <style scoped>
+.edit-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-bottom: 14px;
+}
+.edit-back {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy, #0e1b33);
+  text-decoration: none;
+}
+.edit-back:hover {
+  color: var(--gold, #c6a15b);
+}
+.edit-back.muted {
+  color: var(--muted, #6e6a60);
+  font-weight: 500;
+}
 .wrap {
   --navy: #0e1b33;
   --navy-2: #16243f;
