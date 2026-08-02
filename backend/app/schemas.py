@@ -54,6 +54,7 @@ class MaterialCheckRequest(BaseModel):
 
 class MaturityAnswersRequest(BaseModel):
     answers: dict[str, int]
+    tier: str = "basico"
 
 
 OPPORTUNITY_TYPE_OPTIONS = (

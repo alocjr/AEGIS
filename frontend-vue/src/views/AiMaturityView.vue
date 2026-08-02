@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Plotly from 'plotly.js-dist-min'
 import {
   fetchMaturityModel,
   saveMaturityResponse,
+  type MaturityDimension,
   type MaturityModel,
-  type MaturityResult,
+  type MaturityQuestion,
+  type MaturityTier,
 } from '@/api/maturity'
 
 const router = useRouter()
@@ -14,74 +15,141 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const model = ref<MaturityModel | null>(null)
 const answers = ref<Record<string, number>>({})
+const selectedTier = ref<MaturityTier>('basico')
 const saving = ref(false)
 const saveInfo = ref('')
+const swotCreated = ref(false)
 
-const gaugeEl = ref<HTMLDivElement | null>(null)
-const radarEl = ref<HTMLDivElement | null>(null)
-const dimBarsEl = ref<HTMLDivElement | null>(null)
-
-const scale = ref<{ value: number; label: string }[]>([])
-const displayedResult = ref<MaturityResult | null>(null)
-
-/* Paleta alinhada ao slider: cinza claro → dourado → navy */
-const CHART_COLORS = {
-  navy: '#0c2340',
-  gold: '#9b7e46',
-  step0: '#e2e2e7',
-  step1: 'rgba(155, 126, 70, 0.18)',
-  step2: 'rgba(155, 126, 70, 0.4)',
-  step3: '#9b7e46',
-  step4: '#0c2340',
-  radarFill: 'rgba(155, 126, 70, 0.25)',
+const TIER_KEYS: MaturityTier[] = ['basico', 'completo', 'complementar']
+const TIER_ORDER: Record<MaturityTier, number> = { basico: 0, completo: 1, complementar: 2 }
+const TIER_LABEL_SHORT: Record<MaturityTier, string> = {
+  basico: 'Básico',
+  completo: 'Completo',
+  complementar: 'Complementar',
 }
-
-const totalQuestions = computed(() => {
-  const m = model.value
-  if (!m?.dimensions) return 0
-  return m.dimensions.reduce((acc, d) => acc + (d.questions?.length ?? 0), 0)
-})
-
-const scaleBounds = computed(() => {
-  const s = scale.value
-  if (!s.length) return { min: 1, max: 5 }
-  const vals = s.map((x) => x.value)
-  return { min: Math.min(...vals), max: Math.max(...vals) }
-})
-
-function getLabelForValue(val: number): string {
-  return scale.value.find((o) => o.value === val)?.label ?? String(val)
+const DIMENSION_COLORS: Record<string, string> = {
+  strategy: 'var(--dim-strategy)',
+  data_infra: 'var(--dim-data)',
+  people_culture: 'var(--dim-people)',
+  gov_risk: 'var(--dim-gov)',
 }
+const DIMENSION_ABBR: Record<string, string> = {
+  strategy: 'Est',
+  data_infra: 'Dad',
+  people_culture: 'Pes',
+  gov_risk: 'Gov',
+}
+const QUAD_LABEL = { s: 'Força', w: 'Fraqueza', o: 'Oportunidade', t: 'Ameaça' } as const
 
-function getLevelByScore(score: number): { label?: string; description?: string } | null {
-  const m = model.value
-  if (!m?.scoring_logic) return null
-  for (const k of Object.keys(m.scoring_logic)) {
-    const it = m.scoring_logic[k]
-    if (score >= it.min && score <= it.max) return it
+type EnrichedQuestion = MaturityQuestion & { dimId: string; dimName: string }
+
+const questionIndex = computed(() => {
+  const idx: Record<string, EnrichedQuestion> = {}
+  for (const dim of model.value?.dimensions ?? []) {
+    for (const q of dim.questions ?? []) {
+      idx[q.id] = { ...q, dimId: dim.id, dimName: dim.name }
+    }
   }
-  return null
+  return idx
+})
+
+function tierIndexOf(tier: string): number {
+  return TIER_ORDER[tier as MaturityTier] ?? 99
 }
 
-function setAnswer(qid: string, val: number) {
-  answers.value = { ...answers.value, [qid]: val }
+function isVisibleTier(tier: string): boolean {
+  return tierIndexOf(tier) <= tierIndexOf(selectedTier.value)
+}
+
+function totalForTier(tier: MaturityTier): number {
+  return model.value?.levels?.[tier]?.question_count ?? 0
+}
+
+function naturalCompare(a: string, b: string): number {
+  const ma = a.match(/^([A-Za-z]+)(\d+)$/)
+  const mb = b.match(/^([A-Za-z]+)(\d+)$/)
+  const la = ma?.[1] ?? a
+  const lb = mb?.[1] ?? b
+  const na = Number(ma?.[2] ?? 0)
+  const nb = Number(mb?.[2] ?? 0)
+  if (la !== lb) return la < lb ? -1 : 1
+  return na - nb
+}
+
+function sortedQuestions(dim: MaturityDimension): MaturityQuestion[] {
+  return [...(dim.questions ?? [])].sort((a, b) => naturalCompare(a.id, b.id))
+}
+
+function originLine(q: MaturityQuestion): string {
+  if (q.originType === 'modelo_rapido') {
+    return `Pergunta base do Modelo Rápido (${q.ref ?? '—'})`
+  }
+  return `Deriva do CSF ${q.csfId ?? '—'} · ${q.csfName ?? ''}`
+}
+
+const visibleQuestionIds = computed(() =>
+  Object.keys(questionIndex.value).filter((id) => {
+    const q = questionIndex.value[id]
+    return !!q && isVisibleTier(q.tier)
+  })
+)
+
+const answeredCount = computed(
+  () => visibleQuestionIds.value.filter((id) => answers.value[id] != null).length
+)
+
+const totalVisible = computed(() => totalForTier(selectedTier.value))
+
+const isComplete = computed(
+  () => totalVisible.value > 0 && answeredCount.value === totalVisible.value
+)
+
+const progressPct = computed(() =>
+  totalVisible.value ? (answeredCount.value / totalVisible.value) * 100 : 0
+)
+
+const progressLabel = computed(() => {
+  const answered = answeredCount.value
+  const total = totalVisible.value
+  if (answered === 0) return 'Nenhuma pergunta respondida ainda'
+  if (answered === total) {
+    const v = computeVerdict()
+    return `Diagnóstico ${TIER_LABEL_SHORT[selectedTier.value].toLowerCase()} completo · ${v.sum}/${v.maxScore} pts · ${v.band.label}`
+  }
+  return `${total - answered} pergunta(s) restante(s) no nível ${TIER_LABEL_SHORT[selectedTier.value]}`
+})
+
+function dimVisibleQuestions(dim: MaturityDimension): MaturityQuestion[] {
+  return (dim.questions ?? []).filter((q) => isVisibleTier(q.tier))
+}
+
+function dimAnswered(dim: MaturityDimension): MaturityQuestion[] {
+  return dimVisibleQuestions(dim).filter((q) => answers.value[q.id] != null)
+}
+
+function dimAvg(dim: MaturityDimension): number | null {
+  const answered = dimAnswered(dim)
+  if (!answered.length) return null
+  return answered.reduce((acc, q) => acc + Number(answers.value[q.id]), 0) / answered.length
+}
+
+function setTier(key: MaturityTier) {
+  selectedTier.value = key
+}
+
+function toggleSelect(qid: string, lvl: number) {
+  if (answers.value[qid] === lvl) {
+    const next = { ...answers.value }
+    delete next[qid]
+    answers.value = next
+  } else {
+    answers.value = { ...answers.value, [qid]: lvl }
+  }
 }
 
 onMounted(async () => {
   try {
-    const mod = await fetchMaturityModel()
-    model.value = mod
-    scale.value =
-      mod.answer_scale?.map((s) => ({ value: s.value, label: s.label })) ?? []
-    const defaultVal = scale.value[0]?.value ?? 1
-    const withDefaults: Record<string, number> = {}
-    for (const dim of mod.dimensions ?? []) {
-      for (const q of dim.questions ?? []) {
-        withDefaults[q.id] = defaultVal
-      }
-    }
-    answers.value = withDefaults
-    displayedResult.value = null
+    model.value = await fetchMaturityModel()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar modelo.'
   } finally {
@@ -89,180 +157,389 @@ onMounted(async () => {
   }
 })
 
-watch(
-  displayedResult,
-  async (result) => {
-    await nextTick()
-    if (!model.value || !result) {
-      if (gaugeEl.value) Plotly.purge(gaugeEl.value)
-      if (radarEl.value) Plotly.purge(radarEl.value)
-      if (dimBarsEl.value) Plotly.purge(dimBarsEl.value)
-      return
-    }
-    const level =
-      result.level ?? getLevelByScore(result.total_score) ?? {
-        label: '-',
-        description: '-',
-      }
+/* ---------- SWOT / verdict ---------- */
+type BucketItem = {
+  code: string
+  lvl: number
+  title: string
+  dimLabel: string
+  evidence: string
+  why: string
+}
+type Buckets = Record<'s' | 'w' | 'o' | 't', BucketItem[]>
 
-    if (gaugeEl.value) {
-      Plotly.newPlot(
-        gaugeEl.value,
-        [
-          {
-            type: 'indicator',
-            mode: 'gauge+number',
-            value: result.percent_score,
-            number: { suffix: '%', font: { size: 36 } },
-            gauge: {
-              axis: { range: [0, 100], tickwidth: 1 },
-              bar: { color: CHART_COLORS.navy },
-              bgcolor: 'white',
-              borderwidth: 2,
-              bordercolor: CHART_COLORS.navy,
-              steps: [
-                { range: [0, 20], color: CHART_COLORS.step0 },
-                { range: [20, 40], color: CHART_COLORS.step1 },
-                { range: [40, 60], color: CHART_COLORS.step2 },
-                { range: [60, 80], color: CHART_COLORS.step3 },
-                { range: [80, 100], color: CHART_COLORS.step4 },
-              ],
-              threshold: {
-                line: { color: CHART_COLORS.gold, width: 3 },
-                value: result.percent_score,
-              },
-            },
-          },
-        ],
-        {
-          margin: { t: 20, r: 30, b: 20, l: 30 },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          font: {
-            family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
-          },
-        },
-        { displayModeBar: false, responsive: true }
-      )
+function buildBuckets(): Buckets {
+  const buckets: Buckets = { s: [], w: [], o: [], t: [] }
+  for (const code of Object.keys(answers.value)) {
+    const q = questionIndex.value[code]
+    if (!q || !isVisibleTier(q.tier)) continue
+    const lvl = Number(answers.value[code])
+    const evidence = q.levels[String(lvl)] ?? ''
+    const isExternal = !!(q.csfId && q.csfId.startsWith('R'))
+    let quad: keyof Buckets
+    let why: string
+    if (isExternal) {
+      quad = lvl >= 4 ? 'o' : 't'
+      why =
+        quad === 'o'
+          ? `Requisito regulatório (${q.dimName}) em nível ${lvl}: cenário já favorável — dá para explorar essa vantagem.`
+          : `Requisito regulatório (${q.dimName}) em nível ${lvl}: exposição a risco externo — precisa de plano de mitigação.`
+    } else {
+      quad = lvl >= 4 ? 's' : 'w'
+      why =
+        quad === 's'
+          ? `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade já madura e controlável pela empresa — pode virar alavanca.`
+          : `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade ainda imatura, mas está sob controle da empresa corrigir.`
     }
+    buckets[quad].push({ code, lvl, title: q.text, dimLabel: q.dimName, evidence, why })
+  }
+  ;(['s', 'w', 'o', 't'] as const).forEach((k) =>
+    buckets[k].sort((a, b) => naturalCompare(a.code, b.code))
+  )
+  return buckets
+}
 
-    const dims = model.value.dimensions ?? []
-    if (radarEl.value && dims.length) {
-      const dimNames = dims.map((d) => d.name)
-      const dimValues = dims.map(
-        (d) => (result.dimension_scores?.[d.id] || {}).avg || 0
-      )
-      Plotly.newPlot(
-        radarEl.value,
-        [
-          {
-            type: 'scatterpolar',
-            r: [...dimValues, dimValues[0]],
-            theta: [...dimNames, dimNames[0]],
-            fill: 'toself',
-            name: 'Maturidade',
-            line: { color: CHART_COLORS.navy, width: 2 },
-            fillcolor: CHART_COLORS.radarFill,
-            marker: {
-              size: 8,
-              color: CHART_COLORS.gold,
-              line: { color: '#fff', width: 1.5 },
-            },
-          },
-        ],
-        {
-          autosize: true,
-          margin: { t: 36, r: 80, b: 36, l: 80 },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          font: {
-            family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
-            size: 12,
-            color: '#1c1c1c',
-          },
-          polar: {
-            bgcolor: 'rgba(0,0,0,0)',
-            domain: { x: [0.08, 0.92], y: [0.08, 0.92] },
-            radialaxis: {
-              visible: true,
-              range: [0, 5],
-              tickvals: [1, 2, 3, 4, 5],
-              tickfont: { size: 11, color: '#505050' },
-              gridcolor: '#e2e2e2',
-              linecolor: '#c8c8c8',
-              linewidth: 1,
-            },
-            angularaxis: {
-              tickfont: { size: 11, color: '#505050' },
-              gridcolor: '#e2e2e2',
-              linecolor: '#c8c8c8',
-            },
-          },
-          showlegend: false,
-        },
-        { displayModeBar: false, responsive: true }
-      )
-    }
-
-    if (dimBarsEl.value && dims.length) {
-      const dimNames = dims.map((d) => d.name)
-      const dimPcts = dims.map((d) => {
-        const ds = result.dimension_scores?.[d.id] || {}
-        const max = ds.max || 1
-        return max ? Math.round((ds.score / max) * 100) : 0
-      })
-      Plotly.newPlot(
-        dimBarsEl.value,
-        [
-          {
-            type: 'bar',
-            y: dimNames,
-            x: dimPcts,
-            orientation: 'h',
-            marker: {
-              color: dimPcts.map((p) => {
-                if (p >= 80) return CHART_COLORS.step4
-                if (p >= 60) return CHART_COLORS.step3
-                if (p >= 40) return CHART_COLORS.step2
-                if (p >= 20) return CHART_COLORS.step1
-                return CHART_COLORS.step0
-              }),
-            },
-            text: dimPcts.map((p) => p + '%'),
-            textposition: 'outside',
-          },
-        ],
-        {
-          margin: { t: 10, r: 60, b: 40, l: 140 },
-          xaxis: { range: [0, 105], title: 'Percentual', ticksuffix: '%' },
-          yaxis: { automargin: true },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-        },
-        { displayModeBar: false, responsive: true }
-      )
-    }
-  },
-  { immediate: true }
-)
-
-async function saveAnswers() {
-  if (!model.value) return
-  const missing: string[] = []
-  for (const dim of model.value.dimensions ?? []) {
-    for (const q of dim.questions ?? []) {
-      if (answers.value[q.id] == null) missing.push(q.id)
+function computeVerdict() {
+  const visibleAnswered = Object.keys(answers.value).filter((id) => {
+    const q = questionIndex.value[id]
+    return !!q && isVisibleTier(q.tier)
+  })
+  const sum = visibleAnswered.reduce((acc, c) => {
+    const q = questionIndex.value[c]
+    return acc + Number(answers.value[c]) * (q?.weight || 1)
+  }, 0)
+  const maxScore = model.value?.levels?.[selectedTier.value]?.max_score ?? totalVisible.value * 5
+  const tierScoring = model.value?.scoring?.[selectedTier.value] ?? {}
+  let band = { label: '—', description: '' }
+  for (const key of ['level_1', 'level_2', 'level_3', 'level_4', 'level_5']) {
+    const b = tierScoring[key]
+    if (b && sum >= b.min && sum <= b.max) {
+      band = { label: b.label ?? key, description: b.description ?? '' }
+      break
     }
   }
-  if (missing.length) {
-    alert('Responda todas as perguntas antes de salvar.')
+  const dimAverages = (model.value?.dimensions ?? [])
+    .map((dim) => {
+      const answered = dimAnswered(dim)
+      const avg = answered.length
+        ? answered.reduce((a, q) => a + Number(answers.value[q.id]), 0) / answered.length
+        : 0
+      return { label: dim.name, avg, answeredCount: answered.length }
+    })
+    .filter((d) => d.answeredCount > 0)
+  const strongest = dimAverages.length
+    ? dimAverages.reduce((a, b) => (b.avg > a.avg ? b : a))
+    : null
+  const weakest = dimAverages.length
+    ? dimAverages.reduce((a, b) => (b.avg < a.avg ? b : a))
+    : null
+  return { sum, maxScore, band, strongest, weakest }
+}
+
+function escapeHtml(str: string): string {
+  return String(str).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  )
+}
+
+function pairSentences(
+  listA: BucketItem[],
+  listB: BucketItem[],
+  template: (a: BucketItem, b: BucketItem) => string,
+  capacity: number
+): string[] {
+  if (!listA.length || !listB.length) return []
+  const n = Math.min(capacity, Math.max(listA.length, listB.length))
+  const out: string[] = []
+  for (let i = 0; i < n; i++) {
+    const a = listA[i % listA.length]!
+    const b = listB[i % listB.length]!
+    out.push(template(a, b))
+  }
+  return [...new Set(out)]
+}
+
+function buildTowsCells(buckets: Buckets) {
+  return {
+    so: pairSentences(
+      buckets.s,
+      buckets.o,
+      (a, b) =>
+        `Usar «${a.title}» (força ${a.code}) para aproveitar «${b.title}» (oportunidade ${b.code}).`,
+      4
+    ),
+    st: pairSentences(
+      buckets.s,
+      buckets.t,
+      (a, b) =>
+        `Usar «${a.title}» (força ${a.code}) para conter o risco de «${b.title}» (ameaça ${b.code}).`,
+      4
+    ),
+    wo: pairSentences(
+      buckets.w,
+      buckets.o,
+      (a, b) =>
+        `Aproveitar «${b.title}» (oportunidade ${b.code}) como janela para corrigir «${a.title}» (fraqueza ${a.code}).`,
+      4
+    ),
+    wt: pairSentences(
+      buckets.w,
+      buckets.t,
+      (a, b) =>
+        `Plano defensivo: tratar «${a.title}» (fraqueza ${a.code}) antes que «${b.title}» (ameaça ${b.code}) vire problema real.`,
+      4
+    ),
+  }
+}
+
+function quadItemsHtml(items: BucketItem[], q: keyof typeof QUAD_LABEL): string {
+  if (!items.length) return `<li class="empty">Nenhuma pergunta classificada aqui.</li>`
+  return items
+    .map(
+      (item) => `
+      <li>
+        <span class="code">${item.code} · N${item.lvl}</span>
+        <span class="lbl">
+          <span class="item-title">${escapeHtml(item.title)}</span>
+          <span class="pillar-tag">${escapeHtml(item.dimLabel)}</span>
+          <span class="why"><b>Por quê ${QUAD_LABEL[q].toLowerCase()}:</b> "${escapeHtml(item.evidence)}" — ${escapeHtml(item.why)}</span>
+        </span>
+      </li>`
+    )
+    .join('')
+}
+
+function towsItemsHtml(sentences: string[]): string {
+  if (!sentences.length) return `<li class="empty">Sem itens suficientes para cruzar nesta combinação.</li>`
+  return sentences.map((s) => `<li>${escapeHtml(s)}</li>`).join('')
+}
+
+const SWOT_PAGE_CSS = `
+  :root{
+    --ink:#171b20; --paper:#f4f1ea; --panel:#12181f;
+    --hairline:#2c3743; --card:#fffdf8; --card-border:#e4ddc9;
+    --gold:#c8963e; --gold-strong:#a8752a; --muted:#6b7280; --muted-inv:#9aa7b4;
+    --lvl1:#b6543f; --lvl5:#3f8563; --dim-data:#3d6fa8; --radius:3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page-header{
+    background:var(--panel); color:var(--paper);
+    padding:28px 18px; border-bottom:1px solid var(--hairline);
+  }
+  .page-header .inner{ max-width:920px; margin:0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .page-header .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--gold); margin:0 0 8px;
+  }
+  .page-header h1{
+    font-family:'Fraunces', serif; font-weight:600; font-size:clamp(22px,4.5vw,32px);
+    margin:0 0 6px; letter-spacing:-.01em;
+  }
+  .page-header .meta{ font-size:12px; color:var(--muted-inv); margin:0; }
+  .print-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+    letter-spacing:.04em; text-transform:uppercase;
+    padding:9px 16px; border-radius:99px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold); cursor:pointer; flex:0 0 auto;
+  }
+  .print-btn:hover{ background:var(--gold); color:#1a1005; }
+  main{ max-width:920px; margin:0 auto; padding:26px 18px 60px; }
+  .swot-section{ margin-bottom:30px; }
+  .swot-section-title{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--gold-strong); margin:0 0 12px;
+    padding-bottom:6px; border-bottom:1px solid var(--card-border);
+  }
+  .swot-rule{ font-size:13px; line-height:1.6; color:var(--muted); max-width:760px; margin:0 0 14px; }
+  .swot-rule strong{ color:var(--ink); }
+  .swot-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .swot-quad{
+    background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius);
+    border-top:4px solid; padding:14px 16px 16px; break-inside:avoid;
+  }
+  .swot-quad[data-q="s"]{ border-top-color:var(--lvl5); }
+  .swot-quad[data-q="w"]{ border-top-color:var(--lvl1); }
+  .swot-quad[data-q="o"]{ border-top-color:var(--dim-data); }
+  .swot-quad[data-q="t"]{ border-top-color:var(--gold-strong); }
+  .swot-quad h3{
+    font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin:0 0 10px;
+    display:flex; align-items:center; gap:8px; color:var(--ink);
+  }
+  .swot-quad[data-q="s"] h3{ color:var(--lvl5); }
+  .swot-quad[data-q="w"] h3{ color:var(--lvl1); }
+  .swot-quad[data-q="o"] h3{ color:var(--dim-data); }
+  .swot-quad[data-q="t"] h3{ color:var(--gold-strong); }
+  .swot-count{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--muted);
+    background:var(--paper); border-radius:99px; padding:1px 8px;
+  }
+  .swot-quad ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .swot-quad li{ display:flex; align-items:flex-start; gap:8px; padding:9px 10px; background:var(--paper); border-radius:3px; }
+  .swot-quad li .code{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; flex:0 0 auto;
+    padding:1px 6px; border-radius:3px; background:var(--card); border:1px solid var(--card-border); margin-top:1px;
+  }
+  .swot-quad li .lbl{ color:var(--ink); flex:1; min-width:0; }
+  .swot-quad li .lbl .item-title{ font-size:12.5px; font-weight:600; line-height:1.35; display:block; }
+  .swot-quad li .lbl .pillar-tag{ display:block; font-size:10px; color:var(--muted); font-style:italic; margin-top:2px; }
+  .swot-quad li .lbl .why{
+    display:block; font-size:11.5px; line-height:1.45; color:var(--muted);
+    margin-top:5px; padding-top:5px; border-top:1px dashed var(--card-border);
+  }
+  .swot-quad li .lbl .why b{ color:var(--ink); font-weight:600; }
+  .swot-quad .empty{ font-size:12px; color:var(--muted); font-style:italic; }
+  .tows-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .tows-cell{ background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:14px 16px 16px; break-inside:avoid; }
+  .tows-cell h4{ font-family:'Fraunces', serif; font-weight:600; font-size:14.5px; margin:0 0 10px; color:var(--ink); display:flex; flex-direction:column; gap:2px; }
+  .tows-cell h4 span{ font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .tows-cell[data-t="so"]{ border-left:4px solid var(--lvl5); }
+  .tows-cell[data-t="st"]{ border-left:4px solid var(--dim-data); }
+  .tows-cell[data-t="wo"]{ border-left:4px solid var(--gold-strong); }
+  .tows-cell[data-t="wt"]{ border-left:4px solid var(--lvl1); }
+  .tows-cell ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
+  .tows-cell li{ font-size:12px; line-height:1.45; color:var(--ink); padding:8px 10px; background:var(--paper); border-radius:3px; }
+  .tows-cell .empty{ font-size:12px; color:var(--muted); font-style:italic; }
+  .verdict-card{ display:flex; flex-direction:column; gap:14px; background:var(--panel); color:var(--paper); border-radius:6px; padding:22px; break-inside:avoid; }
+  .verdict-score{ display:flex; align-items:baseline; gap:4px; font-family:'Fraunces', serif; font-weight:700; }
+  .verdict-number{ font-size:44px; color:var(--gold); line-height:1; }
+  .verdict-max{ font-size:16px; color:var(--muted-inv); }
+  .verdict-band{ font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold); margin:0; font-weight:700; }
+  .verdict-text{ font-size:13.5px; line-height:1.6; color:var(--muted-inv); margin:0; }
+  .verdict-text b{ color:var(--paper); }
+  @media (min-width: 700px){
+    .swot-grid{ grid-template-columns:1fr 1fr; }
+    .tows-grid{ grid-template-columns:1fr 1fr; }
+    .verdict-card{ flex-direction:row; align-items:center; gap:26px; }
+    .verdict-score{ flex:0 0 auto; }
+  }
+  @media print{
+    .print-btn{ display:none; }
+    body{ background:#fff; }
+  }
+`
+
+function buildSwotPageHtml(
+  buckets: Buckets,
+  cells: ReturnType<typeof buildTowsCells>,
+  verdict: ReturnType<typeof computeVerdict>
+): string {
+  const stamp = new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })
+  const title = model.value?.assessment_title || model.value?.title || 'Diagnóstico de Maturidade em IA'
+  const total = totalForTier(selectedTier.value)
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz SWOT — ${escapeHtml(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${SWOT_PAGE_CSS}</style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="inner">
+      <div>
+        <p class="eyebrow">Gerado a partir de ${total} respostas · nível ${TIER_LABEL_SHORT[selectedTier.value]} · ${escapeHtml(stamp)}</p>
+        <h1>Matriz SWOT — ${escapeHtml(title)}</h1>
+        <p class="meta">Página independente — pode ser impressa, salva ou compartilhada separadamente do formulário.</p>
+      </div>
+      <button type="button" class="print-btn" onclick="window.print()">Imprimir / salvar PDF</button>
+    </div>
+  </header>
+  <main>
+    <section class="swot-section">
+      <h2 class="swot-section-title">1 · Como lemos suas respostas</h2>
+      <p class="swot-rule">
+        Perguntas ligadas a dimensões internas <strong>(Estratégia e Visão, Dados e Infraestrutura, Pessoas e Cultura, e a parte de Governança de Governança e Risco)</strong> com nível 4–5 viram <strong>Força</strong>, com nível 1–3 viram <strong>Fraqueza</strong>. Perguntas ligadas a requisitos regulatórios <strong>(CSFs de origem "R" dentro de Governança e Risco)</strong> com nível 4–5 viram <strong>Oportunidade</strong>, com nível 1–3 viram <strong>Ameaça</strong>. Cada item abaixo traz a evidência (sua resposta) e a regra aplicada.
+      </p>
+    </section>
+    <section class="swot-section">
+      <h2 class="swot-section-title">2 · Matriz SWOT</h2>
+      <div class="swot-grid">
+        <div class="swot-quad" data-q="s"><h3>Forças <span class="swot-count">${buckets.s.length}</span></h3><ul>${quadItemsHtml(buckets.s, 's')}</ul></div>
+        <div class="swot-quad" data-q="o"><h3>Oportunidades <span class="swot-count">${buckets.o.length}</span></h3><ul>${quadItemsHtml(buckets.o, 'o')}</ul></div>
+        <div class="swot-quad" data-q="w"><h3>Fraquezas <span class="swot-count">${buckets.w.length}</span></h3><ul>${quadItemsHtml(buckets.w, 'w')}</ul></div>
+        <div class="swot-quad" data-q="t"><h3>Ameaças <span class="swot-count">${buckets.t.length}</span></h3><ul>${quadItemsHtml(buckets.t, 't')}</ul></div>
+      </div>
+    </section>
+    <section class="swot-section">
+      <h2 class="swot-section-title">3 · Cruzamento TOWS</h2>
+      <p class="swot-rule">Combina os quadrantes para sugerir movimentos: usar forças para capturar oportunidades ou conter ameaças, e decidir o que fazer com as fraquezas.</p>
+      <div class="tows-grid">
+        <div class="tows-cell" data-t="so"><h4>SO — Ofensiva <span>Força + Oportunidade</span></h4><ul>${towsItemsHtml(cells.so)}</ul></div>
+        <div class="tows-cell" data-t="st"><h4>ST — Confronto <span>Força + Ameaça</span></h4><ul>${towsItemsHtml(cells.st)}</ul></div>
+        <div class="tows-cell" data-t="wo"><h4>WO — Reforço <span>Fraqueza + Oportunidade</span></h4><ul>${towsItemsHtml(cells.wo)}</ul></div>
+        <div class="tows-cell" data-t="wt"><h4>WT — Defesa <span>Fraqueza + Ameaça</span></h4><ul>${towsItemsHtml(cells.wt)}</ul></div>
+      </div>
+    </section>
+    <section class="swot-section">
+      <h2 class="swot-section-title">4 · Veredito</h2>
+      <div class="verdict-card">
+        <div class="verdict-score">
+          <span class="verdict-number">${verdict.sum}</span>
+          <span class="verdict-max">/${verdict.maxScore} pts</span>
+        </div>
+        <div class="verdict-body">
+          <p class="verdict-band">${escapeHtml(verdict.band.label)}</p>
+          <p class="verdict-text">
+            ${escapeHtml(verdict.band.description)}
+            ${
+              verdict.strongest && verdict.weakest
+                ? ` A dimensão mais madura é <b>${escapeHtml(verdict.strongest.label)}</b> (média ${verdict.strongest.avg.toFixed(1)}) — é aí que a empresa tem mais margem para alavancar resultado agora. A dimensão mais frágil é <b>${escapeHtml(verdict.weakest.label)}</b> (média ${verdict.weakest.avg.toFixed(1)}) — é a primeira candidata a plano de ação, antes que vire gargalo para as demais.`
+                : ''
+            }
+            No total: <b>${buckets.s.length} força(s)</b>, <b>${buckets.w.length} fraqueza(s)</b>, <b>${buckets.o.length} oportunidade(s)</b> e <b>${buckets.t.length} ameaça(s)</b>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>`
+}
+
+function openSwot() {
+  if (!isComplete.value) return
+  swotCreated.value = true
+  const buckets = buildBuckets()
+  const cells = buildTowsCells(buckets)
+  const verdict = computeVerdict()
+  const html = buildSwotPageHtml(buckets, cells, verdict)
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  const win = window.open(url, '_blank')
+  if (!win) {
+    alert('O navegador bloqueou a abertura da nova aba. Permita pop-ups para este site e tente novamente.')
+  } else {
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+  }
+}
+
+async function saveAnswers() {
+  if (!model.value || !isComplete.value) {
+    alert('Responda todas as perguntas do nível selecionado antes de salvar.')
     return
   }
   saving.value = true
   try {
-    const result = await saveMaturityResponse(answers.value)
-    displayedResult.value = result.result
-    saveInfo.value =
-      'Salvo em ' + new Date(result.submitted_at).toLocaleString('pt-BR')
-    setTimeout(() => router.push('/ai-maturity'), 1500)
+    const payload: Record<string, number> = {}
+    for (const id of visibleQuestionIds.value) {
+      const val = answers.value[id]
+      if (val != null) payload[id] = val
+    }
+    const result = await saveMaturityResponse(payload, selectedTier.value)
+    saveInfo.value = 'Salvo em ' + new Date(result.submitted_at).toLocaleString('pt-BR')
+    setTimeout(() => router.push('/ai-maturity'), 1200)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao salvar.'
   } finally {
@@ -270,601 +547,933 @@ async function saveAnswers() {
   }
 }
 
-function clearForm() {
-  const defaultVal = scale.value[0]?.value ?? 1
-  const withDefaults: Record<string, number> = {}
-  for (const dim of model.value?.dimensions ?? []) {
-    for (const q of dim.questions ?? []) {
-      withDefaults[q.id] = defaultVal
-    }
+function scrollToDim(idx: number) {
+  document.getElementById(`dim-${idx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    toggleSelect(qid, lvl)
   }
-  answers.value = withDefaults
-  displayedResult.value = null
-  saveInfo.value = ''
 }
 </script>
 
 <template>
-  <div class="wrap">
-    <div v-if="loading" class="card">Carregando...</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+  <div class="maturity">
+    <div v-if="loading" class="state-card">Carregando diagnóstico…</div>
+    <div v-else-if="error" class="state-card error">{{ error }}</div>
 
     <template v-else-if="model">
-      <div class="card">
-        <div class="title">{{ model.assessment_title ?? 'Diagnóstico' }}</div>
-        <div class="muted">
-          Versão {{ model.version ?? '-' }} · {{ totalQuestions }} perguntas
+      <header class="top">
+        <div class="header-flex">
+          <div class="header-text">
+            <p class="eyebrow">
+              Diagnóstico de Maturidade em IA · Valorian 4 Future · v{{ model.version ?? '3.0' }}
+            </p>
+            <h1>{{ model.assessment_title || model.title || 'Diagnóstico de Maturidade em IA' }}</h1>
+            <p class="lede">
+              Formulário único e progressivo em 3 níveis — cada nível contém integralmente as perguntas do
+              anterior. As linhas são perguntas agrupadas pelas 4 dimensões do modelo; as colunas são níveis
+              de maturidade (1 a 5), com alternativas próprias por pergunta. Escolha o nível de profundidade
+              abaixo e clique na célula que melhor descreve a realidade da empresa.
+            </p>
+          </div>
+          <div class="header-chart">
+            <p class="chart-title">Nível médio por dimensão</p>
+            <div class="chart-bars">
+              <div
+                v-for="dim in model.dimensions"
+                :key="'bar-' + dim.id"
+                class="chart-bar-col"
+              >
+                <span class="chart-bar-value">
+                  {{ dimAvg(dim) == null ? '–' : dimAvg(dim)!.toFixed(1) }}
+                </span>
+                <div class="chart-bar-track">
+                  <div
+                    class="chart-bar-fill"
+                    :style="{
+                      background: DIMENSION_COLORS[dim.id] || '#666',
+                      height: dimAvg(dim) == null ? '0%' : (dimAvg(dim)! / 5) * 100 + '%',
+                    }"
+                  />
+                </div>
+                <span class="chart-bar-label">{{ DIMENSION_ABBR[dim.id] || dim.name.slice(0, 3) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="progress-block">
+          <div class="num">{{ answeredCount }}/{{ totalVisible }}</div>
+          <div>
+            <div class="progress-track">
+              <div class="progress-fill" :style="{ width: progressPct + '%' }" />
+            </div>
+            <div class="progress-label">{{ progressLabel }}</div>
+          </div>
+        </div>
+
+        <div class="tier-select" role="tablist" aria-label="Profundidade do diagnóstico">
+          <button
+            v-for="key in TIER_KEYS"
+            :key="key"
+            type="button"
+            class="tier-btn"
+            :class="{ active: selectedTier === key }"
+            @click="setTier(key)"
+          >
+            <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
+            <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
+          </button>
+        </div>
+
+        <div class="scale-legend">
+          <span>Maturidade&nbsp;</span>
+          <div class="swatch">
+            <span style="background: var(--lvl1)" />
+            <span style="background: var(--lvl2)" />
+            <span style="background: var(--lvl3)" />
+            <span style="background: var(--lvl4)" />
+            <span style="background: var(--lvl5)" />
+          </div>
+          <span>1 → 5</span>
+        </div>
+
+        <nav class="pillar-nav">
+          <button
+            v-for="(dim, dIdx) in model.dimensions"
+            :key="'nav-' + dim.id"
+            type="button"
+            class="pillar-chip"
+            @click="scrollToDim(dIdx)"
+          >
+            <span class="dot" :style="{ background: DIMENSION_COLORS[dim.id] || '#666' }" />
+            {{ dim.name }}
+            <span class="n">{{ dimAnswered(dim).length }}/{{ dimVisibleQuestions(dim).length }}</span>
+          </button>
+        </nav>
+
+        <div class="toolbar-actions">
+          <button
+            v-if="isComplete"
+            type="button"
+            class="btn-swot"
+            @click="openSwot"
+          >
+            {{ swotCreated ? 'SWOT' : 'Criar SWOT' }}
+          </button>
+          <button
+            type="button"
+            class="btn-save"
+            :disabled="!isComplete || saving"
+            @click="saveAnswers"
+          >
+            {{ saving ? 'Salvando…' : 'Salvar respostas' }}
+          </button>
         </div>
       </div>
 
-      <!-- Resultados (quando há resultado salvo) -->
-      <template v-if="displayedResult">
-        <div class="results-top">
-          <div class="card">
-            <h3>Pontuação Geral</h3>
-            <div class="results-chart-wrap">
-              <div class="score-card">
-                <div class="score-value">{{ displayedResult.total_score }}</div>
-                <div class="score-max">/ {{ displayedResult.max_score }}</div>
-                <div class="score-pct">{{ displayedResult.percent_score }}%</div>
-                <div class="level-badge">
-                  {{
-                    (displayedResult.level ?? getLevelByScore(displayedResult.total_score))?.label ?? '-'
-                  }}
-                </div>
-                <div class="level-desc">
-                  {{
-                    (displayedResult.level ?? getLevelByScore(displayedResult.total_score))?.description ?? ''
-                  }}
-                </div>
-              </div>
-              <div ref="gaugeEl" class="chart-gauge"></div>
-            </div>
-          </div>
-          <div class="card">
-            <h3>Radar por Dimensão</h3>
-            <div ref="radarEl" class="chart-radar"></div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>Pontuação por Dimensão</h3>
-          <div ref="dimBarsEl" class="chart-dimbars"></div>
-          <div class="dim-cards">
-            <div
-              v-for="dim in (model.dimensions ?? [])"
-              :key="dim.id"
-              class="dim-card"
-            >
-              <div class="dim-name">
-                {{
-                  (displayedResult.dimension_scores?.[dim.id] || {}).name ||
-                  dim.name
-                }}
-              </div>
-              <div class="dim-bar-wrap">
-                <div
-                  class="dim-bar"
-                  :style="{
-                    width:
-                      (() => {
-                        const ds = displayedResult.dimension_scores?.[dim.id] || {
-                          score: 0,
-                          max: 1,
-                        }
-                        return ds.max
-                          ? Math.round((ds.score / ds.max) * 100)
-                          : 0
-                      })() + '%',
-                  }"
-                ></div>
-              </div>
-              <div class="dim-nums">
-                {{
-                  (() => {
-                    const ds =
-                      displayedResult.dimension_scores?.[dim.id] || {
-                        score: 0,
-                        max: 0,
-                        avg: 0,
-                      }
-                    return `${ds.score} / ${ds.max} (média ${ds.avg})`
-                  })()
-                }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
+      <p v-if="saveInfo" class="save-banner">{{ saveInfo }}</p>
 
-      <!-- Formulário por dimensão -->
-      <template
-        v-for="dim in (model.dimensions ?? [])"
-        :key="dim.id"
-      >
-        <div class="card card-dim">
-          <h2 class="dim-title">{{ dim.name }}</h2>
+      <div class="matrix-wrap">
+        <div class="matrix-scroll">
+          <div class="col-legend">
+            <div class="stem-head" />
+            <div v-for="n in 5" :key="'lh-' + n" class="lvl-head" :data-l="n">
+              <span class="tag">Nível {{ n }}</span>
+            </div>
+          </div>
+
           <div
-            v-for="(q, qIdx) in dim.questions"
-            :key="q.id"
-            class="q"
+            v-for="(dim, dIdx) in model.dimensions"
+            :id="'dim-' + dIdx"
+            :key="dim.id"
+            class="pillar-section"
           >
-            <div class="q-header">
-              <span class="q-num">{{ qIdx + 1 }}</span>
-              <p class="q-text">{{ q.text }}</p>
+            <div class="pillar-band" :style="{ background: DIMENSION_COLORS[dim.id] || '#666' }">
+              <h2>{{ dim.name }}</h2>
+              <div class="pillar-meta">
+                <span class="avg">
+                  Média
+                  <span class="bulbs">
+                    <i
+                      v-for="n in 5"
+                      :key="'b-' + dim.id + '-' + n"
+                      :class="{ on: dimAvg(dim) != null && n <= Math.round(dimAvg(dim)!) }"
+                    />
+                  </span>
+                </span>
+                <span>{{ dimAnswered(dim).length }}/{{ dimVisibleQuestions(dim).length }}</span>
+              </div>
             </div>
-            <div class="slider-wrap" role="group" :aria-label="'Resposta: ' + q.text.slice(0, 50)">
+
+            <div
+              v-for="q in sortedQuestions(dim)"
+              v-show="isVisibleTier(q.tier)"
+              :key="q.id"
+              class="csf-row"
+            >
+              <div class="stem">
+                <span
+                  class="code"
+                  :style="{
+                    background: (DIMENSION_COLORS[dim.id] || '#666') + '22',
+                    color: DIMENSION_COLORS[dim.id] || '#666',
+                  }"
+                >{{ q.id }}</span>
+                <span class="tier-pill" :data-tier="q.tier">{{ TIER_LABEL_SHORT[q.tier] }}</span>
+                <p class="title">{{ q.text }}</p>
+                <p class="q">{{ originLine(q) }}</p>
+              </div>
+
               <div
-                class="slider-track-wrap"
-                :style="{
-                  '--slider-pct':
-                    (100 *
-                      (((answers[q.id] ?? scaleBounds.min) - scaleBounds.min) /
-                        (scaleBounds.max - scaleBounds.min || 1))) +
-                    '%',
+                v-for="lvl in 5"
+                :key="q.id + '-' + lvl"
+                class="cell"
+                :class="{
+                  selected: answers[q.id] === lvl,
+                  dim: answers[q.id] != null && answers[q.id] !== lvl,
                 }"
+                :data-l="lvl"
+                tabindex="0"
+                role="button"
+                :aria-pressed="answers[q.id] === lvl"
+                @click="toggleSelect(q.id, lvl)"
+                @keydown="onCellKeydown($event, q.id, lvl)"
               >
-                <input
-                  type="range"
-                  class="slider-input"
-                  :min="scaleBounds.min"
-                  :max="scaleBounds.max"
-                  :step="1"
-                  :value="answers[q.id] ?? scaleBounds.min"
-                  @input="(e) => setAnswer(q.id, Number((e.target as HTMLInputElement).value))"
-                  :aria-valuemin="scaleBounds.min"
-                  :aria-valuemax="scaleBounds.max"
-                  :aria-valuenow="answers[q.id] ?? scaleBounds.min"
-                  :aria-valuetext="getLabelForValue(answers[q.id] ?? scaleBounds.min)"
-                />
-                <div class="slider-ticks" v-if="scale.length">
-                  <span
-                    v-for="opt in scale"
-                    :key="opt.value"
-                    class="slider-tick"
-                    :class="{ active: (answers[q.id] ?? scaleBounds.min) === opt.value }"
-                    @click="setAnswer(q.id, opt.value)"
-                  >
-                    {{ opt.value }}
-                  </span>
-                </div>
-                <div class="slider-labels" v-if="scale.length">
-                  <span
-                    v-for="opt in scale"
-                    :key="'l-' + opt.value"
-                    class="slider-label"
-                  >
-                    {{ opt.label }}
-                  </span>
-                </div>
+                <span class="txt">{{ q.levels[String(lvl)] }}</span>
               </div>
             </div>
           </div>
         </div>
-      </template>
 
-      <div class="card actions">
-        <button type="button" class="btn" @click="saveAnswers" :disabled="saving">
-          {{ saving ? 'Salvando...' : 'Salvar respostas' }}
-        </button>
-        <button type="button" class="btn light" @click="clearForm">
-          Limpar
-        </button>
-        <span class="muted">{{ saveInfo }}</span>
+        <div class="footnote">
+          <b>Como funciona:</b> mudar o nível de profundidade (Básico/Completo/Complementar) mostra ou
+          esconde perguntas, mas não apaga respostas já dadas. Em telas estreitas, cada pergunta vira um
+          cartão com os 5 níveis empilhados; em telas largas, a matriz aparece completa. Ao concluir o
+          diagnóstico você pode gerar a SWOT e salvar as respostas na plataforma.
+        </div>
+
+        <details v-if="model.overlaps?.length" class="overlap-notes">
+          <summary>
+            Notas de sobreposição entre perguntas ({{ model.overlaps.length }})
+          </summary>
+          <ul>
+            <li v-for="(o, i) in model.overlaps" :key="'ov-' + i">
+              <span class="overlap-pair">{{ o.pair.join(' × ') }}</span>
+              — {{ o.distinction }}
+            </li>
+          </ul>
+        </details>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.wrap {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 16px;
-  padding-top: 22px;
-  padding-bottom: 40px;
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+.maturity {
+  --ink: #171b20;
+  --paper: #f4f1ea;
+  --panel: #12181f;
+  --panel-2: #1b232c;
+  --hairline: #2c3743;
+  --hairline-light: #ddd6c6;
+  --card: #fffdf8;
+  --card-border: #e4ddc9;
+  --gold: #c8963e;
+  --gold-strong: #a8752a;
+  --muted: #6b7280;
+  --muted-inv: #9aa7b4;
+  --lvl1: #b6543f;
+  --lvl2: #c07a44;
+  --lvl3: #b79a3e;
+  --lvl4: #6f9457;
+  --lvl5: #3f8563;
+  --dim-strategy: #7a5aa3;
+  --dim-data: #3d6fa8;
+  --dim-people: #b9822f;
+  --dim-gov: #a3453f;
+  --tier-basico: #6f9457;
+  --tier-completo: #b79a3e;
+  --tier-complementar: #3d6fa8;
+  --radius: 3px;
+
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+  min-height: calc(100vh - var(--bar-h, 56px));
+  background: var(--panel);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-.card {
-  background: var(--wh);
-  border: 1px solid var(--bd);
+
+.state-card {
+  margin: 24px 18px;
   padding: 18px;
-  margin-bottom: 14px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  color: var(--ink);
 }
-.card h3 {
-  font-size: 16px;
+.state-card.error {
+  color: #a3453f;
+}
+
+.top {
+  background: var(--panel);
+  color: var(--paper);
+  padding: 26px 18px 22px;
+  border-bottom: 1px solid var(--hairline);
+}
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+.top h1 {
+  font-family: 'Fraunces', serif;
   font-weight: 600;
-  margin-bottom: 14px;
-  color: var(--k0);
+  font-size: clamp(24px, 6.4vw, 42px);
+  line-height: 1.08;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+  color: var(--paper);
 }
-.muted {
-  color: var(--k3);
-  font-size: 14px;
-}
-.title {
-  font-size: 27px;
-  margin-bottom: 6px;
-  font-family: var(--serif);
-  color: var(--k0);
-}
-.card-dim {
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(12, 35, 64, 0.06);
-}
-.dim-title {
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  color: var(--k0);
-  border-bottom: 2px solid var(--gold);
-  letter-spacing: 0.02em;
-}
-.q {
-  padding: 20px 0;
-  border-top: 1px solid var(--k7);
-  transition: background 0.2s ease;
-}
-.q:first-child {
-  border-top: none;
-  padding-top: 0;
-}
-.q:hover {
-  background: linear-gradient(90deg, rgba(155, 126, 70, 0.04) 0%, transparent 100%);
-  margin: 0 -24px;
-  padding-left: 24px;
-  padding-right: 24px;
-  border-radius: 8px;
-}
-.q-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-.q-num {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--k0);
-  color: var(--wh);
-  font-size: 13px;
-  font-weight: 700;
-  border-radius: 50%;
-  line-height: 1;
-}
-.q-text {
-  margin: 0;
-  font-size: 15px;
-  color: var(--k0);
+.lede {
+  max-width: 640px;
+  color: var(--muted-inv);
+  font-size: 13.5px;
   line-height: 1.55;
-  font-weight: 500;
-}
-.slider-wrap {
-  margin-top: 4px;
-}
-.slider-track-wrap {
-  --slider-pct: 0%;
-  position: relative;
-  padding: 8px 0 4px;
-}
-.slider-input {
-  display: block;
-  width: 100%;
-  height: 44px;
   margin: 0;
-  padding: 0 22px;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
 }
-.slider-input::-webkit-slider-runnable-track {
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(
-    to right,
-    var(--k0) 0%,
-    var(--gold) var(--slider-pct),
-    var(--k7) var(--slider-pct),
-    var(--k7) 100%
-  );
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-.slider-input::-moz-range-track {
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(
-    to right,
-    var(--k0) 0%,
-    var(--gold) var(--slider-pct),
-    var(--k7) var(--slider-pct),
-    var(--k7) 100%
-  );
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-.slider-input::-webkit-slider-thumb {
-  appearance: none;
-  width: 28px;
-  height: 28px;
-  margin-top: -8px;
-  background: linear-gradient(145deg, var(--wh) 0%, var(--k8) 100%);
-  border: 2px solid var(--k0);
-  border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(12, 35, 64, 0.25);
-  cursor: grab;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.slider-input::-webkit-slider-thumb:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(12, 35, 64, 0.3);
-}
-.slider-input::-webkit-slider-thumb:active {
-  cursor: grabbing;
-}
-.slider-input::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  background: linear-gradient(145deg, var(--wh) 0%, var(--k8) 100%);
-  border: 2px solid var(--k0);
-  border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(12, 35, 64, 0.25);
-  cursor: grab;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.slider-input::-moz-range-thumb:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(12, 35, 64, 0.3);
-}
-.slider-input:focus-visible {
-  outline: none;
-}
-.slider-input:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px var(--golddim), 0 2px 10px rgba(12, 35, 64, 0.25);
-}
-.slider-input:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px var(--golddim), 0 2px 10px rgba(12, 35, 64, 0.25);
-}
-.slider-ticks {
+.header-flex {
   display: flex;
-  justify-content: space-between;
-  margin-top: 6px;
-  padding: 0 14px;
-  max-width: 100%;
-}
-.slider-tick {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--k5);
-  background: var(--k8);
-  border: 2px solid var(--bd);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s ease;
-}
-.slider-tick:hover {
-  color: var(--k0);
-  background: var(--golddim);
-  border-color: var(--goldbd);
-  transform: scale(1.1);
-}
-.slider-tick.active {
-  color: var(--wh);
-  background: var(--k0);
-  border-color: var(--k0);
-  box-shadow: 0 2px 8px rgba(12, 35, 64, 0.3);
-}
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  padding: 0 4px;
-  gap: 4px;
-}
-.slider-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--k5);
-  text-align: center;
-  line-height: 1.35;
-}
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 14px;
-}
-.btn {
-  height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--k0);
-  background: var(--k0);
-  color: var(--wh);
-  cursor: pointer;
-  font-size: 14px;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.btn.light {
-  background: var(--wh);
-  color: var(--k0);
-}
-.btn.light:hover {
-  background: var(--k8);
-}
-
-.results-top {
-  display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(260px, 1fr);
-  gap: 18px;
+  flex-direction: column;
   align-items: stretch;
-  margin-bottom: 20px;
+  gap: 22px;
 }
-.results-top .card {
+.chart-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-inv);
+  margin: 0 0 10px;
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 11px;
+  height: 88px;
+}
+.chart-bar-col {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  align-items: center;
+  gap: 6px;
+  width: 26px;
 }
-.results-top .card h3 {
-  flex: 0 0 auto;
+.chart-bar-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gold);
+  min-height: 13px;
 }
-.results-chart-wrap {
-  flex: 1;
-  min-height: 0;
+.chart-bar-track {
+  width: 10px;
+  height: 56px;
+  background: var(--hairline);
+  border-radius: 99px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: flex-end;
+  overflow: hidden;
 }
-.results-chart-wrap .score-card {
-  flex: 0 0 auto;
-}
-.results-chart-wrap .chart-gauge {
-  flex: 1;
-  min-height: 0;
-  max-width: 320px;
-  margin: 0 auto;
-  height: 220px;
-}
-.chart-radar {
-  flex: 1;
-  min-height: 420px;
-  max-width: 420px;
-  margin: 0 auto;
-}
-.chart-dimbars {
+.chart-bar-fill {
   width: 100%;
-  height: 260px;
+  border-radius: 99px;
+  transition: height 0.4s ease;
+}
+.chart-bar-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-inv);
 }
 
-.score-card {
-  padding: 20px 20px 18px;
-  border-radius: 12px;
-  background: linear-gradient(160deg, #fafaf9 0%, #f5f3f0 100%);
-  color: var(--k0);
-  text-align: left;
-  margin-bottom: 10px;
-  border: 1px solid var(--bd);
-  box-shadow: 0 2px 12px rgba(12, 35, 64, 0.06);
+.toolbar {
+  position: sticky;
+  top: var(--bar-h, 56px);
+  z-index: 40;
+  background: rgba(18, 24, 31, 0.97);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--hairline);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
 }
-.score-card .score-value {
-  font-family: var(--serif);
-  font-size: 32px;
-  font-weight: 600;
-  line-height: 1.1;
-  margin-bottom: 2px;
-  letter-spacing: -0.02em;
-}
-.score-card .score-max {
-  font-size: 14px;
-  color: var(--k4);
-  font-weight: 500;
-}
-.score-card .score-pct {
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--gold2);
-  margin-top: 8px;
-}
-.score-card .level-badge {
-  display: inline-flex;
+.progress-block {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  margin-top: 10px;
-  padding: 6px 14px;
-  background: rgba(155, 126, 70, 0.12);
-  border-radius: 999px;
-  border: 1px solid rgba(155, 126, 70, 0.35);
-  font-size: 11px;
+  gap: 12px;
+}
+.progress-block .num {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--paper);
   font-weight: 600;
+  min-width: 54px;
+}
+.progress-track {
+  width: 100%;
+  max-width: 220px;
+  height: 6px;
+  background: var(--hairline);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-strong), var(--gold));
+  transition: width 0.35s ease;
+}
+.progress-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--muted-inv);
 }
-.score-card .level-desc {
-  font-size: 13px;
-  color: var(--k4);
-  margin-top: 12px;
-  line-height: 1.45;
-  max-width: 280px;
-  margin-left: 0;
-  margin-right: 0;
+.tier-select {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.tier-btn {
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--muted-inv);
+  cursor: pointer;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+.tier-btn:hover {
+  border-color: var(--gold);
+  color: var(--paper);
+}
+.tier-btn .tier-name {
+  font-size: 11px;
+  font-weight: 700;
+}
+.tier-btn .tier-count {
+  font-size: 9px;
+  opacity: 0.7;
+}
+.tier-btn.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #1a1005;
+}
+.pillar-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.pillar-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  padding: 6px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--hairline);
+  color: var(--muted-inv);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+.pillar-chip:hover {
+  border-color: var(--gold);
+  color: var(--paper);
+}
+.pillar-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.pillar-chip .n {
+  opacity: 0.65;
+}
+.scale-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted-inv);
+  order: 3;
+}
+.scale-legend .swatch {
+  display: flex;
+  gap: 3px;
+}
+.scale-legend .swatch span {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  display: block;
+}
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn-swot,
+.btn-save {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 11px 18px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: 0.15s;
+  width: 100%;
+}
+.btn-swot {
+  border: 1px solid var(--gold);
+  background: var(--gold);
+  color: #1a1005;
+}
+.btn-swot:hover {
+  background: var(--gold-strong);
+  border-color: var(--gold-strong);
+}
+.btn-save {
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--paper);
+}
+.btn-save:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.btn-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.save-banner {
+  margin: 0;
+  padding: 10px 18px;
+  background: var(--lvl5);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
-.dim-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+.matrix-wrap {
+  background: var(--paper);
+  padding: 0 18px 56px;
 }
-.dim-card {
-  background: var(--wh);
-  border: 1px solid var(--bd);
-  padding: 16px;
-  border-radius: 6px;
+.matrix-scroll {
+  overflow-x: auto;
+  padding-top: 18px;
 }
-.dim-card .dim-name {
+.col-legend {
+  display: none;
+}
+.lvl-head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #6b6250;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px 6px;
+  border-bottom: 2px solid;
+}
+.lvl-head .tag {
+  font-weight: 700;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--k0);
-  margin-bottom: 10px;
-  line-height: 1.3;
 }
-.dim-card .dim-bar-wrap {
-  height: 10px;
-  background: var(--k7);
-  border-radius: 5px;
-  overflow: hidden;
+.lvl-head[data-l='1'] {
+  border-color: var(--lvl1);
+  color: var(--lvl1);
+}
+.lvl-head[data-l='2'] {
+  border-color: var(--lvl2);
+  color: var(--lvl2);
+}
+.lvl-head[data-l='3'] {
+  border-color: var(--lvl3);
+  color: var(--lvl3);
+}
+.lvl-head[data-l='4'] {
+  border-color: var(--lvl4);
+  color: var(--lvl4);
+}
+.lvl-head[data-l='5'] {
+  border-color: var(--lvl5);
+  color: var(--lvl5);
+}
+
+.pillar-section {
+  margin-bottom: 4px;
+}
+.pillar-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  margin-top: 16px;
+  border-radius: var(--radius);
+  color: #fff;
+}
+.pillar-band h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0;
+  color: #fff;
+}
+.pillar-meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  flex-wrap: wrap;
+}
+.avg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bulbs {
+  display: flex;
+  gap: 3px;
+}
+.bulbs i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  display: inline-block;
+}
+.bulbs i.on {
+  background: #fff;
+}
+
+.csf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline-light);
+}
+.stem .code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
   margin-bottom: 6px;
 }
-.dim-card .dim-bar {
-  height: 100%;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--k0), var(--gold));
-  transition: width 0.4s ease;
+.stem .tier-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 99px;
+  margin: 0 0 6px 6px;
+  color: #fff;
 }
-.dim-card .dim-nums {
+.stem .tier-pill[data-tier='basico'] {
+  background: var(--tier-basico);
+}
+.stem .tier-pill[data-tier='completo'] {
+  background: var(--tier-completo);
+  color: #1a1005;
+}
+.stem .tier-pill[data-tier='complementar'] {
+  background: var(--tier-complementar);
+}
+.stem .title {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+.stem .q {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0;
+}
+.cell {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 11px 12px;
+  font-size: 13px;
+  line-height: 1.42;
+  cursor: pointer;
+  position: relative;
+  min-height: 44px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cell::before {
+  content: attr(data-l);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.cell[data-l='1']::before {
+  background: var(--lvl1);
+}
+.cell[data-l='2']::before {
+  background: var(--lvl2);
+}
+.cell[data-l='3']::before {
+  background: var(--lvl3);
+}
+.cell[data-l='4']::before {
+  background: var(--lvl4);
+}
+.cell[data-l='5']::before {
+  background: var(--lvl5);
+}
+.cell:hover {
+  border-color: var(--gold);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+.cell:focus-visible {
+  outline: 2px solid var(--gold-strong);
+  outline-offset: 1px;
+}
+.cell.dim {
+  opacity: 0.42;
+}
+.cell.selected {
+  background: #20262d;
+  border-color: #20262d;
+  color: #f4f1ea;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.cell.selected::before {
+  background: var(--gold);
+  color: #20262d;
+}
+.cell .txt {
+  flex: 1;
+}
+
+.footnote {
+  margin: 22px 0 0;
+  padding: 12px 14px;
+  background: #eee7d3;
+  border: 1px dashed #c9bd9a;
+  border-radius: var(--radius);
+  font-size: 11.5px;
+  color: #5c5340;
+  line-height: 1.55;
+}
+.footnote b {
+  color: #3d3627;
+}
+.overlap-notes {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
   font-size: 12px;
-  color: var(--k5);
+  color: var(--muted);
+}
+.overlap-notes summary {
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-strong);
+  font-weight: 700;
+}
+.overlap-notes ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.overlap-notes li {
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: var(--paper);
+  border-radius: 3px;
+}
+.overlap-pair {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--ink);
+  margin-right: 2px;
 }
 
-.error-msg {
-  color: #c00;
+@media (min-width: 700px) {
+  .top {
+    padding: 38px 40px 26px;
+  }
+  .header-flex {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 48px;
+  }
+  .chart-bars {
+    gap: 16px;
+    height: 112px;
+  }
+  .chart-bar-col {
+    width: 30px;
+    gap: 8px;
+  }
+  .chart-bar-track {
+    width: 12px;
+    height: 70px;
+  }
+  .toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px 28px;
+    padding: 14px 40px;
+  }
+  .progress-track {
+    width: 180px;
+  }
+  .pillar-nav {
+    margin-left: auto;
+    overflow-x: visible;
+    flex-wrap: wrap;
+  }
+  .scale-legend {
+    order: 0;
+  }
+  .toolbar-actions {
+    width: auto;
+  }
+  .btn-swot,
+  .btn-save {
+    width: auto;
+    padding: 9px 18px;
+  }
 }
 
-@media (max-width: 760px) {
-  .results-top {
-    grid-template-columns: 1fr;
+@media (min-width: 860px) {
+  .matrix-wrap {
+    padding: 0 40px 80px;
   }
-}
-@media (max-width: 900px) {
-  .wrap {
-    padding-left: 12px;
-    padding-right: 12px;
+  .matrix-scroll {
+    padding-top: 28px;
   }
-}
-@media (max-width: 640px) {
-  .card-dim {
-    padding: 18px;
+  .col-legend {
+    display: grid;
+    grid-template-columns: 300px repeat(5, minmax(210px, 1fr));
+    gap: 10px;
+    padding: 0 0 10px;
+    min-width: 1360px;
   }
-  .q:hover {
-    margin: 0 -18px;
-    padding-left: 18px;
-    padding-right: 18px;
+  .pillar-section {
+    min-width: 1360px;
+    margin-bottom: 6px;
   }
-  .slider-label {
-    font-size: 10px;
+  .pillar-band {
+    flex-wrap: nowrap;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-top: 22px;
+    position: sticky;
+    top: calc(var(--bar-h, 56px) + 64px);
+    z-index: 20;
+  }
+  .pillar-band h2 {
+    font-size: 19px;
+  }
+  .csf-row {
+    display: grid;
+    grid-template-columns: 300px repeat(5, minmax(210px, 1fr));
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .stem {
+    padding: 6px 14px 6px 0;
+    position: sticky;
+    left: 0;
+  }
+  .cell {
+    padding: 10px 12px;
+    font-size: 12.5px;
+    align-items: flex-start;
+    min-height: auto;
+  }
+  .cell:hover {
+    transform: translateY(-1px);
+  }
+  .footnote,
+  .overlap-notes {
+    max-width: 1360px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 </style>

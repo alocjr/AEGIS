@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
@@ -10,15 +13,27 @@ from app.schemas import MaturityAnswersRequest
 
 router = APIRouter(prefix="/api/maturity", tags=["maturity"])
 
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+MODEL_FILE = DATA_DIR / "ai_maturity_model.json"
 
-def _load_model(db: Database) -> dict:
-    doc = db.ai_maturity_model.find_one(sort=[("_id", -1)])
-    if not doc:
+TIER_ORDER = {"basico": 0, "completo": 1, "complementar": 2}
+TIER_KEYS = ("basico", "completo", "complementar")
+
+
+@lru_cache(maxsize=1)
+def _load_model_from_file() -> dict:
+    if not MODEL_FILE.is_file():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Modelo de maturidade nao configurado",
         )
-    model = {k: v for k, v in doc.items() if k != "_id"}
+    try:
+        model = json.loads(MODEL_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Modelo de maturidade invalido",
+        ) from exc
     if not model.get("dimensions"):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -27,20 +42,50 @@ def _load_model(db: Database) -> dict:
     return model
 
 
-def _score_submission(model: dict, answers: dict[str, int]) -> dict:
-    dimensions = model.get("dimensions", [])
+def _load_model(_db: Database | None = None) -> dict:
+    """Carrega o modelo de maturidade do JSON estático (fonte de verdade)."""
+    return dict(_load_model_from_file())
+
+
+def _normalize_tier(tier: str | None) -> str:
+    key = (tier or "basico").strip().lower()
+    if key not in TIER_ORDER:
+        raise HTTPException(status_code=400, detail="Tier invalido")
+    return key
+
+
+def _is_visible_tier(question_tier: str, selected_tier: str) -> bool:
+    return TIER_ORDER.get(question_tier, 99) <= TIER_ORDER[selected_tier]
+
+
+def _questions_for_tier(model: dict, tier: str) -> list[dict]:
+    out: list[dict] = []
+    for dimension in model.get("dimensions", []):
+        for q in dimension.get("questions", []):
+            if _is_visible_tier(q.get("tier", "basico"), tier):
+                out.append({**q, "dim_id": dimension["id"], "dim_name": dimension["name"]})
+    return out
+
+
+def _score_submission(model: dict, answers: dict[str, int], tier: str) -> dict:
+    questions = _questions_for_tier(model, tier)
+    levels_cfg = (model.get("levels") or {}).get(tier) or {}
+    max_score = int(levels_cfg.get("max_score") or (len(questions) * 5))
+
     total_score = 0
-    total_max = 0
     dimension_scores: dict[str, dict] = {}
 
-    for dimension in dimensions:
+    for dimension in model.get("dimensions", []):
         dim_id = dimension["id"]
         dim_name = dimension["name"]
+        dim_qs = [
+            q
+            for q in dimension.get("questions", [])
+            if _is_visible_tier(q.get("tier", "basico"), tier)
+        ]
         dim_score = 0
         dim_max = 0
-        question_count = 0
-
-        for q in dimension.get("questions", []):
+        for q in dim_qs:
             qid = q["id"]
             weight = int(q.get("weight", 1))
             value = int(answers.get(qid, 0))
@@ -48,25 +93,41 @@ def _score_submission(model: dict, answers: dict[str, int]) -> dict:
                 value = 0
             dim_score += value * weight
             dim_max += 5 * weight
-            question_count += 1
-
-        total_score += dim_score
-        total_max += dim_max
+        question_count = len(dim_qs)
         avg = (dim_score / question_count) if question_count else 0
-        dimension_scores[dim_id] = {"name": dim_name, "score": dim_score, "max": dim_max, "avg": round(avg, 2)}
+        dimension_scores[dim_id] = {
+            "name": dim_name,
+            "score": dim_score,
+            "max": dim_max,
+            "avg": round(avg, 2),
+        }
+        total_score += dim_score
 
+    scoring = ((model.get("scoring") or {}).get(tier)) or model.get("scoring_logic") or {}
     level = None
-    for _, cfg in model.get("scoring_logic", {}).items():
+    for key in ("level_1", "level_2", "level_3", "level_4", "level_5"):
+        cfg = scoring.get(key)
+        if not cfg:
+            continue
         if cfg.get("min", 0) <= total_score <= cfg.get("max", 0):
             level = cfg
             break
+    if level is None and scoring:
+        # fallback: fora da faixa → extremos
+        first = scoring.get("level_1")
+        last = scoring.get("level_5")
+        if first and total_score < first.get("min", 0):
+            level = first
+        elif last:
+            level = last
 
     return {
         "total_score": total_score,
-        "max_score": total_max,
-        "percent_score": round((total_score / total_max) * 100, 2) if total_max else 0,
+        "max_score": max_score,
+        "percent_score": round((total_score / max_score) * 100, 2) if max_score else 0,
         "dimension_scores": dimension_scores,
         "level": level,
+        "tier": tier,
     }
 
 
@@ -91,12 +152,14 @@ def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(ge
         items.append({
             "id": str(doc["_id"]),
             "submitted_at": submitted_at.isoformat() if submitted_at else None,
+            "tier": doc.get("tier") or result.get("tier"),
             "result": {
                 "total_score": result.get("total_score", 0),
                 "max_score": result.get("max_score", 0),
                 "percent_score": result.get("percent_score", 0),
                 "level": result.get("level"),
                 "dimension_scores": dim_scores,
+                "tier": result.get("tier") or doc.get("tier"),
             },
         })
     return {"items": items}
@@ -118,6 +181,7 @@ def get_my_response_by_id(
     return {
         "id": str(doc["_id"]),
         "answers": doc.get("answers", {}),
+        "tier": doc.get("tier"),
         "submitted_at": submitted_at.isoformat() if submitted_at else None,
         "result": doc.get("result"),
     }
@@ -126,36 +190,37 @@ def get_my_response_by_id(
 @router.post("/my-response")
 def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
     """Cria uma nova autoavaliação (múltiplas respostas por aluno)."""
-    from bson import ObjectId
     model = _load_model(db)
-    all_questions = {q["id"] for d in model.get("dimensions", []) for q in d.get("questions", [])}
-    if not all_questions:
+    tier = _normalize_tier(payload.tier)
+    required = {q["id"] for q in _questions_for_tier(model, tier)}
+    if not required:
         raise HTTPException(status_code=500, detail="Modelo de maturidade invalido")
 
-    answers = {}
-    for qid in all_questions:
+    answers: dict[str, int] = {}
+    for qid in required:
         value = int(payload.answers.get(qid, 0))
         if value < 1 or value > 5:
             raise HTTPException(status_code=400, detail=f"Resposta invalida para {qid}")
         answers[qid] = value
 
-    result = _score_submission(model, answers)
+    result = _score_submission(model, answers, tier)
     submitted_at = datetime.now(timezone.utc)
 
     doc = {
         "user_id": user["_id"],
         "model_version": model.get("version", "1.0"),
-        "assessment_title": model.get("assessment_title"),
+        "assessment_title": model.get("assessment_title") or model.get("title"),
+        "tier": tier,
         "answers": answers,
         "result": result,
         "submitted_at": submitted_at,
     }
     ins = db.maturity_responses.insert_one(doc)
-    doc["_id"] = ins.inserted_id
 
     return {
         "id": str(ins.inserted_id),
         "answers": answers,
+        "tier": tier,
         "submitted_at": submitted_at.isoformat(),
         "result": result,
     }

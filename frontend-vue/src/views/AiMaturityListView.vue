@@ -102,7 +102,7 @@ onMounted(async () => {
 <template>
   <div class="wrap">
     <div class="page-header">
-      <h1 class="page-title">{{ model?.assessment_title ?? 'Modelo de Maturidade em IA' }}</h1>
+      <h1 class="page-title">{{ model?.assessment_title || model?.title || 'Modelo de Maturidade em IA' }}</h1>
       <p class="page-desc">Suas autoavaliações. Realize novas avaliações para acompanhar sua evolução.</p>
     </div>
 
@@ -126,7 +126,12 @@ onMounted(async () => {
           <RouterLink :to="`/ai-maturity/${item.id}`" class="list-link">
             <div class="list-main">
               <span class="list-date">{{ formatDate(item.submitted_at) }}</span>
-              <span class="list-level">{{ item.result?.level?.label ?? '—' }}</span>
+              <span class="list-level">
+                {{ item.result?.level?.label ?? '—' }}
+                <template v-if="item.tier || item.result?.tier">
+                  · {{ ({ basico: 'Básico', completo: 'Completo', complementar: 'Complementar' } as Record<string, string>)[(item.tier || item.result?.tier) as string] || (item.tier || item.result?.tier) }}
+                </template>
+              </span>
               <div class="list-charts-wrap" v-if="getDimensionPcts(item, model?.dimensions).length">
                 <div class="list-mini-chart">
                   <div

@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de Maturidade em IA — Aegis AI — Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#171b20;
+    --paper:#f4f1ea;
+    --panel:#12181f;
+    --panel-2:#1b232c;
+    --hairline:#2c3743;
+    --hairline-light:#ddd6c6;
+    --card:#fffdf8;
+    --card-border:#e4ddc9;
+    --gold:#c8963e;
+    --gold-strong:#a8752a;
+    --muted:#6b7280;
+    --muted-inv:#9aa7b4;
+
+    --lvl1:#b6543f;
+    --lvl2:#c07a44;
+    --lvl3:#b79a3e;
+    --lvl4:#6f9457;
+    --lvl5:#3f8563;
+
+    --lvl1-tint:#fbeeea;
+    --lvl2-tint:#faf1e6;
+    --lvl3-tint:#f8f4e2;
+    --lvl4-tint:#eef4e8;
+    --lvl5-tint:#e7f2ec;
+
+    --dim-strategy:#7a5aa3;
+    --dim-data:#3d6fa8;
+    --dim-people:#b9822f;
+    --dim-gov:#a3453f;
+
+    --tier-basico:#6f9457;
+    --tier-completo:#b79a3e;
+    --tier-complementar:#3d6fa8;
+
+    --radius: 3px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--panel);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  ::selection{ background:var(--gold); color:#171b20; }
+
+  /* ---------- Header ---------- */
+  header.top{
+    background:var(--panel);
+    color:var(--paper);
+    padding:26px 18px 22px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:0 0 8px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(24px,6.4vw,42px);
+    line-height:1.08;
+    margin:0 0 10px;
+    letter-spacing:-.01em;
+  }
+  header.top p.lede{
+    max-width:640px;
+    color:var(--muted-inv);
+    font-size:13.5px;
+    line-height:1.55;
+    margin:0;
+  }
+
+  .header-flex{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:22px;
+  }
+  .header-text{ flex:1 1 auto; }
+
+  .header-chart{ flex:0 0 auto; }
+  .header-chart .chart-title{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted-inv);
+    margin:0 0 10px;
+    text-align:left;
+  }
+  .chart-bars{
+    display:flex;
+    align-items:flex-end;
+    gap:11px;
+    height:88px;
+    overflow-x:auto;
+    padding-bottom:2px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .chart-bar-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    width:26px;
+    flex:0 0 auto;
+  }
+  .chart-bar-value{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    font-weight:600;
+    color:var(--gold);
+    min-height:13px;
+  }
+  .chart-bar-track{
+    width:10px;
+    height:56px;
+    background:var(--hairline);
+    border-radius:99px;
+    display:flex;
+    align-items:flex-end;
+    overflow:hidden;
+  }
+  .chart-bar-fill{
+    width:100%;
+    height:0%;
+    border-radius:99px;
+    transition:height .4s ease;
+  }
+  .chart-bar-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:8.5px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    color:var(--muted-inv);
+  }
+
+  @media (min-width: 700px){
+    header.top{ padding:38px 40px 26px; }
+    .eyebrow{ font-size:11px; letter-spacing:.16em; margin:0 0 10px; }
+    h1{ margin:0 0 10px; }
+    header.top p.lede{ font-size:14.5px; }
+    .header-flex{
+      flex-direction:row;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:48px;
+    }
+    .header-chart .chart-title{ font-size:10.5px; margin:0 0 12px; }
+    .chart-bars{ gap:16px; height:112px; overflow-x:visible; }
+    .chart-bar-col{ width:30px; gap:8px; }
+    .chart-bar-value{ font-size:11px; min-height:14px; }
+    .chart-bar-track{ width:12px; height:70px; }
+    .chart-bar-label{ font-size:9.5px; letter-spacing:.04em; }
+  }
+
+  /* ---------- Toolbar / summary ---------- */
+  .toolbar{
+    position:sticky; top:0; z-index:40;
+    background:rgba(18,24,31,.97);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--hairline);
+    padding:12px 18px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+  }
+  .progress-block{ display:flex; align-items:center; gap:12px; }
+  .progress-block .num{
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    color:var(--paper);
+    font-weight:600;
+    min-width:54px;
+  }
+  .progress-track{
+    width:100%; max-width:220px; height:6px; background:var(--hairline);
+    border-radius:99px; overflow:hidden;
+  }
+  .progress-fill{
+    height:100%; background:linear-gradient(90deg,var(--gold-strong),var(--gold));
+    width:0%; transition:width .35s ease;
+  }
+  .progress-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted-inv);
+  }
+
+  .tier-select{
+    display:flex; gap:6px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:2px;
+  }
+  .tier-btn{
+    font-family:'JetBrains Mono',monospace;
+    display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+    padding:6px 12px;
+    border-radius:8px;
+    border:1px solid var(--hairline);
+    background:transparent;
+    color:var(--muted-inv);
+    cursor:pointer;
+    flex:0 0 auto;
+    white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+    transition:.15s;
+  }
+  .tier-btn:hover{ border-color:var(--gold); color:var(--paper); }
+  .tier-btn .tier-name{ font-size:11px; font-weight:700; letter-spacing:.02em; }
+  .tier-btn .tier-count{ font-size:9px; opacity:.7; letter-spacing:.03em; }
+  .tier-btn.active{
+    background:var(--gold); border-color:var(--gold); color:#1a1005;
+  }
+  .tier-btn.active .tier-count{ opacity:.85; }
+
+  .pillar-nav{
+    display:flex; gap:6px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:2px;
+  }
+  .pillar-chip{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px; letter-spacing:.03em;
+    padding:6px 10px;
+    border-radius:99px;
+    border:1px solid var(--hairline);
+    color:var(--muted-inv);
+    background:transparent;
+    cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+    flex:0 0 auto;
+    white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+    transition:.15s;
+  }
+  .pillar-chip:hover{ border-color:var(--gold); color:var(--paper); }
+  .pillar-chip .dot{ width:7px;height:7px;border-radius:50%; flex:0 0 auto; }
+  .pillar-chip .n{ opacity:.65; }
+
+  .scale-legend{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted-inv);
+    order:3;
+  }
+  .scale-legend .swatch{ display:flex; gap:3px; }
+  .scale-legend .swatch span{
+    width:14px; height:14px; border-radius:2px;
+  }
+
+  /* ---------- SWOT trigger button ---------- */
+  .btn-swot{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:.04em;
+    font-weight:600;
+    text-transform:uppercase;
+    padding:11px 18px;
+    border-radius:99px;
+    border:1px solid var(--gold);
+    background:var(--gold);
+    color:#1a1005;
+    cursor:pointer;
+    width:100%;
+    -webkit-tap-highlight-color:transparent;
+    transition:.15s;
+  }
+  .btn-swot:hover{ background:var(--gold-strong); border-color:var(--gold-strong); }
+  .btn-swot[hidden]{ display:none; }
+
+  @media (min-width: 700px){
+    .toolbar{
+      flex-direction:row;
+      align-items:center;
+      gap:28px;
+      padding:14px 40px;
+    }
+    .progress-track{ width:180px; }
+    .progress-label{ font-size:10.5px; letter-spacing:.08em; }
+    .pillar-nav{ margin-left:auto; overflow-x:visible; flex-wrap:wrap; }
+    .pillar-chip{ font-size:11px; padding:6px 11px; }
+    .scale-legend{ order:0; font-size:10.5px; }
+    .btn-swot{ width:auto; padding:9px 18px; }
+  }
+
+
+  /* ---------- Matrix wrapper ---------- */
+  .matrix-wrap{
+    background:var(--paper);
+    padding:0 18px 56px;
+  }
+  .matrix-scroll{
+    overflow-x:auto;
+    padding-top:18px;
+  }
+
+  .col-legend{ display:none; }
+  .col-legend .stem-head{ }
+  .col-legend .lvl-head{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.04em;
+    color:#6b6250;
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 4px 6px;
+    border-bottom:2px solid;
+  }
+  .col-legend .lvl-head .tag{ font-weight:700; font-size:13px; }
+  .col-legend .lvl-head .word{ text-transform:uppercase; font-size:9.5px; letter-spacing:.1em; opacity:.75;}
+
+  .lvl-head[data-l="1"]{ border-color:var(--lvl1); color:var(--lvl1); }
+  .lvl-head[data-l="2"]{ border-color:var(--lvl2); color:var(--lvl2); }
+  .lvl-head[data-l="3"]{ border-color:var(--lvl3); color:var(--lvl3); }
+  .lvl-head[data-l="4"]{ border-color:var(--lvl4); color:var(--lvl4); }
+  .lvl-head[data-l="5"]{ border-color:var(--lvl5); color:var(--lvl5); }
+
+  @media (min-width: 860px){
+    .matrix-wrap{ padding:0 40px 80px; }
+    .matrix-scroll{ padding-top:28px; }
+    .col-legend{
+      display:grid;
+      grid-template-columns: 300px repeat(5, minmax(210px,1fr));
+      gap:10px;
+      padding: 0 0 10px;
+      min-width:1360px;
+    }
+  }
+
+  /* ---------- Pillar section ---------- */
+  .pillar-section{ margin-bottom:4px; }
+  .pillar-band{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px;
+    padding:12px 14px;
+    margin-top:16px;
+    border-radius:var(--radius);
+    color:#fff;
+  }
+  .pillar-band h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16px;
+    margin:0;
+    letter-spacing:-.005em;
+  }
+  .pillar-band .note{
+    font-size:10.5px;
+    opacity:.85;
+    font-style:italic;
+    margin-left:2px;
+  }
+  .pillar-band .pillar-meta{
+    margin-left:auto;
+    display:flex; align-items:center; gap:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    flex-wrap:wrap;
+  }
+  .pillar-band .pillar-meta .avg{
+    display:flex; align-items:center; gap:6px;
+  }
+  .pillar-band .avg .bulbs{ display:flex; gap:3px; }
+  .pillar-band .avg .bulbs i{
+    width:8px; height:8px; border-radius:50%;
+    background:rgba(255,255,255,.22);
+    display:inline-block;
+  }
+  .pillar-band .avg .bulbs i.on{ background:#fff; }
+
+  @media (min-width: 860px){
+    .pillar-section{ min-width:1360px; margin-bottom:6px; }
+    .pillar-band{
+      flex-wrap:nowrap;
+      gap:14px;
+      padding:14px 16px;
+      margin-top:22px;
+      position:sticky; top:0; z-index:20;
+    }
+    .pillar-band h2{ font-size:19px; }
+    .pillar-band .pillar-meta{ font-size:11px; gap:14px; flex-wrap:nowrap; }
+  }
+
+  /* ---------- Rows ---------- */
+  .csf-row{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:14px 0;
+    border-bottom:1px solid var(--hairline-light);
+  }
+  .csf-row:last-child{ border-bottom:none; }
+  .csf-row[hidden]{ display:none !important; }
+
+  .stem{
+    padding:0;
+  }
+  .stem .code{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.03em;
+    display:inline-block;
+    padding:1px 6px;
+    border-radius:3px;
+    margin-bottom:6px;
+  }
+  .stem .tier-pill{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    display:inline-block;
+    padding:1px 7px;
+    border-radius:99px;
+    margin:0 0 6px 6px;
+    color:#fff;
+  }
+  .stem .tier-pill[data-tier="basico"]{ background:var(--tier-basico); }
+  .stem .tier-pill[data-tier="completo"]{ background:var(--tier-completo); color:#1a1005; }
+  .stem .tier-pill[data-tier="complementar"]{ background:var(--tier-complementar); }
+  .stem .title{
+    font-weight:600;
+    font-size:14px;
+    line-height:1.3;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .stem .q{
+    font-size:12.5px;
+    line-height:1.45;
+    color:var(--muted);
+    font-style:italic;
+    margin:0;
+  }
+
+  .cell{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    padding:11px 12px;
+    font-size:13px;
+    line-height:1.42;
+    cursor:pointer;
+    position:relative;
+    min-height:44px;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .cell::before{
+    content:attr(data-l);
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:11px;
+    line-height:1;
+    flex:0 0 auto;
+    width:18px; height:18px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff;
+  }
+  .cell[data-l="1"]::before{ background:var(--lvl1); }
+  .cell[data-l="2"]::before{ background:var(--lvl2); }
+  .cell[data-l="3"]::before{ background:var(--lvl3); }
+  .cell[data-l="4"]::before{ background:var(--lvl4); }
+  .cell[data-l="5"]::before{ background:var(--lvl5); }
+
+  .cell:hover{
+    border-color:var(--gold);
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+  }
+  .cell:focus-visible{
+    outline:2px solid var(--gold-strong);
+    outline-offset:1px;
+  }
+
+  .cell.dim{ opacity:.42; }
+
+  .cell.selected{
+    background:#20262d;
+    border-color:#20262d;
+    color:#f4f1ea;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+  .cell.selected::before{
+    background:var(--gold);
+    color:#20262d;
+  }
+
+  .cell .txt{ flex:1; }
+
+  @media (min-width: 860px){
+    .csf-row{
+      display:grid;
+      grid-template-columns: 300px repeat(5, minmax(210px,1fr));
+      gap:10px;
+      padding:10px 0;
+    }
+    .stem{ padding:6px 14px 6px 0; position:sticky; left:0; }
+    .stem .title{ font-size:13.5px; }
+    .stem .q{ font-size:12px; }
+    .cell{ padding:10px 12px; font-size:12.5px; align-items:flex-start; min-height:auto; }
+    .cell:hover{ transform:translateY(-1px); }
+    .cell::before{ width:16px; height:16px; font-size:10.5px; margin-top:1px; }
+  }
+
+  /* ---------- Footer note ---------- */
+  .footnote{
+    margin: 22px 0 0;
+    padding:12px 14px;
+    background:#eee7d3;
+    border:1px dashed #c9bd9a;
+    border-radius:var(--radius);
+    font-size:11.5px;
+    color:#5c5340;
+    line-height:1.55;
+  }
+  .footnote b{ color:#3d3627; }
+
+  .overlap-notes{
+    margin:14px 0 0;
+    padding:12px 14px;
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    font-size:12px;
+    color:var(--muted);
+  }
+  .overlap-notes summary{
+    cursor:pointer;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--gold-strong);
+    font-weight:700;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .overlap-notes ul{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .overlap-notes li{
+    line-height:1.5;
+    padding:8px 10px;
+    background:var(--paper);
+    border-radius:3px;
+  }
+  .overlap-pair{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    color:var(--ink);
+    margin-right:2px;
+  }
+
+  @media (min-width: 860px){
+    .footnote{
+      max-width:1360px;
+      margin: 30px auto 0;
+      padding:14px 18px;
+      font-size:12px;
+    }
+    .overlap-notes{ max-width:1360px; margin:14px auto 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="header-flex">
+    <div class="header-text">
+      <p class="eyebrow">Diagnóstico de Maturidade em IA · Aegis AI · v3.0 · Protótipo funcional</p>
+      <h1>Diagnóstico de Maturidade em IA</h1>
+      <p class="lede">Formulário único e progressivo em 3 níveis — cada nível contém integralmente as perguntas do anterior. As linhas são perguntas agrupadas pelas 4 dimensões do modelo; as colunas são níveis de maturidade (1 a 5), com alternativas próprias por pergunta. Escolha o nível de profundidade abaixo e clique na célula que melhor descreve a realidade da empresa.</p>
+    </div>
+    <div class="header-chart">
+      <p class="chart-title">Nível médio por dimensão</p>
+      <div class="chart-bars" id="headerChart"></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="progress-block">
+    <div class="num" id="progressNum">0/12</div>
+    <div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">Nenhuma pergunta respondida ainda</div>
+    </div>
+  </div>
+
+  <div class="tier-select" id="tierSelect" role="tablist" aria-label="Profundidade do diagnóstico"></div>
+
+  <div class="scale-legend">
+    <span>Maturidade&nbsp;</span>
+    <div class="swatch">
+      <span style="background:var(--lvl1)"></span>
+      <span style="background:var(--lvl2)"></span>
+      <span style="background:var(--lvl3)"></span>
+      <span style="background:var(--lvl4)"></span>
+      <span style="background:var(--lvl5)"></span>
+    </div>
+    <span>1 → 5</span>
+  </div>
+
+  <nav class="pillar-nav" id="pillarNav"></nav>
+
+  <button type="button" class="btn-swot" id="swotBtn" hidden>Criar SWOT</button>
+</div>
+
+<div class="matrix-wrap">
+  <div class="matrix-scroll">
+    <div class="col-legend">
+      <div class="stem-head"></div>
+      <div class="lvl-head" data-l="1"><span class="tag">Nível 1</span></div>
+      <div class="lvl-head" data-l="2"><span class="tag">Nível 2</span></div>
+      <div class="lvl-head" data-l="3"><span class="tag">Nível 3</span></div>
+      <div class="lvl-head" data-l="4"><span class="tag">Nível 4</span></div>
+      <div class="lvl-head" data-l="5"><span class="tag">Nível 5</span></div>
+    </div>
+
+    <div id="matrixRoot"></div>
+  </div>
+
+  <div class="footnote">
+    <b>Nota de protótipo:</b> as seleções ficam apenas na memória desta página (sem persistência) e servem para validar o formato de preenchimento — perguntas por dimensão × nível, com clique direto na alternativa — antes da implementação final. Mudar o nível de profundidade (Básico/Completo/Complementar) mostra ou esconde perguntas, mas não apaga respostas já dadas. Em telas estreitas, cada pergunta vira um cartão com os 5 níveis empilhados; em telas largas, a matriz aparece completa com as colunas de nível lado a lado.
+  </div>
+
+  <details class="overlap-notes" id="overlapNotes">
+    <summary>Notas de sobreposição entre perguntas (<span id="overlapCount">0</span>)</summary>
+    <ul id="overlapList"></ul>
+  </details>
+</div>
+
+
+<script id="quiz-data" type="application/json">{"title": "Diagnóstico de Maturidade em IA - Aegis AI", "version": "3.0", "levels": {"basico": {"label": "Básico", "description": "Modelo Rápido original — diagnóstico inicial rápido.", "question_count": 12, "max_score": 60}, "completo": {"label": "Completo", "description": "Básico + 20 perguntas adicionais — diagnóstico robusto.", "question_count": 32, "max_score": 160}, "complementar": {"label": "Complementar (opcional)", "description": "Completo + 16 perguntas adicionais — cobre a totalidade dos 36 CSFs do modelo de referência.", "question_count": 48, "max_score": 240}}, "dimensions": [{"id": "strategy", "name": "Estratégia e Visão", "questions": [{"id": "EV1", "tier": "basico", "text": "Nossa liderança possui uma visão clara de como a IA impacta nossos OKRs e modelo de receita.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q1", "levels": {"1": "A liderança não relaciona IA a resultados de negócio; o tema é tratado como curiosidade tecnológica isolada.", "2": "Há interesse informal da liderança, mas sem conexão direta com OKRs ou receita — discussões pontuais e não estruturadas.", "3": "Está em andamento um esforço para mapear a conexão entre IA e receita, ainda sem consenso formal da liderança.", "4": "A liderança conecta IA a OKRs específicos e acompanha indicadores de impacto nas áreas onde já foi implementada.", "5": "IA é parte central da estratégia de receita da empresa, com OKRs mensuráveis e revisão contínua pelo C-level."}}, {"id": "EV2", "tier": "basico", "text": "A organização possui um roadmap de IA de 12 a 18 meses aprovado pelo Board.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q2", "levels": {"1": "Não existe roadmap; as ações em IA são reativas, sem planejamento formal.", "2": "Existem ideias soltas de projetos de IA, mas sem documento formal ou aprovação de qualquer instância.", "3": "Um roadmap está sendo elaborado e aguarda validação do Board.", "4": "O roadmap está aprovado, com fases, responsáveis e investimentos definidos, e em execução.", "5": "O roadmap é um documento vivo, revisado periodicamente pelo Board, com ajustes ágeis conforme os resultados obtidos."}}, {"id": "EV3", "tier": "basico", "text": "As decisões de investimento em IA são baseadas em um framework claro de impacto vs. viabilidade.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q3", "levels": {"1": "Os investimentos em IA são decididos de forma ad hoc, sem critérios definidos.", "2": "Existem critérios informais, mas eles variam conforme a pessoa ou área que decide.", "3": "Um framework de priorização (impacto vs. viabilidade) está sendo desenhado.", "4": "O framework é aplicado de forma consistente para priorizar projetos de IA.", "5": "O framework está institucionalizado, é usado em todas as decisões de investimento e inclui revisão contínua de ROI."}}, {"id": "EV4", "tier": "completo", "text": "A alta gestão possui um rito formal de acompanhamento e cobrança de resultados das iniciativas de IA.", "weight": 1, "originType": "nova", "csfId": "S4", "csfName": "Patrocínio da alta gestão", "ref": null, "levels": {"1": "Não existe cobrança nem espaço formal para acompanhar resultados de IA.", "2": "O tema aparece em conversas informais, mas nunca entra em pauta oficial.", "3": "Aparece ocasionalmente em reuniões de gestão, sem rito ou periodicidade definida.", "4": "Existe um rito de acompanhamento, mas é irregular ou nem sempre reúne todos os decisores relevantes.", "5": "Há um rito formal e recorrente de acompanhamento de resultados de IA pela alta gestão, com decisores presentes."}}, {"id": "EV5", "tier": "completo", "text": "O orçamento de IA contempla o custo total das iniciativas, incluindo implementação, integração, manutenção e capacitação.", "weight": 1, "originType": "nova", "csfId": "S3", "csfName": "Planejamento financeiro", "ref": null, "levels": {"1": "Não há orçamento formal para IA; os gastos acontecem de forma dispersa.", "2": "O orçamento é aprovado projeto a projeto, sem visão do custo total envolvido.", "3": "O orçamento cobre apenas a parte visível (ferramenta/licença), sem prever integração ou manutenção.", "4": "O orçamento cobre a maior parte do custo total (implementação, integração, manutenção, capacitação), com lacunas pontuais.", "5": "O orçamento cobre o custo total de ponta a ponta — implementação, integração, manutenção e capacitação."}}, {"id": "EV6", "tier": "completo", "text": "Existe uma métrica oficial da empresa para medir o sucesso das iniciativas de IA.", "weight": 1, "originType": "nova", "csfId": "O1", "csfName": "Outcomes mensuráveis institucionalizados", "ref": null, "levels": {"1": "Não existe métrica oficial; cada área (ou relatório) usa a sua própria definição de sucesso.", "2": "Uma métrica foi proposta em algum momento, mas nunca foi formalmente adotada.", "3": "A métrica existe, mas é pouco divulgada e pouco usada na prática.", "4": "A métrica é divulgada e usada na maioria dos relatórios e decisões sobre IA.", "5": "Existe uma métrica oficial, divulgada e usada de forma consistente em todos os relatórios da empresa."}}, {"id": "EV7", "tier": "completo", "text": "A IA possui uma linha de orçamento própria e formalmente alocada, distinta de verbas genéricas de TI ou inovação.", "weight": 1, "originType": "nova", "csfId": "O3", "csfName": "Recursos formalmente alocados", "ref": null, "levels": {"1": "O investimento em IA sai de uma verba genérica de TI/inovação, sem previsibilidade própria.", "2": "Uma linha de orçamento própria já foi discutida, mas ainda não foi aprovada.", "3": "Existe uma linha própria, mas ainda parcial ou recém-criada.", "4": "A linha própria está consolidada, com pequenos ajustes ao longo do ano.", "5": "A linha própria é planejada, previsível e revisada como parte do ciclo orçamentário formal."}}, {"id": "EV8", "tier": "completo", "text": "Existe uma metodologia ou comitê formal que acompanha de forma padronizada o escopo, o prazo e o orçamento dos projetos de IA.", "weight": 1, "originType": "nova", "csfId": "O2", "csfName": "Gestão de projetos formalizada", "ref": null, "levels": {"1": "Não existe metodologia ou comitê formal de acompanhamento dos projetos de IA.", "2": "O comitê existe no papel, mas nunca se reuniu de fato.", "3": "Existe, mas é aplicado de forma inconsistente entre os projetos.", "4": "É aplicado à maioria dos projetos de IA, com exceções pontuais.", "5": "É aplicado de forma consistente a todos os projetos de IA da empresa."}}, {"id": "EV9", "tier": "complementar", "text": "IA está formalmente incorporada ao plano estratégico da empresa, com metas próprias e mensuráveis.", "weight": 1, "originType": "nova", "csfId": "S2", "csfName": "Alinhamento a metas de longo prazo", "ref": null, "levels": {"1": "IA não consta no plano estratégico oficial da empresa.", "2": "IA é citada apenas informalmente, fora do documento estratégico oficial.", "3": "O plano estratégico menciona IA de forma genérica, sem detalhamento.", "4": "O plano estratégico detalha IA, mas ainda sem metas próprias e mensuráveis.", "5": "IA é um pilar explícito do plano estratégico, com metas próprias e mensuráveis."}}, {"id": "EV10", "tier": "complementar", "text": "Os projetos de IA são coerentes com os valores e o discurso institucional que a empresa comunica publicamente.", "weight": 1, "originType": "nova", "csfId": "S5", "csfName": "Alinhamento a valores/práticas", "ref": null, "levels": {"1": "As iniciativas de IA destoam do discurso institucional divulgado publicamente.", "2": "A coerência existe apenas nos projetos de maior visibilidade externa.", "3": "A coerência é parcial e depende do projeto específico.", "4": "A coerência existe na maioria dos projetos, com exceções raras.", "5": "A coerência é clara e consistente, sendo usada inclusive na narrativa de marca da empresa."}}, {"id": "EV11", "tier": "complementar", "text": "A empresa possui um programa formal de inovação em IA, com incentivo e reconhecimento institucionalizados.", "weight": 1, "originType": "nova", "csfId": "O4", "csfName": "Inovação institucionalizada", "ref": null, "levels": {"1": "A inovação em IA depende exclusivamente de iniciativa individual, sem qualquer apoio institucional.", "2": "Um programa de inovação foi anunciado, mas não há atividade real associada a ele.", "3": "O programa existe, mas ainda é pouco maduro ou pouco divulgado.", "4": "O programa está ativo e é conhecido, mas o engajamento ainda se concentra em poucas áreas.", "5": "O programa é maduro, com incentivo formal e histórico consistente de resultados."}}]}, {"id": "data_infra", "name": "Dados e Infraestrutura", "questions": [{"id": "DI1", "tier": "basico", "text": "Nossos dados proprietários são acessíveis, limpos e centralizados para alimentar modelos de IA.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q4", "levels": {"1": "Os dados estão dispersos em silos, sem padronização, e são de difícil acesso.", "2": "Existem esforços isolados de organização de dados em algumas áreas específicas.", "3": "Há um projeto de centralização e limpeza de dados em planejamento ou fase inicial.", "4": "Os dados estão centralizados e utilizáveis na maioria das áreas relevantes da empresa.", "5": "Os dados estão totalmente centralizados, limpos, com qualidade monitorada continuamente e prontos para consumo por modelos de IA."}}, {"id": "DI2", "tier": "basico", "text": "Possuímos uma arquitetura de dados moderna (Lakehouse/Mesh) que suporta RAG e IA em tempo real.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q5", "levels": {"1": "A arquitetura de dados é legada e não suporta cargas de trabalho de IA moderna.", "2": "Existem discussões iniciais sobre a necessidade de modernizar a arquitetura.", "3": "Um piloto de arquitetura Lakehouse/Mesh está em construção.", "4": "A arquitetura moderna já está implementada e suporta parte dos casos de uso de IA.", "5": "A arquitetura é madura e escalável, suportando RAG e IA em tempo real em produção."}}, {"id": "DI3", "tier": "basico", "text": "Existe um processo claro de governança de dados e conformidade com a LGPD em todos os projetos.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q6", "levels": {"1": "Não existe processo formal de governança de dados ou de conformidade com a LGPD.", "2": "Há ações pontuais de conformidade, sem processo estruturado.", "3": "Um processo de governança está em definição, com mapeamento de gaps de LGPD em andamento.", "4": "A governança está implementada na maioria dos projetos, com checkpoints de conformidade LGPD.", "5": "A governança de dados é madura, auditável, e a conformidade com a LGPD é embutida por padrão em todos os projetos."}}, {"id": "DI4", "tier": "completo", "text": "Os dados da empresa são confiáveis o suficiente para embasar decisões importantes, sem exigir reconferência manual.", "weight": 1, "originType": "nova", "csfId": "D1", "csfName": "Qualidade/consistência", "ref": null, "levels": {"1": "Há desconfiança generalizada nos dados; a reconferência manual é sempre necessária antes de decidir.", "2": "Apenas alguns relatórios específicos são confiáveis; reconferência manual ainda é a regra geral.", "3": "A maior parte dos dados é confiável, mas existem exceções conhecidas que exigem checagem.", "4": "Os dados são confiáveis na quase totalidade dos casos; exceções são raras e já mapeadas.", "5": "Os dados são confiáveis por padrão, com controle de qualidade automatizado e monitorado."}}, {"id": "DI5", "tier": "completo", "text": "Nossa infraestrutura é escalável o suficiente para suportar um crescimento repentino no uso de IA, sem exigir um projeto emergencial.", "weight": 1, "originType": "nova", "csfId": "T1", "csfName": "Infraestrutura escalável e flexível", "ref": null, "levels": {"1": "Já há instabilidade nos picos de uso atuais, sem qualquer folga de capacidade.", "2": "A infraestrutura aguenta o volume atual, mas qualquer crescimento exigiria um projeto emergencial.", "3": "Aguenta o crescimento previsto, mas depende de intervenção manual da equipe de TI.", "4": "Escala com pouca intervenção manual, geralmente planejada com antecedência.", "5": "Escala automaticamente conforme a demanda, sem necessidade de intervenção manual."}}, {"id": "DI6", "tier": "completo", "text": "As áreas de negócio conseguem acessar os dados que precisam sozinhas, sem depender de TI a cada solicitação.", "weight": 1, "originType": "nova", "csfId": "D5", "csfName": "Acesso entre departamentos", "ref": null, "levels": {"1": "Qualquer cruzamento de dados depende integralmente da equipe de TI.", "2": "Existe autoatendimento apenas para um relatório específico e limitado.", "3": "Autoatendimento cobre dados básicos; para o restante, a área ainda depende de TI.", "4": "O autoatendimento cobre a maioria das necessidades do dia a dia das áreas de negócio.", "5": "O autoatendimento é amplo e consolidado, com poucas exceções que ainda exigem TI."}}, {"id": "DI7", "tier": "completo", "text": "Nosso núcleo operacional (financeiro, estoque, CRM) já está modernizado ou possui um plano ativo e financiado de modernização.", "weight": 1, "originType": "nova", "csfId": "T5", "csfName": "Modernização de legado", "ref": null, "levels": {"1": "O núcleo operacional inteiro roda em sistema legado, sem qualquer plano de modernização.", "2": "A modernização já foi discutida, mas sem projeto formalizado ou orçamento definido.", "3": "A modernização está em andamento, de forma parcial ou lenta.", "4": "A maior parte do núcleo já foi modernizada; restam módulos pontuais em legado.", "5": "O núcleo está modernizado ou possui plano ativo e financiado de modernização."}}, {"id": "DI8", "tier": "completo", "text": "Os dados de canais e sistemas diferentes já chegam integrados, sem necessidade de junção manual a cada nova análise.", "weight": 1, "originType": "nova", "csfId": "D2", "csfName": "Integração interna/externa", "ref": null, "levels": {"1": "As bases são isoladas; a junção de dados é sempre manual, a cada nova análise.", "2": "A junção ainda é manual, mas já existe um processo ou planilha padronizada para facilitar.", "3": "Há integração parcial entre os principais sistemas.", "4": "A integração cobre a maioria dos sistemas, com exceções pontuais.", "5": "Existe uma visão unificada disponível por padrão, sem qualquer trabalho manual de integração."}}, {"id": "DI9", "tier": "complementar", "text": "As ferramentas e plataformas de IA/tecnologia da empresa se comunicam entre si, em vez de operarem isoladas por área.", "weight": 1, "originType": "nova", "csfId": "T2", "csfName": "Orquestração de plataformas", "ref": null, "levels": {"1": "Cada ferramenta funciona como uma ilha; a integração entre elas é manual ou inexistente.", "2": "Existem integrações pontuais, mas frágeis e mantidas manualmente.", "3": "Os principais sistemas se conectam, mas cada nova integração exige esforço dedicado de TI.", "4": "A integração entre ferramentas é prática comum, com poucos pontos ainda manuais.", "5": "Novas ferramentas se conectam a uma arquitetura padronizada, sem exigir um projeto dedicado."}}, {"id": "DI10", "tier": "complementar", "text": "As decisões apoiadas por dados e IA usam informação atualizada, e não apenas relatórios defasados.", "weight": 1, "originType": "nova", "csfId": "T3", "csfName": "Processamento em tempo real/alto volume", "ref": null, "levels": {"1": "Só existem relatórios em lote (batch), sempre defasados em pelo menos um dia.", "2": "Alguns relatórios são mais frequentes, mas nenhum funciona em tempo real.", "3": "Alguns painéis operam quase em tempo real, mas os processos críticos ainda não.", "4": "A maioria dos processos críticos já usa dados quase em tempo real.", "5": "As decisões operacionais críticas usam dados em tempo real como padrão."}}, {"id": "DI11", "tier": "complementar", "text": "A empresa consegue resolver dúvidas técnicas complexas de IA internamente, sem depender de terceiros.", "weight": 1, "originType": "nova", "csfId": "T4", "csfName": "Acesso a expertise em IA", "ref": null, "levels": {"1": "A resolução depende inteiramente de um fornecedor externo pontual, sem relação contínua.", "2": "Existe um fornecedor de confiança, mas ele é acionado caso a caso, sem retenção de conhecimento interno.", "3": "Há acesso a um especialista externo de confiança, mas ainda sem capacidade interna própria.", "4": "O time interno resolve boa parte das dúvidas, recorrendo a terceiros apenas em temas avançados.", "5": "O time interno resolve a maioria das questões técnicas de IA sem depender de terceiros."}}, {"id": "DI12", "tier": "complementar", "text": "Nossa infraestrutura de rede e conectividade foi avaliada especificamente para suportar as cargas de IA.", "weight": 1, "originType": "nova", "csfId": "T6", "csfName": "Infraestrutura de rede avaliada para IA", "ref": null, "levels": {"1": "A rede nunca foi avaliada com esse recorte específico.", "2": "Houve uma avaliação informal, sem registro ou responsável definido.", "3": "A avaliação foi feita, com upgrades pontuais realizados.", "4": "A avaliação é recorrente, com upgrades planejados com antecedência.", "5": "A rede é dimensionada e monitorada continuamente para suportar a carga de IA."}}, {"id": "DI13", "tier": "complementar", "text": "Um mesmo tipo de dado é registrado de forma padronizada em todas as unidades e sistemas da empresa.", "weight": 1, "originType": "nova", "csfId": "T7", "csfName": "Padronização de processos digitais/formatos", "ref": null, "levels": {"1": "Cada unidade ou sistema registra o dado à sua própria maneira.", "2": "Existe um padrão sugerido, mas ele é seguido de forma inconsistente.", "3": "O padrão existe, mas ainda exige normalização manual em cruzamentos de dados.", "4": "O padrão é seguido na maioria dos casos, com poucas exceções que exigem ajuste manual.", "5": "Existe um padrão único, validado automaticamente já na entrada do dado."}}, {"id": "DI14", "tier": "complementar", "text": "Existe um processo sistemático de rotulagem e classificação de dados (ex.: motivo de devolução, categoria de atendimento).", "weight": 1, "originType": "nova", "csfId": "D3", "csfName": "Rotulagem/validação", "ref": null, "levels": {"1": "Não existe rotulagem sistemática de dados.", "2": "A rotulagem ocorre, mas de forma informal e sem revisão.", "3": "A rotulagem existe para alguns processos-chave específicos.", "4": "A rotulagem cobre a maioria dos processos relevantes, com revisão periódica.", "5": "A rotulagem é sistemática e validada, cobrindo os principais processos da empresa."}}, {"id": "DI15", "tier": "complementar", "text": "Existe uma política escrita definindo quem pode acessar e usar cada tipo de dado na empresa.", "weight": 1, "originType": "nova", "csfId": "D4", "csfName": "Governança formal de dados", "ref": null, "levels": {"1": "Não existe política formal; o acesso é decidido caso a caso.", "2": "Existem regras informais, conhecidas por poucas pessoas e nada documentado.", "3": "A política existe, mas com cobertura parcial ou pouco conhecida na empresa.", "4": "A política é documentada e conhecida pela maioria, com aplicação quase integral.", "5": "A política é formal, conhecida, aplicada de fato e possui um dono claramente definido."}}, {"id": "DI16", "tier": "complementar", "text": "A preparação de dados para uma nova análise ou projeto é rápida, e não um grande projeto à parte.", "weight": 1, "originType": "nova", "csfId": "D6", "csfName": "Capacidade de processamento", "ref": null, "levels": {"1": "Preparar dados novos é sempre um projeto grande e demorado.", "2": "É rápido apenas quando já existe um caso quase idêntico documentado anteriormente.", "3": "É rápido para casos já conhecidos, mas lento para casos novos.", "4": "O pipeline cobre a maioria dos casos novos, com pouco retrabalho necessário.", "5": "Existe um pipeline padronizado que prepara dados novos em poucos dias."}}]}, {"id": "people_culture", "name": "Pessoas e Cultura", "questions": [{"id": "PC1", "tier": "basico", "text": "Nossa equipe se sente segura e incentivada a experimentar IA para otimizar suas tarefas diárias.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q7", "levels": {"1": "Predomina medo ou resistência; o uso de IA é desencorajado ou tratado de forma informal/velada.", "2": "Há uso individual esporádico, mas sem qualquer incentivo institucional.", "3": "Iniciativas de incentivo (comunicados, políticas de uso) estão em planejamento.", "4": "Existe uma cultura de experimentação ativa em várias equipes, com incentivo claro da gestão.", "5": "A experimentação com IA é parte da cultura da empresa, celebrada e disseminada por toda a organização."}}, {"id": "PC2", "tier": "basico", "text": "Há um programa ativo de upskilling e capacitação em IA para gestores e colaboradores.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q8", "levels": {"1": "Não existe nenhum programa de capacitação em IA.", "2": "Há treinamentos pontuais e não estruturados, sem trilha definida.", "3": "Um programa de capacitação está sendo desenhado ou está em fase piloto.", "4": "O programa está ativo, com trilhas específicas para gestores e colaboradores.", "5": "O programa é consolidado e contínuo, com métricas de adoção e de impacto sobre a produtividade."}}, {"id": "PC3", "tier": "basico", "text": "A comunicação interna sobre IA foca no \"aumento humano\" e não apenas na substituição de pessoal.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q9", "levels": {"1": "A comunicação é ausente ou gera insegurança sobre substituição de pessoas por IA.", "2": "As mensagens são informais e inconsistentes sobre o tema.", "3": "Uma estratégia de comunicação sobre o tema está em elaboração.", "4": "A comunicação é estruturada e reforça o aumento humano na maioria das iniciativas de IA.", "5": "A narrativa de aumento humano é consistente, institucionalizada e reforçada continuamente pela liderança."}}, {"id": "PC4", "tier": "completo", "text": "Nossa equipe consegue quantificar, em números, o ganho concreto que a IA trouxe ao seu trabalho no dia a dia.", "weight": 1, "originType": "nova", "csfId": "P1", "csfName": "Outcomes mensuráveis na prática", "ref": null, "levels": {"1": "Ninguém quantifica o ganho; só existe uma \"impressão\" subjetiva de que ajuda.", "2": "Um ou outro time tenta medir, mas sem método consistente.", "3": "Alguns times conseguem quantificar o ganho, a maioria ainda não.", "4": "A maioria dos times mede o ganho, com metodologia parecida entre eles.", "5": "Medir e reportar o ganho de IA é uma prática comum e consistente em toda a empresa."}}, {"id": "PC5", "tier": "completo", "text": "As equipes conseguem interpretar e questionar o resultado de uma ferramenta de IA, em vez de aceitá-lo sem checar.", "weight": 1, "originType": "nova", "csfId": "P7", "csfName": "Competência prática", "ref": null, "levels": {"1": "O resultado da IA é aceito como está, sem qualquer checagem.", "2": "A checagem só acontece quando algo parece muito claramente errado.", "3": "Algumas pessoas conseguem checar e interpretar o resultado; a maioria não.", "4": "A maioria das equipes já checa e interpreta criticamente o resultado; poucas ainda não.", "5": "Checar e interpretar criticamente o resultado da IA é uma prática comum e disseminada."}}, {"id": "PC6", "tier": "completo", "text": "Existe um canal pelo qual o feedback sobre problemas no uso de IA chega a quem pode ajustar o processo, gerando mudanças reais.", "weight": 1, "originType": "nova", "csfId": "P6", "csfName": "Feedback contínuo na prática", "ref": null, "levels": {"1": "O problema fica em reclamação informal e não gera nenhum ajuste.", "2": "O feedback chega raramente e, quando chega, demora muito a virar ação.", "3": "O feedback chega ocasionalmente, e o ajuste acontece às vezes.", "4": "O feedback chega na maioria das vezes e o ajuste é comum.", "5": "Existe um canal formal e consistente de feedback, que gera ajuste regular no processo."}}, {"id": "PC7", "tier": "completo", "text": "A organização reconhece e incentiva abertamente quem testa novas ferramentas de IA por conta própria, mesmo quando o teste resulta em erro.", "weight": 1, "originType": "nova", "csfId": "P4", "csfName": "Cultura de experimentação vivida", "ref": null, "levels": {"1": "O erro é punido ou explicitamente desencorajado.", "2": "O erro é tolerado apenas em silêncio, sem qualquer menção positiva.", "3": "O erro é tolerado, mas sem incentivo explícito à experimentação.", "4": "A experimentação é incentivada na maioria das áreas; algumas ainda são mais conservadoras.", "5": "Quem experimenta e erra é reconhecido e incentivado abertamente pela organização."}}, {"id": "PC8", "tier": "completo", "text": "As equipes que usam IA no dia a dia conhecem e seguem a política de uso na prática, não apenas formalmente.", "weight": 1, "originType": "nova", "csfId": "P5", "csfName": "Papéis/políticas seguidos na prática", "ref": null, "levels": {"1": "A política é desconhecida na prática, mesmo existindo formalmente.", "2": "É conhecida por poucas pessoas e seguida raramente.", "3": "É conhecida por parte do time e seguida apenas parcialmente.", "4": "É conhecida pela maioria e seguida na maior parte do tempo.", "5": "É conhecida e seguida de forma consistente por quem usa IA no dia a dia."}}, {"id": "PC9", "tier": "complementar", "text": "Os projetos de IA têm dono e prazo de fato seguidos na prática, e não apenas definidos no papel.", "weight": 1, "originType": "nova", "csfId": "P2", "csfName": "Gestão de projetos na prática", "ref": null, "levels": {"1": "Dono e prazo existem apenas formalmente; raramente são seguidos na prática.", "2": "São seguidos apenas quando há pressão pontual de algum gestor.", "3": "São seguidos na maioria dos projetos.", "4": "São seguidos com poucas exceções; já é um hábito consolidado.", "5": "São seguidos de forma consistente, com poucas exceções."}}, {"id": "PC10", "tier": "complementar", "text": "O time dedicado a um projeto de IA se mantém alocado até a entrega, sem ser remanejado no meio do caminho.", "weight": 1, "originType": "nova", "csfId": "P3", "csfName": "Recursos chegando na prática", "ref": null, "levels": {"1": "O remanejamento é frequente e o projeto perde prioridade quando isso acontece.", "2": "O remanejamento é comum, mas o projeto é retomado depois.", "3": "O remanejamento acontece ocasionalmente.", "4": "É raro, acontecendo só em emergências claras.", "5": "O time se mantém dedicado até a entrega, sendo raramente remanejado."}}]}, {"id": "gov_risk", "name": "Governança e Risco", "questions": [{"id": "GR1", "tier": "basico", "text": "Temos políticas formais de uso ético e responsável de IA Generativa na empresa.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q10", "levels": {"1": "Nenhuma política sobre uso ético de IA Generativa existe.", "2": "Existem diretrizes informais, não documentadas.", "3": "Uma política está em elaboração ou em revisão jurídica.", "4": "A política formal está implementada e comunicada para a maior parte da empresa.", "5": "A política é robusta, revisada periodicamente, com treinamento obrigatório e mecanismos de enforcement."}}, {"id": "GR2", "tier": "basico", "text": "Monitoramos e auditamos ativamente Shadow AI e possíveis vazamentos de dados proprietários.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q11", "levels": {"1": "Não há nenhum monitoramento; o uso de ferramentas de IA não é rastreado.", "2": "Existe consciência do risco, mas sem ferramentas ou processos de monitoramento.", "3": "Uma solução de monitoramento está em avaliação ou implantação piloto.", "4": "O monitoramento está ativo na maioria das áreas, com alertas configurados.", "5": "Há monitoramento contínuo e auditoria formal, com processo estruturado de resposta a incidentes."}}, {"id": "GR3", "tier": "basico", "text": "O Conselho (Board) revisa periodicamente os riscos éticos e o ROI dos projetos de IA.", "weight": 1, "originType": "modelo_rapido", "csfId": null, "csfName": null, "ref": "Q12", "levels": {"1": "O Board não trata do tema de IA em suas pautas.", "2": "O tema é mencionado ocasionalmente, sem revisão formal.", "3": "Uma revisão periódica está sendo planejada ou estruturada.", "4": "O Board revisa riscos e ROI de IA em cadência definida (ex: trimestral).", "5": "A revisão de riscos éticos e ROI de IA é parte fixa da pauta do Board, com decisões documentadas."}}, {"id": "GR4", "tier": "completo", "text": "Mantemos registro documentado e recuperável de decisões automatizadas, suficiente para responder a uma auditoria regulatória a qualquer momento.", "weight": 1, "originType": "nova", "csfId": "R1", "csfName": "Auditabilidade", "ref": null, "levels": {"1": "Não há registro ou documentação das decisões tomadas por modelos de IA.", "2": "O registro existe, mas é informal, disperso e difícil de recuperar.", "3": "O registro existe para alguns casos específicos, sem sistematização.", "4": "O registro é sistemático na maioria dos casos, com algumas lacunas pontuais.", "5": "O registro é sistemático e recuperável para qualquer decisão automatizada, a qualquer momento."}}, {"id": "GR5", "tier": "completo", "text": "O time de negócio consegue explicar, em linguagem simples, por que um modelo de IA recomenda determinado resultado.", "weight": 1, "originType": "nova", "csfId": "R2", "csfName": "Explicabilidade", "ref": null, "levels": {"1": "Ninguém do negócio consegue explicar; o modelo funciona como uma caixa-preta.", "2": "Apenas o time técnico consegue explicar, e somente em linguagem técnica.", "3": "A explicação é possível parcialmente, apenas para os modelos mais simples.", "4": "A explicação está disponível para a maioria dos modelos, em linguagem acessível ao negócio.", "5": "A explicação está disponível e é compreendida pelo negócio para os principais modelos em uso."}}, {"id": "GR6", "tier": "completo", "text": "Existe um papel ou comitê formalmente nomeado, com responsabilidades claras, pela governança de risco e ética de IA.", "weight": 1, "originType": "nova", "csfId": "O5", "csfName": "Estrutura de governança formal", "ref": null, "levels": {"1": "Não existe nenhuma estrutura formal nomeada para governança de IA.", "2": "Há um responsável indicado informalmente, sem mandato claro.", "3": "A estrutura existe, mas as responsabilidades ainda são pouco claras ou muito recentes.", "4": "A estrutura é formal, com responsabilidades claras, ainda ganhando maturidade na prática.", "5": "A estrutura formal é madura, com responsabilidades claras e reconhecidas em toda a empresa."}}, {"id": "GR7", "tier": "completo", "text": "Avaliamos de forma recorrente se nossos modelos (ex.: crédito, desconto, priorização) tratam algum grupo de pessoas de forma diferente sem justificativa.", "weight": 1, "originType": "nova", "csfId": "R3", "csfName": "Mitigação de viés", "ref": null, "levels": {"1": "Isso nunca foi avaliado em nenhum modelo.", "2": "A preocupação já foi levantada informalmente, mas nunca foi investigada de fato.", "3": "Já foi avaliado uma vez, mas sem processo recorrente.", "4": "Há avaliação recorrente, mas ela não cobre todos os modelos críticos.", "5": "Há avaliação recorrente e documentada, incorporada como parte do processo de deploy dos modelos."}}, {"id": "GR8", "tier": "completo", "text": "Nossa política interna de uso de IA foi criada de forma proativa e é revisada periodicamente, independentemente da ocorrência de incidentes.", "weight": 1, "originType": "nova", "csfId": "R5", "csfName": "Políticas internas", "ref": null, "levels": {"1": "Não existe política interna de uso de IA.", "2": "Existe apenas um rascunho de política, que nunca foi formalizado.", "3": "A política existe, mas nasceu de forma reativa, após algum incidente.", "4": "A política existe e é revisada às vezes, mas sem calendário formal de revisão.", "5": "A política existe, é proativa por natureza e revisada periodicamente, de forma planejada."}}, {"id": "GR9", "tier": "complementar", "text": "Está definido e documentado quem responde por decisões automatizadas de IA que afetam pessoas.", "weight": 1, "originType": "nova", "csfId": "S1", "csfName": "Framework regulatório co-desenvolvido", "ref": null, "levels": {"1": "O tema nunca foi discutido.", "2": "Foi discutido uma vez, mas sem conclusão registrada.", "3": "Foi discutido informalmente, sem nenhum documento formal.", "4": "Está documentado, mas ainda não foi revisado com todos os stakeholders relevantes.", "5": "Está formalizado e revisado periodicamente com todos os stakeholders relevantes."}}, {"id": "GR10", "tier": "complementar", "text": "Existe um rito periódico institucional para revisar e ajustar a prática de IA, independentemente de crises ou reclamações.", "weight": 1, "originType": "nova", "csfId": "O6", "csfName": "Ciclo de revisão formal", "ref": null, "levels": {"1": "O ajuste só acontece de forma reativa, depois de uma crise ou reclamação.", "2": "A revisão ocorre, mas sem periodicidade definida.", "3": "O rito existe, mas acontece de forma irregular.", "4": "O rito ocorre na maioria dos ciclos previstos.", "5": "O rito periódico é consistente e independe da ocorrência de crises."}}, {"id": "GR11", "tier": "complementar", "text": "Sabemos o que muda nas exigências legais de IA caso a empresa expanda para outro estado ou país.", "weight": 1, "originType": "nova", "csfId": "R4", "csfName": "Contexto cultural/legal", "ref": null, "levels": {"1": "Isso nunca foi mapeado.", "2": "Existe um mapeamento informal, feito individualmente por alguém.", "3": "O mapeamento é parcial ou está desatualizado.", "4": "O mapeamento está atualizado, mas ainda não integrado ao planejamento formal de expansão.", "5": "O mapeamento está atualizado e integrado ao planejamento formal de expansão da empresa."}}]}], "scoring": {"basico": {"level_1": {"min": 12, "max": 24, "label": "Iniciação (Ad Hoc)", "description": "Uso individual e isolado. Sem estratégia centralizada."}, "level_2": {"min": 25, "max": 36, "label": "Experimentação", "description": "PoCs em departamentos específicos. Dados em silos."}, "level_3": {"min": 37, "max": 48, "label": "Prontidão", "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."}, "level_4": {"min": 49, "max": 56, "label": "Otimização/Escala", "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."}, "level_5": {"min": 57, "max": 60, "label": "Transformação (AI-First)", "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."}}, "completo": {"level_1": {"min": 32, "max": 64, "label": "Iniciação (Ad Hoc)", "description": "Uso individual e isolado. Sem estratégia centralizada."}, "level_2": {"min": 65, "max": 96, "label": "Experimentação", "description": "PoCs em departamentos específicos. Dados em silos."}, "level_3": {"min": 97, "max": 128, "label": "Prontidão", "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."}, "level_4": {"min": 129, "max": 149, "label": "Otimização/Escala", "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."}, "level_5": {"min": 150, "max": 160, "label": "Transformação (AI-First)", "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."}}, "complementar": {"level_1": {"min": 48, "max": 96, "label": "Iniciação (Ad Hoc)", "description": "Uso individual e isolado. Sem estratégia centralizada."}, "level_2": {"min": 97, "max": 144, "label": "Experimentação", "description": "PoCs em departamentos específicos. Dados em silos."}, "level_3": {"min": 145, "max": 192, "label": "Prontidão", "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."}, "level_4": {"min": 193, "max": 224, "label": "Otimização/Escala", "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."}, "level_5": {"min": 225, "max": 240, "label": "Transformação (AI-First)", "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."}}}, "overlaps": [{"pair": ["EV8", "GR6"], "distinction": "EV8 avalia a entrega de projetos de IA (escopo/prazo/orçamento); GR6 avalia a governança de risco e ética."}, {"pair": ["DI1", "DI4"], "distinction": "DI1 avalia a prontidão estrutural dos dados; DI4 avalia a confiabilidade dos dados no uso diário."}, {"pair": ["DI3", "DI15"], "distinction": "DI3 avalia a governança de dados voltada à LGPD; DI15 avalia a política de controle de acesso aos dados."}, {"pair": ["PC1", "PC7"], "distinction": "PC1 avalia o clima geral de segurança para experimentar; PC7 avalia a consequência concreta de errar ao experimentar."}, {"pair": ["EV6", "PC4"], "distinction": "EV6 avalia a existência de uma métrica oficial institucional; PC4 avalia a capacidade prática das equipes de medir seu próprio ganho."}, {"pair": ["GR1", "GR8"], "distinction": "GR1 avalia a existência e maturidade do conteúdo da política; GR8 avalia a origem proativa e a periodicidade de revisão dessa política."}]}</script>
+<script>
+const QUIZ = JSON.parse(document.getElementById('quiz-data').textContent);
+
+const TIER_KEYS = ['basico', 'completo', 'complementar'];
+const TIER_ORDER = { basico: 0, completo: 1, complementar: 2 };
+const TIER_LABEL_SHORT = { basico: 'Básico', completo: 'Completo', complementar: 'Complementar' };
+
+const DIMENSION_COLORS = {
+  strategy: 'var(--dim-strategy)',
+  data_infra: 'var(--dim-data)',
+  people_culture: 'var(--dim-people)',
+  gov_risk: 'var(--dim-gov)'
+};
+const DIMENSION_ABBR = { strategy: 'Est', data_infra: 'Dad', people_culture: 'Pes', gov_risk: 'Gov' };
+const QUAD_LABEL = { s: 'Força', w: 'Fraqueza', o: 'Oportunidade', t: 'Ameaça' };
+
+const state = {};              // questionId -> level string
+let selectedTier = 'basico';
+let swotCreated = false;
+
+const questionIndex = {};      // questionId -> enriched question object
+const headerBars = {};         // dimensionId -> { fill, value }
+const dimRefs = [];            // [{ dim, band, chipCount }]
+
+function totalForTier(tier){ return QUIZ.levels[tier].question_count; }
+function tierIndexOf(tier){ return TIER_ORDER[tier]; }
+function isVisibleTier(tier){ return tierIndexOf(tier) <= tierIndexOf(selectedTier); }
+
+function naturalCompare(a, b){
+  const [, la, na] = a.match(/^([A-Za-z]+)(\d+)$/) || [null, a, '0'];
+  const [, lb, nb] = b.match(/^([A-Za-z]+)(\d+)$/) || [null, b, '0'];
+  if(la !== lb) return la < lb ? -1 : 1;
+  return Number(na) - Number(nb);
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- Build tier selector ---------- */
+const tierSelect = document.getElementById('tierSelect');
+TIER_KEYS.forEach(key => {
+  const cfg = QUIZ.levels[key];
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'tier-btn';
+  btn.dataset.tier = key;
+  btn.innerHTML = `<span class="tier-name">${cfg.label}</span><span class="tier-count">${cfg.question_count} perguntas</span>`;
+  btn.addEventListener('click', () => setTier(key));
+  tierSelect.appendChild(btn);
+});
+
+function updateTierButtons(){
+  [...tierSelect.querySelectorAll('.tier-btn')].forEach(b => {
+    b.classList.toggle('active', b.dataset.tier === selectedTier);
+  });
+}
+
+function setTier(key){
+  if(key === selectedTier) return;
+  selectedTier = key;
+  updateTierButtons();
+  applyTierFilter();
+  updateProgress();
+  dimRefs.forEach(ref => updateDimensionProgress(ref.dim, ref.band));
+}
+
+function applyTierFilter(){
+  document.querySelectorAll('.csf-row').forEach(row => {
+    row.hidden = !isVisibleTier(row.dataset.tier);
+  });
+}
+
+/* ---------- Build matrix ---------- */
+const root = document.getElementById('matrixRoot');
+const nav = document.getElementById('pillarNav');
+const headerChart = document.getElementById('headerChart');
+
+QUIZ.dimensions.forEach((dim, dIdx) => {
+  const color = DIMENSION_COLORS[dim.id] || '#666';
+  const sectionId = 'dim-' + dIdx;
+
+  // nav chip
+  const chip = document.createElement('button');
+  chip.className = 'pillar-chip';
+  chip.innerHTML = `<span class="dot" style="background:${color}"></span>${dim.name} <span class="n" data-count="${dim.id}">0/0</span>`;
+  chip.addEventListener('click', () => {
+    document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  nav.appendChild(chip);
+
+  // header chart bar
+  const barCol = document.createElement('div');
+  barCol.className = 'chart-bar-col';
+  barCol.innerHTML = `
+    <span class="chart-bar-value" data-bar-value>–</span>
+    <div class="chart-bar-track"><div class="chart-bar-fill" style="background:${color}"></div></div>
+    <span class="chart-bar-label">${DIMENSION_ABBR[dim.id] || dim.name.slice(0,3)}</span>
+  `;
+  headerChart.appendChild(barCol);
+  headerBars[dim.id] = {
+    fill: barCol.querySelector('.chart-bar-fill'),
+    value: barCol.querySelector('[data-bar-value]')
+  };
+
+  const section = document.createElement('div');
+  section.className = 'pillar-section';
+  section.id = sectionId;
+
+  const band = document.createElement('div');
+  band.className = 'pillar-band';
+  band.style.background = color;
+  band.innerHTML = `
+    <h2>${dim.name}</h2>
+    <div class="pillar-meta">
+      <span class="avg">
+        Média
+        <span class="bulbs">${[1,2,3,4,5].map(() => '<i></i>').join('')}</span>
+      </span>
+      <span data-pillar-progress>0/0</span>
+    </div>
+  `;
+  section.appendChild(band);
+
+  dimRefs.push({ dim, band, chip });
+
+  const sortedQuestions = [...dim.questions].sort((a,b) => naturalCompare(a.id, b.id));
+
+  sortedQuestions.forEach(q => {
+    questionIndex[q.id] = { ...q, dimId: dim.id, dimName: dim.name };
+
+    const row = document.createElement('div');
+    row.className = 'csf-row';
+    row.dataset.code = q.id;
+    row.dataset.tier = q.tier;
+    row.hidden = !isVisibleTier(q.tier);
+
+    const originLine = q.originType === 'modelo_rapido'
+      ? `Pergunta base do Modelo Rápido (${q.ref})`
+      : `Deriva do CSF ${q.csfId} · ${q.csfName}`;
+
+    const stem = document.createElement('div');
+    stem.className = 'stem';
+    stem.innerHTML = `
+      <span class="code" style="background:${color}22; color:${color}">${q.id}</span>
+      <span class="tier-pill" data-tier="${q.tier}">${TIER_LABEL_SHORT[q.tier]}</span>
+      <p class="title">${escapeHtml(q.text)}</p>
+      <p class="q">${escapeHtml(originLine)}</p>
+    `;
+    row.appendChild(stem);
+
+    ['1','2','3','4','5'].forEach(lvl => {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.l = lvl;
+      cell.tabIndex = 0;
+      cell.innerHTML = `<span class="txt">${escapeHtml(q.levels[lvl])}</span>`;
+      cell.addEventListener('click', () => toggleSelect(q.id, lvl, row, dim, band));
+      cell.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleSelect(q.id, lvl, row, dim, band); }
+      });
+      row.appendChild(cell);
+    });
+
+    section.appendChild(row);
+  });
+
+  root.appendChild(section);
+});
+
+dimRefs.forEach(ref => updateDimensionProgress(ref.dim, ref.band));
+
+/* ---------- Overlap notes ---------- */
+const overlapList = document.getElementById('overlapList');
+document.getElementById('overlapCount').textContent = QUIZ.overlaps.length;
+QUIZ.overlaps.forEach(o => {
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="overlap-pair">${o.pair.join(' × ')}</span> — ${escapeHtml(o.distinction)}`;
+  overlapList.appendChild(li);
+});
+
+/* ---------- Answering ---------- */
+function toggleSelect(code, lvl, row, dim, band){
+  const already = state[code] === lvl;
+  if(already){ delete state[code]; } else { state[code] = lvl; }
+
+  [...row.querySelectorAll('.cell')].forEach(c => {
+    c.classList.remove('selected', 'dim');
+    if(!already && c.dataset.l === lvl){ c.classList.add('selected'); }
+    else if(state[code]){ c.classList.add('dim'); }
+  });
+
+  updateProgress();
+  updateDimensionProgress(dim, band);
+}
+
+function updateProgress(){
+  const total = totalForTier(selectedTier);
+  const visibleCodes = Object.keys(questionIndex).filter(id => isVisibleTier(questionIndex[id].tier));
+  const answered = visibleCodes.filter(id => state[id]).length;
+
+  document.getElementById('progressNum').textContent = `${answered}/${total}`;
+  document.getElementById('progressFill').style.width = (answered / total * 100) + '%';
+  const label = document.getElementById('progressLabel');
+
+  if(answered === 0){
+    label.textContent = 'Nenhuma pergunta respondida ainda';
+  } else if(answered === total){
+    const v = computeVerdict(buildBuckets());
+    label.textContent = `Diagnóstico ${TIER_LABEL_SHORT[selectedTier].toLowerCase()} completo · ${v.sum}/${v.maxScore} pts · ${v.band.label}`;
+  } else {
+    label.textContent = `${total - answered} pergunta(s) restante(s) no nível ${TIER_LABEL_SHORT[selectedTier]}`;
+  }
+
+  updateSwotButton();
+}
+
+function updateDimensionProgress(dim, band){
+  const codes = dim.questions.filter(q => isVisibleTier(q.tier)).map(q => q.id);
+  const answeredCodes = codes.filter(c => state[c]);
+
+  band.querySelector('[data-pillar-progress]').textContent = `${answeredCodes.length}/${codes.length}`;
+  const navEl = document.querySelector(`[data-count="${dim.id}"]`);
+  if(navEl) navEl.textContent = `${answeredCodes.length}/${codes.length}`;
+
+  const bulbs = band.querySelectorAll('.bulbs i');
+  const bar = headerBars[dim.id];
+  if(answeredCodes.length){
+    const avgExact = answeredCodes.reduce((a,c) => a + Number(state[c]), 0) / answeredCodes.length;
+    const avg = Math.round(avgExact);
+    bulbs.forEach((b,i) => b.classList.toggle('on', i < avg));
+    if(bar){
+      bar.fill.style.height = (avgExact / 5 * 100) + '%';
+      bar.value.textContent = avgExact.toFixed(1);
+    }
+  } else {
+    bulbs.forEach(b => b.classList.remove('on'));
+    if(bar){
+      bar.fill.style.height = '0%';
+      bar.value.textContent = '–';
+    }
+  }
+}
+
+/* ---------- SWOT (opens as an independent page) ---------- */
+const swotBtn = document.getElementById('swotBtn');
+
+function updateSwotButton(){
+  const total = totalForTier(selectedTier);
+  const visibleCodes = Object.keys(questionIndex).filter(id => isVisibleTier(questionIndex[id].tier));
+  const answered = visibleCodes.filter(id => state[id]).length;
+  const complete = answered === total;
+  swotBtn.hidden = !complete;
+  if(complete){
+    swotBtn.textContent = swotCreated ? 'SWOT' : 'Criar SWOT';
+  }
+}
+
+/* Build the four SWOT buckets, each item carrying the evidence (the chosen
+   alternative's own text) and a one-line rule explaining the classification.
+   Classification uses the question's origin: CSFs whose id starts with "R"
+   (Regulations, in the reference 36-CSF model) are treated as external. */
+function buildBuckets(){
+  const buckets = { s: [], w: [], o: [], t: [] };
+
+  Object.keys(state).forEach(code => {
+    const q = questionIndex[code];
+    if(!q || !isVisibleTier(q.tier)) return;
+    const lvl = Number(state[code]);
+    const evidence = q.levels[String(lvl)];
+    const isExternal = !!(q.csfId && q.csfId.startsWith('R'));
+    let quad, why;
+
+    if(isExternal){
+      quad = lvl >= 4 ? 'o' : 't';
+      why = quad === 'o'
+        ? `Requisito regulatório (${q.dimName}) em nível ${lvl}: cenário já favorável — dá para explorar essa vantagem.`
+        : `Requisito regulatório (${q.dimName}) em nível ${lvl}: exposição a risco externo — precisa de plano de mitigação.`;
+    } else {
+      quad = lvl >= 4 ? 's' : 'w';
+      why = quad === 's'
+        ? `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade já madura e controlável pela empresa — pode virar alavanca.`
+        : `Dimensão interna (${q.dimName}) em nível ${lvl}: capacidade ainda imatura, mas está sob controle da empresa corrigir.`;
+    }
+
+    buckets[quad].push({ code, lvl, title: q.text, dimLabel: q.dimName, evidence, why });
+  });
+
+  ['s','w','o','t'].forEach(q => buckets[q].sort((a,b) => naturalCompare(a.code, b.code)));
+  return buckets;
+}
+
+function quadItemsHtml(items, q){
+  if(!items.length) return `<li class="empty">Nenhuma pergunta classificada aqui.</li>`;
+  return items.map(item => `
+      <li>
+        <span class="code">${item.code} · N${item.lvl}</span>
+        <span class="lbl">
+          <span class="item-title">${escapeHtml(item.title)}</span>
+          <span class="pillar-tag">${escapeHtml(item.dimLabel)}</span>
+          <span class="why"><b>Por quê ${QUAD_LABEL[q].toLowerCase()}:</b> "${escapeHtml(item.evidence)}" — ${escapeHtml(item.why)}</span>
+        </span>
+      </li>`).join('');
+}
+
+/* Combine bucket pairs into templated TOWS strategy bullets, capped so the
+   panel stays readable even when a bucket has many items. */
+function pairSentences(listA, listB, template, capacity){
+  if(!listA.length || !listB.length) return [];
+  const n = Math.min(capacity, Math.max(listA.length, listB.length));
+  const out = [];
+  for(let i = 0; i < n; i++){
+    const a = listA[i % listA.length];
+    const b = listB[i % listB.length];
+    out.push(template(a, b));
+  }
+  return [...new Set(out)];
+}
+
+function buildTowsCells(buckets){
+  return {
+    so: pairSentences(buckets.s, buckets.o,
+      (a,b) => `Usar «${a.title}» (força ${a.code}) para aproveitar «${b.title}» (oportunidade ${b.code}).`, 4),
+    st: pairSentences(buckets.s, buckets.t,
+      (a,b) => `Usar «${a.title}» (força ${a.code}) para conter o risco de «${b.title}» (ameaça ${b.code}).`, 4),
+    wo: pairSentences(buckets.w, buckets.o,
+      (a,b) => `Aproveitar «${b.title}» (oportunidade ${b.code}) como janela para corrigir «${a.title}» (fraqueza ${a.code}).`, 4),
+    wt: pairSentences(buckets.w, buckets.t,
+      (a,b) => `Plano defensivo: tratar «${a.title}» (fraqueza ${a.code}) antes que «${b.title}» (ameaça ${b.code}) vire problema real.`, 4),
+  };
+}
+
+function towsItemsHtml(sentences){
+  if(!sentences.length) return `<li class="empty">Sem itens suficientes para cruzar nesta combinação.</li>`;
+  return sentences.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+}
+
+/* Verdict: sums the answered visible questions' values and matches the
+   official scoring bands defined for the selected tier in the source JSON. */
+function computeVerdict(buckets){
+  const visibleAnsweredCodes = Object.keys(state).filter(id => questionIndex[id] && isVisibleTier(questionIndex[id].tier));
+  const sum = visibleAnsweredCodes.reduce((acc,c) => acc + Number(state[c]) * (questionIndex[c].weight || 1), 0);
+  const maxScore = QUIZ.levels[selectedTier].max_score;
+  const tierScoring = QUIZ.scoring[selectedTier];
+
+  let band = null;
+  for(const key of ['level_1','level_2','level_3','level_4','level_5']){
+    const b = tierScoring[key];
+    if(sum >= b.min && sum <= b.max){ band = b; break; }
+  }
+  if(!band){
+    band = sum < tierScoring.level_1.min ? tierScoring.level_1 : tierScoring.level_5;
+  }
+
+  const dimAverages = QUIZ.dimensions.map(dim => {
+    const codes = dim.questions.filter(q => isVisibleTier(q.tier)).map(q => q.id);
+    const answered = codes.filter(c => state[c]);
+    const avg = answered.length ? answered.reduce((a,c) => a + Number(state[c]), 0) / answered.length : 0;
+    return { label: dim.name, avg, answeredCount: answered.length };
+  }).filter(d => d.answeredCount > 0);
+
+  const strongest = dimAverages.length ? dimAverages.reduce((a,b) => b.avg > a.avg ? b : a) : null;
+  const weakest = dimAverages.length ? dimAverages.reduce((a,b) => b.avg < a.avg ? b : a) : null;
+
+  return { sum, maxScore, band, strongest, weakest };
+}
+
+const SWOT_PAGE_CSS = `
+  :root{
+    --ink:#171b20; --paper:#f4f1ea; --panel:#12181f;
+    --hairline:#2c3743; --card:#fffdf8; --card-border:#e4ddc9;
+    --gold:#c8963e; --gold-strong:#a8752a; --muted:#6b7280; --muted-inv:#9aa7b4;
+    --lvl1:#b6543f; --lvl5:#3f8563; --dim-data:#3d6fa8; --radius:3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page-header{
+    background:var(--panel); color:var(--paper);
+    padding:28px 18px; border-bottom:1px solid var(--hairline);
+  }
+  .page-header .inner{ max-width:920px; margin:0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .page-header .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--gold); margin:0 0 8px;
+  }
+  .page-header h1{
+    font-family:'Fraunces', serif; font-weight:600; font-size:clamp(22px,4.5vw,32px);
+    margin:0 0 6px; letter-spacing:-.01em;
+  }
+  .page-header .meta{ font-size:12px; color:var(--muted-inv); margin:0; }
+  .print-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+    letter-spacing:.04em; text-transform:uppercase;
+    padding:9px 16px; border-radius:99px; border:1px solid var(--gold);
+    background:transparent; color:var(--gold); cursor:pointer; flex:0 0 auto;
+  }
+  .print-btn:hover{ background:var(--gold); color:#1a1005; }
+
+  main{ max-width:920px; margin:0 auto; padding:26px 18px 60px; }
+
+  .swot-section{ margin-bottom:30px; }
+  .swot-section:last-child{ margin-bottom:0; }
+  .swot-section-title{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--gold-strong); margin:0 0 12px;
+    padding-bottom:6px; border-bottom:1px solid var(--card-border);
+  }
+  .swot-rule{ font-size:13px; line-height:1.6; color:var(--muted); max-width:760px; margin:0 0 14px; }
+  .swot-rule strong{ color:var(--ink); }
+
+  .swot-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .swot-quad{
+    background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius);
+    border-top:4px solid; padding:14px 16px 16px; break-inside:avoid;
+  }
+  .swot-quad[data-q="s"]{ border-top-color:var(--lvl5); }
+  .swot-quad[data-q="w"]{ border-top-color:var(--lvl1); }
+  .swot-quad[data-q="o"]{ border-top-color:var(--dim-data); }
+  .swot-quad[data-q="t"]{ border-top-color:var(--gold-strong); }
+  .swot-quad h3{
+    font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin:0 0 10px;
+    display:flex; align-items:center; gap:8px; color:var(--ink);
+  }
+  .swot-quad[data-q="s"] h3{ color:var(--lvl5); }
+  .swot-quad[data-q="w"] h3{ color:var(--lvl1); }
+  .swot-quad[data-q="o"] h3{ color:var(--dim-data); }
+  .swot-quad[data-q="t"] h3{ color:var(--gold-strong); }
+  .swot-count{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--muted);
+    background:var(--paper); border-radius:99px; padding:1px 8px;
+  }
+  .swot-quad ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .swot-quad li{ display:flex; align-items:flex-start; gap:8px; padding:9px 10px; background:var(--paper); border-radius:3px; }
+  .swot-quad li .code{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; flex:0 0 auto;
+    padding:1px 6px; border-radius:3px; background:var(--card); border:1px solid var(--card-border); margin-top:1px;
+  }
+  .swot-quad li .lbl{ color:var(--ink); flex:1; min-width:0; }
+  .swot-quad li .lbl .item-title{ font-size:12.5px; font-weight:600; line-height:1.35; display:block; }
+  .swot-quad li .lbl .pillar-tag{ display:block; font-size:10px; color:var(--muted); font-style:italic; margin-top:2px; }
+  .swot-quad li .lbl .why{
+    display:block; font-size:11.5px; line-height:1.45; color:var(--muted);
+    margin-top:5px; padding-top:5px; border-top:1px dashed var(--card-border);
+  }
+  .swot-quad li .lbl .why b{ color:var(--ink); font-weight:600; }
+  .swot-quad .empty{ font-size:12px; color:var(--muted); font-style:italic; }
+
+  .tows-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+  .tows-cell{ background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:14px 16px 16px; break-inside:avoid; }
+  .tows-cell h4{ font-family:'Fraunces', serif; font-weight:600; font-size:14.5px; margin:0 0 10px; color:var(--ink); display:flex; flex-direction:column; gap:2px; }
+  .tows-cell h4 span{ font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .tows-cell[data-t="so"]{ border-left:4px solid var(--lvl5); }
+  .tows-cell[data-t="st"]{ border-left:4px solid var(--dim-data); }
+  .tows-cell[data-t="wo"]{ border-left:4px solid var(--gold-strong); }
+  .tows-cell[data-t="wt"]{ border-left:4px solid var(--lvl1); }
+  .tows-cell ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
+  .tows-cell li{ font-size:12px; line-height:1.45; color:var(--ink); padding:8px 10px; background:var(--paper); border-radius:3px; }
+  .tows-cell .empty{ font-size:12px; color:var(--muted); font-style:italic; }
+
+  .verdict-card{ display:flex; flex-direction:column; gap:14px; background:var(--panel); color:var(--paper); border-radius:6px; padding:22px; break-inside:avoid; }
+  .verdict-score{ display:flex; align-items:baseline; gap:4px; font-family:'Fraunces', serif; font-weight:700; }
+  .verdict-number{ font-size:44px; color:var(--gold); line-height:1; }
+  .verdict-max{ font-size:16px; color:var(--muted-inv); }
+  .verdict-band{ font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold); margin:0; font-weight:700; }
+  .verdict-text{ font-size:13.5px; line-height:1.6; color:var(--muted-inv); margin:0; }
+  .verdict-text b{ color:var(--paper); }
+
+  @media (min-width: 700px){
+    .swot-grid{ grid-template-columns:1fr 1fr; }
+    .tows-grid{ grid-template-columns:1fr 1fr; }
+    .verdict-card{ flex-direction:row; align-items:center; gap:26px; }
+    .verdict-score{ flex:0 0 auto; }
+  }
+  @media print{
+    .print-btn{ display:none; }
+    body{ background:#fff; }
+  }
+`;
+
+function buildSwotPageHtml(buckets, cells, verdict){
+  const now = new Date();
+  const stamp = now.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+  const total = totalForTier(selectedTier);
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz SWOT — ${escapeHtml(QUIZ.title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>${SWOT_PAGE_CSS}</style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="inner">
+      <div>
+        <p class="eyebrow">Gerado a partir de ${total} respostas · nível ${TIER_LABEL_SHORT[selectedTier]} · ${escapeHtml(stamp)}</p>
+        <h1>Matriz SWOT — ${escapeHtml(QUIZ.title)}</h1>
+        <p class="meta">Página independente — pode ser impressa, salva ou compartilhada separadamente do formulário.</p>
+      </div>
+      <button type="button" class="print-btn" onclick="window.print()">Imprimir / salvar PDF</button>
+    </div>
+  </header>
+  <main>
+    <section class="swot-section">
+      <h2 class="swot-section-title">1 · Como lemos suas respostas</h2>
+      <p class="swot-rule">
+        Perguntas ligadas a dimensões internas <strong>(Estratégia e Visão, Dados e Infraestrutura, Pessoas e Cultura, e a parte de Governança de Governança e Risco)</strong> com nível 4–5 viram <strong>Força</strong>, com nível 1–3 viram <strong>Fraqueza</strong>. Perguntas ligadas a requisitos regulatórios <strong>(CSFs de origem "R" dentro de Governança e Risco)</strong> com nível 4–5 viram <strong>Oportunidade</strong>, com nível 1–3 viram <strong>Ameaça</strong>. Cada item abaixo traz a evidência (sua resposta) e a regra aplicada.
+      </p>
+    </section>
+
+    <section class="swot-section">
+      <h2 class="swot-section-title">2 · Matriz SWOT</h2>
+      <div class="swot-grid">
+        <div class="swot-quad" data-q="s">
+          <h3>Forças <span class="swot-count">${buckets.s.length}</span></h3>
+          <ul>${quadItemsHtml(buckets.s, 's')}</ul>
+        </div>
+        <div class="swot-quad" data-q="o">
+          <h3>Oportunidades <span class="swot-count">${buckets.o.length}</span></h3>
+          <ul>${quadItemsHtml(buckets.o, 'o')}</ul>
+        </div>
+        <div class="swot-quad" data-q="w">
+          <h3>Fraquezas <span class="swot-count">${buckets.w.length}</span></h3>
+          <ul>${quadItemsHtml(buckets.w, 'w')}</ul>
+        </div>
+        <div class="swot-quad" data-q="t">
+          <h3>Ameaças <span class="swot-count">${buckets.t.length}</span></h3>
+          <ul>${quadItemsHtml(buckets.t, 't')}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="swot-section">
+      <h2 class="swot-section-title">3 · Cruzamento TOWS</h2>
+      <p class="swot-rule">Combina os quadrantes para sugerir movimentos: usar forças para capturar oportunidades ou conter ameaças, e decidir o que fazer com as fraquezas.</p>
+      <div class="tows-grid">
+        <div class="tows-cell" data-t="so">
+          <h4>SO — Ofensiva <span>Força + Oportunidade</span></h4>
+          <ul>${towsItemsHtml(cells.so)}</ul>
+        </div>
+        <div class="tows-cell" data-t="st">
+          <h4>ST — Confronto <span>Força + Ameaça</span></h4>
+          <ul>${towsItemsHtml(cells.st)}</ul>
+        </div>
+        <div class="tows-cell" data-t="wo">
+          <h4>WO — Reforço <span>Fraqueza + Oportunidade</span></h4>
+          <ul>${towsItemsHtml(cells.wo)}</ul>
+        </div>
+        <div class="tows-cell" data-t="wt">
+          <h4>WT — Defesa <span>Fraqueza + Ameaça</span></h4>
+          <ul>${towsItemsHtml(cells.wt)}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="swot-section">
+      <h2 class="swot-section-title">4 · Veredito</h2>
+      <div class="verdict-card">
+        <div class="verdict-score">
+          <span class="verdict-number">${verdict.sum}</span>
+          <span class="verdict-max">/${verdict.maxScore} pts</span>
+        </div>
+        <div class="verdict-body">
+          <p class="verdict-band">${escapeHtml(verdict.band.label)}</p>
+          <p class="verdict-text">
+            ${escapeHtml(verdict.band.description)}
+            ${verdict.strongest && verdict.weakest ? `
+            A dimensão mais madura é <b>${escapeHtml(verdict.strongest.label)}</b> (média ${verdict.strongest.avg.toFixed(1)}) — é aí que a empresa tem mais margem para alavancar resultado agora.
+            A dimensão mais frágil é <b>${escapeHtml(verdict.weakest.label)}</b> (média ${verdict.weakest.avg.toFixed(1)}) — é a primeira candidata a plano de ação, antes que vire gargalo para as demais.` : ''}
+            No total: <b>${buckets.s.length} força(s)</b>, <b>${buckets.w.length} fraqueza(s)</b>, <b>${buckets.o.length} oportunidade(s)</b> e <b>${buckets.t.length} ameaça(s)</b>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+function openSwot(){
+  swotCreated = true;
+  swotBtn.textContent = 'SWOT';
+
+  const buckets = buildBuckets();
+  const cells = buildTowsCells(buckets);
+  const verdict = computeVerdict(buckets);
+  const html = buildSwotPageHtml(buckets, cells, verdict);
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+
+  if(!win){
+    alert('O navegador bloqueou a abertura da nova aba. Permita pop-ups para este site e clique em "SWOT" novamente.');
+  } else {
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+}
+
+swotBtn.addEventListener('click', openSwot);
+
+updateTierButtons();
+updateProgress();
+</script>
+</body>
+</html>

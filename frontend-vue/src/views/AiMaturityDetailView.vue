@@ -35,10 +35,15 @@ const CHART_COLORS = {
 
 function getLevelByScore(score: number): { label?: string; description?: string } | null {
   const m = model.value
-  if (!m?.scoring_logic) return null
-  for (const k of Object.keys(m.scoring_logic)) {
-    const it = m.scoring_logic[k]
-    if (score >= it.min && score <= it.max) return it
+  const tier = displayedResult.value?.tier
+  const bands =
+    (tier && m?.scoring?.[tier as keyof NonNullable<typeof m.scoring>]) ||
+    m?.scoring?.basico ||
+    m?.scoring_logic
+  if (!bands) return null
+  for (const k of Object.keys(bands)) {
+    const it = bands[k]
+    if (it && score >= it.min && score <= it.max) return it
   }
   return null
 }

@@ -1,0 +1,1816 @@
+{
+  "assessment_title": "Diagnóstico de Maturidade em IA - Aegis AI",
+  "version": "3.0",
+  "form_structure": {
+    "description": "Formulário único e progressivo em 3 níveis. Cada nível contém integralmente as perguntas do nível anterior.",
+    "levels": {
+      "basico": {
+        "label": "Básico",
+        "description": "Modelo Rápido original — diagnóstico inicial rápido.",
+        "question_count": 12,
+        "max_score": 60
+      },
+      "completo": {
+        "label": "Completo",
+        "description": "Básico + 20 perguntas adicionais — diagnóstico robusto.",
+        "question_count": 32,
+        "max_score": 160
+      },
+      "complementar": {
+        "label": "Complementar (opcional)",
+        "description": "Completo + 16 perguntas adicionais — cobre a totalidade dos 36 CSFs do modelo de referência.",
+        "question_count": 48,
+        "max_score": 240
+      }
+    }
+  },
+  "answer_scale_note": "Cada pergunta possui suas próprias 5 opções de resposta (campo 'options'), com descrição explicativa por nível de maturidade, em vez de uma escala genérica única.",
+  "dimensions": [
+    {
+      "id": "strategy",
+      "name": "Estratégia e Visão",
+      "questions": [
+        {
+          "id": "EV1",
+          "tier": "basico",
+          "text": "Nossa liderança possui uma visão clara de como a IA impacta nossos OKRs e modelo de receita.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q1",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A liderança não relaciona IA a resultados de negócio; o tema é tratado como curiosidade tecnológica isolada."
+            },
+            {
+              "value": 2,
+              "description": "Há interesse informal da liderança, mas sem conexão direta com OKRs ou receita — discussões pontuais e não estruturadas."
+            },
+            {
+              "value": 3,
+              "description": "Está em andamento um esforço para mapear a conexão entre IA e receita, ainda sem consenso formal da liderança."
+            },
+            {
+              "value": 4,
+              "description": "A liderança conecta IA a OKRs específicos e acompanha indicadores de impacto nas áreas onde já foi implementada."
+            },
+            {
+              "value": 5,
+              "description": "IA é parte central da estratégia de receita da empresa, com OKRs mensuráveis e revisão contínua pelo C-level."
+            }
+          ]
+        },
+        {
+          "id": "EV2",
+          "tier": "basico",
+          "text": "A organização possui um roadmap de IA de 12 a 18 meses aprovado pelo Board.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q2",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe roadmap; as ações em IA são reativas, sem planejamento formal."
+            },
+            {
+              "value": 2,
+              "description": "Existem ideias soltas de projetos de IA, mas sem documento formal ou aprovação de qualquer instância."
+            },
+            {
+              "value": 3,
+              "description": "Um roadmap está sendo elaborado e aguarda validação do Board."
+            },
+            {
+              "value": 4,
+              "description": "O roadmap está aprovado, com fases, responsáveis e investimentos definidos, e em execução."
+            },
+            {
+              "value": 5,
+              "description": "O roadmap é um documento vivo, revisado periodicamente pelo Board, com ajustes ágeis conforme os resultados obtidos."
+            }
+          ]
+        },
+        {
+          "id": "EV3",
+          "tier": "basico",
+          "text": "As decisões de investimento em IA são baseadas em um framework claro de impacto vs. viabilidade.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q3",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Os investimentos em IA são decididos de forma ad hoc, sem critérios definidos."
+            },
+            {
+              "value": 2,
+              "description": "Existem critérios informais, mas eles variam conforme a pessoa ou área que decide."
+            },
+            {
+              "value": 3,
+              "description": "Um framework de priorização (impacto vs. viabilidade) está sendo desenhado."
+            },
+            {
+              "value": 4,
+              "description": "O framework é aplicado de forma consistente para priorizar projetos de IA."
+            },
+            {
+              "value": 5,
+              "description": "O framework está institucionalizado, é usado em todas as decisões de investimento e inclui revisão contínua de ROI."
+            }
+          ]
+        },
+        {
+          "id": "EV4",
+          "tier": "completo",
+          "text": "A alta gestão possui um rito formal de acompanhamento e cobrança de resultados das iniciativas de IA.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "S4",
+            "csf_name": "Patrocínio da alta gestão",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe cobrança nem espaço formal para acompanhar resultados de IA."
+            },
+            {
+              "value": 2,
+              "description": "O tema aparece em conversas informais, mas nunca entra em pauta oficial."
+            },
+            {
+              "value": 3,
+              "description": "Aparece ocasionalmente em reuniões de gestão, sem rito ou periodicidade definida."
+            },
+            {
+              "value": 4,
+              "description": "Existe um rito de acompanhamento, mas é irregular ou nem sempre reúne todos os decisores relevantes."
+            },
+            {
+              "value": 5,
+              "description": "Há um rito formal e recorrente de acompanhamento de resultados de IA pela alta gestão, com decisores presentes."
+            }
+          ]
+        },
+        {
+          "id": "EV5",
+          "tier": "completo",
+          "text": "O orçamento de IA contempla o custo total das iniciativas, incluindo implementação, integração, manutenção e capacitação.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "S3",
+            "csf_name": "Planejamento financeiro",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não há orçamento formal para IA; os gastos acontecem de forma dispersa."
+            },
+            {
+              "value": 2,
+              "description": "O orçamento é aprovado projeto a projeto, sem visão do custo total envolvido."
+            },
+            {
+              "value": 3,
+              "description": "O orçamento cobre apenas a parte visível (ferramenta/licença), sem prever integração ou manutenção."
+            },
+            {
+              "value": 4,
+              "description": "O orçamento cobre a maior parte do custo total (implementação, integração, manutenção, capacitação), com lacunas pontuais."
+            },
+            {
+              "value": 5,
+              "description": "O orçamento cobre o custo total de ponta a ponta — implementação, integração, manutenção e capacitação."
+            }
+          ]
+        },
+        {
+          "id": "EV6",
+          "tier": "completo",
+          "text": "Existe uma métrica oficial da empresa para medir o sucesso das iniciativas de IA.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O1",
+            "csf_name": "Outcomes mensuráveis institucionalizados",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe métrica oficial; cada área (ou relatório) usa a sua própria definição de sucesso."
+            },
+            {
+              "value": 2,
+              "description": "Uma métrica foi proposta em algum momento, mas nunca foi formalmente adotada."
+            },
+            {
+              "value": 3,
+              "description": "A métrica existe, mas é pouco divulgada e pouco usada na prática."
+            },
+            {
+              "value": 4,
+              "description": "A métrica é divulgada e usada na maioria dos relatórios e decisões sobre IA."
+            },
+            {
+              "value": 5,
+              "description": "Existe uma métrica oficial, divulgada e usada de forma consistente em todos os relatórios da empresa."
+            }
+          ]
+        },
+        {
+          "id": "EV7",
+          "tier": "completo",
+          "text": "A IA possui uma linha de orçamento própria e formalmente alocada, distinta de verbas genéricas de TI ou inovação.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O3",
+            "csf_name": "Recursos formalmente alocados",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O investimento em IA sai de uma verba genérica de TI/inovação, sem previsibilidade própria."
+            },
+            {
+              "value": 2,
+              "description": "Uma linha de orçamento própria já foi discutida, mas ainda não foi aprovada."
+            },
+            {
+              "value": 3,
+              "description": "Existe uma linha própria, mas ainda parcial ou recém-criada."
+            },
+            {
+              "value": 4,
+              "description": "A linha própria está consolidada, com pequenos ajustes ao longo do ano."
+            },
+            {
+              "value": 5,
+              "description": "A linha própria é planejada, previsível e revisada como parte do ciclo orçamentário formal."
+            }
+          ]
+        },
+        {
+          "id": "EV8",
+          "tier": "completo",
+          "text": "Existe uma metodologia ou comitê formal que acompanha de forma padronizada o escopo, o prazo e o orçamento dos projetos de IA.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O2",
+            "csf_name": "Gestão de projetos formalizada",
+            "note": "distinta de GR6 — aqui o foco é a entrega dos projetos; em GR6 o foco é a governança de risco e ética."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe metodologia ou comitê formal de acompanhamento dos projetos de IA."
+            },
+            {
+              "value": 2,
+              "description": "O comitê existe no papel, mas nunca se reuniu de fato."
+            },
+            {
+              "value": 3,
+              "description": "Existe, mas é aplicado de forma inconsistente entre os projetos."
+            },
+            {
+              "value": 4,
+              "description": "É aplicado à maioria dos projetos de IA, com exceções pontuais."
+            },
+            {
+              "value": 5,
+              "description": "É aplicado de forma consistente a todos os projetos de IA da empresa."
+            }
+          ]
+        },
+        {
+          "id": "EV9",
+          "tier": "complementar",
+          "text": "IA está formalmente incorporada ao plano estratégico da empresa, com metas próprias e mensuráveis.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "S2",
+            "csf_name": "Alinhamento a metas de longo prazo",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "IA não consta no plano estratégico oficial da empresa."
+            },
+            {
+              "value": 2,
+              "description": "IA é citada apenas informalmente, fora do documento estratégico oficial."
+            },
+            {
+              "value": 3,
+              "description": "O plano estratégico menciona IA de forma genérica, sem detalhamento."
+            },
+            {
+              "value": 4,
+              "description": "O plano estratégico detalha IA, mas ainda sem metas próprias e mensuráveis."
+            },
+            {
+              "value": 5,
+              "description": "IA é um pilar explícito do plano estratégico, com metas próprias e mensuráveis."
+            }
+          ]
+        },
+        {
+          "id": "EV10",
+          "tier": "complementar",
+          "text": "Os projetos de IA são coerentes com os valores e o discurso institucional que a empresa comunica publicamente.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "S5",
+            "csf_name": "Alinhamento a valores/práticas",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "As iniciativas de IA destoam do discurso institucional divulgado publicamente."
+            },
+            {
+              "value": 2,
+              "description": "A coerência existe apenas nos projetos de maior visibilidade externa."
+            },
+            {
+              "value": 3,
+              "description": "A coerência é parcial e depende do projeto específico."
+            },
+            {
+              "value": 4,
+              "description": "A coerência existe na maioria dos projetos, com exceções raras."
+            },
+            {
+              "value": 5,
+              "description": "A coerência é clara e consistente, sendo usada inclusive na narrativa de marca da empresa."
+            }
+          ]
+        },
+        {
+          "id": "EV11",
+          "tier": "complementar",
+          "text": "A empresa possui um programa formal de inovação em IA, com incentivo e reconhecimento institucionalizados.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O4",
+            "csf_name": "Inovação institucionalizada",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A inovação em IA depende exclusivamente de iniciativa individual, sem qualquer apoio institucional."
+            },
+            {
+              "value": 2,
+              "description": "Um programa de inovação foi anunciado, mas não há atividade real associada a ele."
+            },
+            {
+              "value": 3,
+              "description": "O programa existe, mas ainda é pouco maduro ou pouco divulgado."
+            },
+            {
+              "value": 4,
+              "description": "O programa está ativo e é conhecido, mas o engajamento ainda se concentra em poucas áreas."
+            },
+            {
+              "value": 5,
+              "description": "O programa é maduro, com incentivo formal e histórico consistente de resultados."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data_infra",
+      "name": "Dados e Infraestrutura",
+      "questions": [
+        {
+          "id": "DI1",
+          "tier": "basico",
+          "text": "Nossos dados proprietários são acessíveis, limpos e centralizados para alimentar modelos de IA.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q4",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Os dados estão dispersos em silos, sem padronização, e são de difícil acesso."
+            },
+            {
+              "value": 2,
+              "description": "Existem esforços isolados de organização de dados em algumas áreas específicas."
+            },
+            {
+              "value": 3,
+              "description": "Há um projeto de centralização e limpeza de dados em planejamento ou fase inicial."
+            },
+            {
+              "value": 4,
+              "description": "Os dados estão centralizados e utilizáveis na maioria das áreas relevantes da empresa."
+            },
+            {
+              "value": 5,
+              "description": "Os dados estão totalmente centralizados, limpos, com qualidade monitorada continuamente e prontos para consumo por modelos de IA."
+            }
+          ]
+        },
+        {
+          "id": "DI2",
+          "tier": "basico",
+          "text": "Possuímos uma arquitetura de dados moderna (Lakehouse/Mesh) que suporta RAG e IA em tempo real.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q5",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A arquitetura de dados é legada e não suporta cargas de trabalho de IA moderna."
+            },
+            {
+              "value": 2,
+              "description": "Existem discussões iniciais sobre a necessidade de modernizar a arquitetura."
+            },
+            {
+              "value": 3,
+              "description": "Um piloto de arquitetura Lakehouse/Mesh está em construção."
+            },
+            {
+              "value": 4,
+              "description": "A arquitetura moderna já está implementada e suporta parte dos casos de uso de IA."
+            },
+            {
+              "value": 5,
+              "description": "A arquitetura é madura e escalável, suportando RAG e IA em tempo real em produção."
+            }
+          ]
+        },
+        {
+          "id": "DI3",
+          "tier": "basico",
+          "text": "Existe um processo claro de governança de dados e conformidade com a LGPD em todos os projetos.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q6",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe processo formal de governança de dados ou de conformidade com a LGPD."
+            },
+            {
+              "value": 2,
+              "description": "Há ações pontuais de conformidade, sem processo estruturado."
+            },
+            {
+              "value": 3,
+              "description": "Um processo de governança está em definição, com mapeamento de gaps de LGPD em andamento."
+            },
+            {
+              "value": 4,
+              "description": "A governança está implementada na maioria dos projetos, com checkpoints de conformidade LGPD."
+            },
+            {
+              "value": 5,
+              "description": "A governança de dados é madura, auditável, e a conformidade com a LGPD é embutida por padrão em todos os projetos."
+            }
+          ]
+        },
+        {
+          "id": "DI4",
+          "tier": "completo",
+          "text": "Os dados da empresa são confiáveis o suficiente para embasar decisões importantes, sem exigir reconferência manual.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D1",
+            "csf_name": "Qualidade/consistência",
+            "note": "distinta de DI1 — aqui o foco é a confiabilidade dos dados no uso diário; em DI1 o foco é a prontidão estrutural, ou seja, se os dados existem de forma limpa e centralizada."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Há desconfiança generalizada nos dados; a reconferência manual é sempre necessária antes de decidir."
+            },
+            {
+              "value": 2,
+              "description": "Apenas alguns relatórios específicos são confiáveis; reconferência manual ainda é a regra geral."
+            },
+            {
+              "value": 3,
+              "description": "A maior parte dos dados é confiável, mas existem exceções conhecidas que exigem checagem."
+            },
+            {
+              "value": 4,
+              "description": "Os dados são confiáveis na quase totalidade dos casos; exceções são raras e já mapeadas."
+            },
+            {
+              "value": 5,
+              "description": "Os dados são confiáveis por padrão, com controle de qualidade automatizado e monitorado."
+            }
+          ]
+        },
+        {
+          "id": "DI5",
+          "tier": "completo",
+          "text": "Nossa infraestrutura é escalável o suficiente para suportar um crescimento repentino no uso de IA, sem exigir um projeto emergencial.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T1",
+            "csf_name": "Infraestrutura escalável e flexível",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Já há instabilidade nos picos de uso atuais, sem qualquer folga de capacidade."
+            },
+            {
+              "value": 2,
+              "description": "A infraestrutura aguenta o volume atual, mas qualquer crescimento exigiria um projeto emergencial."
+            },
+            {
+              "value": 3,
+              "description": "Aguenta o crescimento previsto, mas depende de intervenção manual da equipe de TI."
+            },
+            {
+              "value": 4,
+              "description": "Escala com pouca intervenção manual, geralmente planejada com antecedência."
+            },
+            {
+              "value": 5,
+              "description": "Escala automaticamente conforme a demanda, sem necessidade de intervenção manual."
+            }
+          ]
+        },
+        {
+          "id": "DI6",
+          "tier": "completo",
+          "text": "As áreas de negócio conseguem acessar os dados que precisam sozinhas, sem depender de TI a cada solicitação.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D5",
+            "csf_name": "Acesso entre departamentos",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Qualquer cruzamento de dados depende integralmente da equipe de TI."
+            },
+            {
+              "value": 2,
+              "description": "Existe autoatendimento apenas para um relatório específico e limitado."
+            },
+            {
+              "value": 3,
+              "description": "Autoatendimento cobre dados básicos; para o restante, a área ainda depende de TI."
+            },
+            {
+              "value": 4,
+              "description": "O autoatendimento cobre a maioria das necessidades do dia a dia das áreas de negócio."
+            },
+            {
+              "value": 5,
+              "description": "O autoatendimento é amplo e consolidado, com poucas exceções que ainda exigem TI."
+            }
+          ]
+        },
+        {
+          "id": "DI7",
+          "tier": "completo",
+          "text": "Nosso núcleo operacional (financeiro, estoque, CRM) já está modernizado ou possui um plano ativo e financiado de modernização.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T5",
+            "csf_name": "Modernização de legado",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O núcleo operacional inteiro roda em sistema legado, sem qualquer plano de modernização."
+            },
+            {
+              "value": 2,
+              "description": "A modernização já foi discutida, mas sem projeto formalizado ou orçamento definido."
+            },
+            {
+              "value": 3,
+              "description": "A modernização está em andamento, de forma parcial ou lenta."
+            },
+            {
+              "value": 4,
+              "description": "A maior parte do núcleo já foi modernizada; restam módulos pontuais em legado."
+            },
+            {
+              "value": 5,
+              "description": "O núcleo está modernizado ou possui plano ativo e financiado de modernização."
+            }
+          ]
+        },
+        {
+          "id": "DI8",
+          "tier": "completo",
+          "text": "Os dados de canais e sistemas diferentes já chegam integrados, sem necessidade de junção manual a cada nova análise.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D2",
+            "csf_name": "Integração interna/externa",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "As bases são isoladas; a junção de dados é sempre manual, a cada nova análise."
+            },
+            {
+              "value": 2,
+              "description": "A junção ainda é manual, mas já existe um processo ou planilha padronizada para facilitar."
+            },
+            {
+              "value": 3,
+              "description": "Há integração parcial entre os principais sistemas."
+            },
+            {
+              "value": 4,
+              "description": "A integração cobre a maioria dos sistemas, com exceções pontuais."
+            },
+            {
+              "value": 5,
+              "description": "Existe uma visão unificada disponível por padrão, sem qualquer trabalho manual de integração."
+            }
+          ]
+        },
+        {
+          "id": "DI9",
+          "tier": "complementar",
+          "text": "As ferramentas e plataformas de IA/tecnologia da empresa se comunicam entre si, em vez de operarem isoladas por área.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T2",
+            "csf_name": "Orquestração de plataformas",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Cada ferramenta funciona como uma ilha; a integração entre elas é manual ou inexistente."
+            },
+            {
+              "value": 2,
+              "description": "Existem integrações pontuais, mas frágeis e mantidas manualmente."
+            },
+            {
+              "value": 3,
+              "description": "Os principais sistemas se conectam, mas cada nova integração exige esforço dedicado de TI."
+            },
+            {
+              "value": 4,
+              "description": "A integração entre ferramentas é prática comum, com poucos pontos ainda manuais."
+            },
+            {
+              "value": 5,
+              "description": "Novas ferramentas se conectam a uma arquitetura padronizada, sem exigir um projeto dedicado."
+            }
+          ]
+        },
+        {
+          "id": "DI10",
+          "tier": "complementar",
+          "text": "As decisões apoiadas por dados e IA usam informação atualizada, e não apenas relatórios defasados.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T3",
+            "csf_name": "Processamento em tempo real/alto volume",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Só existem relatórios em lote (batch), sempre defasados em pelo menos um dia."
+            },
+            {
+              "value": 2,
+              "description": "Alguns relatórios são mais frequentes, mas nenhum funciona em tempo real."
+            },
+            {
+              "value": 3,
+              "description": "Alguns painéis operam quase em tempo real, mas os processos críticos ainda não."
+            },
+            {
+              "value": 4,
+              "description": "A maioria dos processos críticos já usa dados quase em tempo real."
+            },
+            {
+              "value": 5,
+              "description": "As decisões operacionais críticas usam dados em tempo real como padrão."
+            }
+          ]
+        },
+        {
+          "id": "DI11",
+          "tier": "complementar",
+          "text": "A empresa consegue resolver dúvidas técnicas complexas de IA internamente, sem depender de terceiros.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T4",
+            "csf_name": "Acesso a expertise em IA",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A resolução depende inteiramente de um fornecedor externo pontual, sem relação contínua."
+            },
+            {
+              "value": 2,
+              "description": "Existe um fornecedor de confiança, mas ele é acionado caso a caso, sem retenção de conhecimento interno."
+            },
+            {
+              "value": 3,
+              "description": "Há acesso a um especialista externo de confiança, mas ainda sem capacidade interna própria."
+            },
+            {
+              "value": 4,
+              "description": "O time interno resolve boa parte das dúvidas, recorrendo a terceiros apenas em temas avançados."
+            },
+            {
+              "value": 5,
+              "description": "O time interno resolve a maioria das questões técnicas de IA sem depender de terceiros."
+            }
+          ]
+        },
+        {
+          "id": "DI12",
+          "tier": "complementar",
+          "text": "Nossa infraestrutura de rede e conectividade foi avaliada especificamente para suportar as cargas de IA.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T6",
+            "csf_name": "Infraestrutura de rede avaliada para IA",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A rede nunca foi avaliada com esse recorte específico."
+            },
+            {
+              "value": 2,
+              "description": "Houve uma avaliação informal, sem registro ou responsável definido."
+            },
+            {
+              "value": 3,
+              "description": "A avaliação foi feita, com upgrades pontuais realizados."
+            },
+            {
+              "value": 4,
+              "description": "A avaliação é recorrente, com upgrades planejados com antecedência."
+            },
+            {
+              "value": 5,
+              "description": "A rede é dimensionada e monitorada continuamente para suportar a carga de IA."
+            }
+          ]
+        },
+        {
+          "id": "DI13",
+          "tier": "complementar",
+          "text": "Um mesmo tipo de dado é registrado de forma padronizada em todas as unidades e sistemas da empresa.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "T7",
+            "csf_name": "Padronização de processos digitais/formatos",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Cada unidade ou sistema registra o dado à sua própria maneira."
+            },
+            {
+              "value": 2,
+              "description": "Existe um padrão sugerido, mas ele é seguido de forma inconsistente."
+            },
+            {
+              "value": 3,
+              "description": "O padrão existe, mas ainda exige normalização manual em cruzamentos de dados."
+            },
+            {
+              "value": 4,
+              "description": "O padrão é seguido na maioria dos casos, com poucas exceções que exigem ajuste manual."
+            },
+            {
+              "value": 5,
+              "description": "Existe um padrão único, validado automaticamente já na entrada do dado."
+            }
+          ]
+        },
+        {
+          "id": "DI14",
+          "tier": "complementar",
+          "text": "Existe um processo sistemático de rotulagem e classificação de dados (ex.: motivo de devolução, categoria de atendimento).",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D3",
+            "csf_name": "Rotulagem/validação",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe rotulagem sistemática de dados."
+            },
+            {
+              "value": 2,
+              "description": "A rotulagem ocorre, mas de forma informal e sem revisão."
+            },
+            {
+              "value": 3,
+              "description": "A rotulagem existe para alguns processos-chave específicos."
+            },
+            {
+              "value": 4,
+              "description": "A rotulagem cobre a maioria dos processos relevantes, com revisão periódica."
+            },
+            {
+              "value": 5,
+              "description": "A rotulagem é sistemática e validada, cobrindo os principais processos da empresa."
+            }
+          ]
+        },
+        {
+          "id": "DI15",
+          "tier": "complementar",
+          "text": "Existe uma política escrita definindo quem pode acessar e usar cada tipo de dado na empresa.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D4",
+            "csf_name": "Governança formal de dados",
+            "note": "distinta de DI3 — DI3 avalia a governança de dados voltada à conformidade com a LGPD; aqui o foco é especificamente a política de controle de acesso."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe política formal; o acesso é decidido caso a caso."
+            },
+            {
+              "value": 2,
+              "description": "Existem regras informais, conhecidas por poucas pessoas e nada documentado."
+            },
+            {
+              "value": 3,
+              "description": "A política existe, mas com cobertura parcial ou pouco conhecida na empresa."
+            },
+            {
+              "value": 4,
+              "description": "A política é documentada e conhecida pela maioria, com aplicação quase integral."
+            },
+            {
+              "value": 5,
+              "description": "A política é formal, conhecida, aplicada de fato e possui um dono claramente definido."
+            }
+          ]
+        },
+        {
+          "id": "DI16",
+          "tier": "complementar",
+          "text": "A preparação de dados para uma nova análise ou projeto é rápida, e não um grande projeto à parte.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "D6",
+            "csf_name": "Capacidade de processamento",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Preparar dados novos é sempre um projeto grande e demorado."
+            },
+            {
+              "value": 2,
+              "description": "É rápido apenas quando já existe um caso quase idêntico documentado anteriormente."
+            },
+            {
+              "value": 3,
+              "description": "É rápido para casos já conhecidos, mas lento para casos novos."
+            },
+            {
+              "value": 4,
+              "description": "O pipeline cobre a maioria dos casos novos, com pouco retrabalho necessário."
+            },
+            {
+              "value": 5,
+              "description": "Existe um pipeline padronizado que prepara dados novos em poucos dias."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "people_culture",
+      "name": "Pessoas e Cultura",
+      "questions": [
+        {
+          "id": "PC1",
+          "tier": "basico",
+          "text": "Nossa equipe se sente segura e incentivada a experimentar IA para otimizar suas tarefas diárias.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q7",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Predomina medo ou resistência; o uso de IA é desencorajado ou tratado de forma informal/velada."
+            },
+            {
+              "value": 2,
+              "description": "Há uso individual esporádico, mas sem qualquer incentivo institucional."
+            },
+            {
+              "value": 3,
+              "description": "Iniciativas de incentivo (comunicados, políticas de uso) estão em planejamento."
+            },
+            {
+              "value": 4,
+              "description": "Existe uma cultura de experimentação ativa em várias equipes, com incentivo claro da gestão."
+            },
+            {
+              "value": 5,
+              "description": "A experimentação com IA é parte da cultura da empresa, celebrada e disseminada por toda a organização."
+            }
+          ]
+        },
+        {
+          "id": "PC2",
+          "tier": "basico",
+          "text": "Há um programa ativo de upskilling e capacitação em IA para gestores e colaboradores.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q8",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe nenhum programa de capacitação em IA."
+            },
+            {
+              "value": 2,
+              "description": "Há treinamentos pontuais e não estruturados, sem trilha definida."
+            },
+            {
+              "value": 3,
+              "description": "Um programa de capacitação está sendo desenhado ou está em fase piloto."
+            },
+            {
+              "value": 4,
+              "description": "O programa está ativo, com trilhas específicas para gestores e colaboradores."
+            },
+            {
+              "value": 5,
+              "description": "O programa é consolidado e contínuo, com métricas de adoção e de impacto sobre a produtividade."
+            }
+          ]
+        },
+        {
+          "id": "PC3",
+          "tier": "basico",
+          "text": "A comunicação interna sobre IA foca no \"aumento humano\" e não apenas na substituição de pessoal.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q9",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A comunicação é ausente ou gera insegurança sobre substituição de pessoas por IA."
+            },
+            {
+              "value": 2,
+              "description": "As mensagens são informais e inconsistentes sobre o tema."
+            },
+            {
+              "value": 3,
+              "description": "Uma estratégia de comunicação sobre o tema está em elaboração."
+            },
+            {
+              "value": 4,
+              "description": "A comunicação é estruturada e reforça o aumento humano na maioria das iniciativas de IA."
+            },
+            {
+              "value": 5,
+              "description": "A narrativa de aumento humano é consistente, institucionalizada e reforçada continuamente pela liderança."
+            }
+          ]
+        },
+        {
+          "id": "PC4",
+          "tier": "completo",
+          "text": "Nossa equipe consegue quantificar, em números, o ganho concreto que a IA trouxe ao seu trabalho no dia a dia.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P1",
+            "csf_name": "Outcomes mensuráveis na prática",
+            "note": "distinta de EV6 — aqui o foco é a capacidade prática das equipes de medir seu próprio ganho; em EV6 o foco é a existência de uma métrica oficial e institucional."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Ninguém quantifica o ganho; só existe uma \"impressão\" subjetiva de que ajuda."
+            },
+            {
+              "value": 2,
+              "description": "Um ou outro time tenta medir, mas sem método consistente."
+            },
+            {
+              "value": 3,
+              "description": "Alguns times conseguem quantificar o ganho, a maioria ainda não."
+            },
+            {
+              "value": 4,
+              "description": "A maioria dos times mede o ganho, com metodologia parecida entre eles."
+            },
+            {
+              "value": 5,
+              "description": "Medir e reportar o ganho de IA é uma prática comum e consistente em toda a empresa."
+            }
+          ]
+        },
+        {
+          "id": "PC5",
+          "tier": "completo",
+          "text": "As equipes conseguem interpretar e questionar o resultado de uma ferramenta de IA, em vez de aceitá-lo sem checar.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P7",
+            "csf_name": "Competência prática",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O resultado da IA é aceito como está, sem qualquer checagem."
+            },
+            {
+              "value": 2,
+              "description": "A checagem só acontece quando algo parece muito claramente errado."
+            },
+            {
+              "value": 3,
+              "description": "Algumas pessoas conseguem checar e interpretar o resultado; a maioria não."
+            },
+            {
+              "value": 4,
+              "description": "A maioria das equipes já checa e interpreta criticamente o resultado; poucas ainda não."
+            },
+            {
+              "value": 5,
+              "description": "Checar e interpretar criticamente o resultado da IA é uma prática comum e disseminada."
+            }
+          ]
+        },
+        {
+          "id": "PC6",
+          "tier": "completo",
+          "text": "Existe um canal pelo qual o feedback sobre problemas no uso de IA chega a quem pode ajustar o processo, gerando mudanças reais.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P6",
+            "csf_name": "Feedback contínuo na prática",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O problema fica em reclamação informal e não gera nenhum ajuste."
+            },
+            {
+              "value": 2,
+              "description": "O feedback chega raramente e, quando chega, demora muito a virar ação."
+            },
+            {
+              "value": 3,
+              "description": "O feedback chega ocasionalmente, e o ajuste acontece às vezes."
+            },
+            {
+              "value": 4,
+              "description": "O feedback chega na maioria das vezes e o ajuste é comum."
+            },
+            {
+              "value": 5,
+              "description": "Existe um canal formal e consistente de feedback, que gera ajuste regular no processo."
+            }
+          ]
+        },
+        {
+          "id": "PC7",
+          "tier": "completo",
+          "text": "A organização reconhece e incentiva abertamente quem testa novas ferramentas de IA por conta própria, mesmo quando o teste resulta em erro.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P4",
+            "csf_name": "Cultura de experimentação vivida",
+            "note": "distinta de PC1 — aqui o foco é a consequência concreta de errar ao experimentar; em PC1 o foco é o clima geral de segurança para experimentar."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O erro é punido ou explicitamente desencorajado."
+            },
+            {
+              "value": 2,
+              "description": "O erro é tolerado apenas em silêncio, sem qualquer menção positiva."
+            },
+            {
+              "value": 3,
+              "description": "O erro é tolerado, mas sem incentivo explícito à experimentação."
+            },
+            {
+              "value": 4,
+              "description": "A experimentação é incentivada na maioria das áreas; algumas ainda são mais conservadoras."
+            },
+            {
+              "value": 5,
+              "description": "Quem experimenta e erra é reconhecido e incentivado abertamente pela organização."
+            }
+          ]
+        },
+        {
+          "id": "PC8",
+          "tier": "completo",
+          "text": "As equipes que usam IA no dia a dia conhecem e seguem a política de uso na prática, não apenas formalmente.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P5",
+            "csf_name": "Papéis/políticas seguidos na prática",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "A política é desconhecida na prática, mesmo existindo formalmente."
+            },
+            {
+              "value": 2,
+              "description": "É conhecida por poucas pessoas e seguida raramente."
+            },
+            {
+              "value": 3,
+              "description": "É conhecida por parte do time e seguida apenas parcialmente."
+            },
+            {
+              "value": 4,
+              "description": "É conhecida pela maioria e seguida na maior parte do tempo."
+            },
+            {
+              "value": 5,
+              "description": "É conhecida e seguida de forma consistente por quem usa IA no dia a dia."
+            }
+          ]
+        },
+        {
+          "id": "PC9",
+          "tier": "complementar",
+          "text": "Os projetos de IA têm dono e prazo de fato seguidos na prática, e não apenas definidos no papel.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P2",
+            "csf_name": "Gestão de projetos na prática",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Dono e prazo existem apenas formalmente; raramente são seguidos na prática."
+            },
+            {
+              "value": 2,
+              "description": "São seguidos apenas quando há pressão pontual de algum gestor."
+            },
+            {
+              "value": 3,
+              "description": "São seguidos na maioria dos projetos."
+            },
+            {
+              "value": 4,
+              "description": "São seguidos com poucas exceções; já é um hábito consolidado."
+            },
+            {
+              "value": 5,
+              "description": "São seguidos de forma consistente, com poucas exceções."
+            }
+          ]
+        },
+        {
+          "id": "PC10",
+          "tier": "complementar",
+          "text": "O time dedicado a um projeto de IA se mantém alocado até a entrega, sem ser remanejado no meio do caminho.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "P3",
+            "csf_name": "Recursos chegando na prática",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O remanejamento é frequente e o projeto perde prioridade quando isso acontece."
+            },
+            {
+              "value": 2,
+              "description": "O remanejamento é comum, mas o projeto é retomado depois."
+            },
+            {
+              "value": 3,
+              "description": "O remanejamento acontece ocasionalmente."
+            },
+            {
+              "value": 4,
+              "description": "É raro, acontecendo só em emergências claras."
+            },
+            {
+              "value": 5,
+              "description": "O time se mantém dedicado até a entrega, sendo raramente remanejado."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gov_risk",
+      "name": "Governança e Risco",
+      "questions": [
+        {
+          "id": "GR1",
+          "tier": "basico",
+          "text": "Temos políticas formais de uso ético e responsável de IA Generativa na empresa.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q10",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Nenhuma política sobre uso ético de IA Generativa existe."
+            },
+            {
+              "value": 2,
+              "description": "Existem diretrizes informais, não documentadas."
+            },
+            {
+              "value": 3,
+              "description": "Uma política está em elaboração ou em revisão jurídica."
+            },
+            {
+              "value": 4,
+              "description": "A política formal está implementada e comunicada para a maior parte da empresa."
+            },
+            {
+              "value": 5,
+              "description": "A política é robusta, revisada periodicamente, com treinamento obrigatório e mecanismos de enforcement."
+            }
+          ]
+        },
+        {
+          "id": "GR2",
+          "tier": "basico",
+          "text": "Monitoramos e auditamos ativamente Shadow AI e possíveis vazamentos de dados proprietários.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q11",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não há nenhum monitoramento; o uso de ferramentas de IA não é rastreado."
+            },
+            {
+              "value": 2,
+              "description": "Existe consciência do risco, mas sem ferramentas ou processos de monitoramento."
+            },
+            {
+              "value": 3,
+              "description": "Uma solução de monitoramento está em avaliação ou implantação piloto."
+            },
+            {
+              "value": 4,
+              "description": "O monitoramento está ativo na maioria das áreas, com alertas configurados."
+            },
+            {
+              "value": 5,
+              "description": "Há monitoramento contínuo e auditoria formal, com processo estruturado de resposta a incidentes."
+            }
+          ]
+        },
+        {
+          "id": "GR3",
+          "tier": "basico",
+          "text": "O Conselho (Board) revisa periodicamente os riscos éticos e o ROI dos projetos de IA.",
+          "origin": {
+            "type": "modelo_rapido",
+            "ref": "Q12",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O Board não trata do tema de IA em suas pautas."
+            },
+            {
+              "value": 2,
+              "description": "O tema é mencionado ocasionalmente, sem revisão formal."
+            },
+            {
+              "value": 3,
+              "description": "Uma revisão periódica está sendo planejada ou estruturada."
+            },
+            {
+              "value": 4,
+              "description": "O Board revisa riscos e ROI de IA em cadência definida (ex: trimestral)."
+            },
+            {
+              "value": 5,
+              "description": "A revisão de riscos éticos e ROI de IA é parte fixa da pauta do Board, com decisões documentadas."
+            }
+          ]
+        },
+        {
+          "id": "GR4",
+          "tier": "completo",
+          "text": "Mantemos registro documentado e recuperável de decisões automatizadas, suficiente para responder a uma auditoria regulatória a qualquer momento.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "R1",
+            "csf_name": "Auditabilidade",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não há registro ou documentação das decisões tomadas por modelos de IA."
+            },
+            {
+              "value": 2,
+              "description": "O registro existe, mas é informal, disperso e difícil de recuperar."
+            },
+            {
+              "value": 3,
+              "description": "O registro existe para alguns casos específicos, sem sistematização."
+            },
+            {
+              "value": 4,
+              "description": "O registro é sistemático na maioria dos casos, com algumas lacunas pontuais."
+            },
+            {
+              "value": 5,
+              "description": "O registro é sistemático e recuperável para qualquer decisão automatizada, a qualquer momento."
+            }
+          ]
+        },
+        {
+          "id": "GR5",
+          "tier": "completo",
+          "text": "O time de negócio consegue explicar, em linguagem simples, por que um modelo de IA recomenda determinado resultado.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "R2",
+            "csf_name": "Explicabilidade",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Ninguém do negócio consegue explicar; o modelo funciona como uma caixa-preta."
+            },
+            {
+              "value": 2,
+              "description": "Apenas o time técnico consegue explicar, e somente em linguagem técnica."
+            },
+            {
+              "value": 3,
+              "description": "A explicação é possível parcialmente, apenas para os modelos mais simples."
+            },
+            {
+              "value": 4,
+              "description": "A explicação está disponível para a maioria dos modelos, em linguagem acessível ao negócio."
+            },
+            {
+              "value": 5,
+              "description": "A explicação está disponível e é compreendida pelo negócio para os principais modelos em uso."
+            }
+          ]
+        },
+        {
+          "id": "GR6",
+          "tier": "completo",
+          "text": "Existe um papel ou comitê formalmente nomeado, com responsabilidades claras, pela governança de risco e ética de IA.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O5",
+            "csf_name": "Estrutura de governança formal",
+            "note": "distinta de EV8 — ver nota em EV8."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe nenhuma estrutura formal nomeada para governança de IA."
+            },
+            {
+              "value": 2,
+              "description": "Há um responsável indicado informalmente, sem mandato claro."
+            },
+            {
+              "value": 3,
+              "description": "A estrutura existe, mas as responsabilidades ainda são pouco claras ou muito recentes."
+            },
+            {
+              "value": 4,
+              "description": "A estrutura é formal, com responsabilidades claras, ainda ganhando maturidade na prática."
+            },
+            {
+              "value": 5,
+              "description": "A estrutura formal é madura, com responsabilidades claras e reconhecidas em toda a empresa."
+            }
+          ]
+        },
+        {
+          "id": "GR7",
+          "tier": "completo",
+          "text": "Avaliamos de forma recorrente se nossos modelos (ex.: crédito, desconto, priorização) tratam algum grupo de pessoas de forma diferente sem justificativa.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "R3",
+            "csf_name": "Mitigação de viés",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Isso nunca foi avaliado em nenhum modelo."
+            },
+            {
+              "value": 2,
+              "description": "A preocupação já foi levantada informalmente, mas nunca foi investigada de fato."
+            },
+            {
+              "value": 3,
+              "description": "Já foi avaliado uma vez, mas sem processo recorrente."
+            },
+            {
+              "value": 4,
+              "description": "Há avaliação recorrente, mas ela não cobre todos os modelos críticos."
+            },
+            {
+              "value": 5,
+              "description": "Há avaliação recorrente e documentada, incorporada como parte do processo de deploy dos modelos."
+            }
+          ]
+        },
+        {
+          "id": "GR8",
+          "tier": "completo",
+          "text": "Nossa política interna de uso de IA foi criada de forma proativa e é revisada periodicamente, independentemente da ocorrência de incidentes.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "R5",
+            "csf_name": "Políticas internas",
+            "note": "distinta de GR1 — aqui o foco é a origem e a periodicidade de revisão da política; em GR1 o foco é a existência e a maturidade do conteúdo da política."
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Não existe política interna de uso de IA."
+            },
+            {
+              "value": 2,
+              "description": "Existe apenas um rascunho de política, que nunca foi formalizado."
+            },
+            {
+              "value": 3,
+              "description": "A política existe, mas nasceu de forma reativa, após algum incidente."
+            },
+            {
+              "value": 4,
+              "description": "A política existe e é revisada às vezes, mas sem calendário formal de revisão."
+            },
+            {
+              "value": 5,
+              "description": "A política existe, é proativa por natureza e revisada periodicamente, de forma planejada."
+            }
+          ]
+        },
+        {
+          "id": "GR9",
+          "tier": "complementar",
+          "text": "Está definido e documentado quem responde por decisões automatizadas de IA que afetam pessoas.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "S1",
+            "csf_name": "Framework regulatório co-desenvolvido",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O tema nunca foi discutido."
+            },
+            {
+              "value": 2,
+              "description": "Foi discutido uma vez, mas sem conclusão registrada."
+            },
+            {
+              "value": 3,
+              "description": "Foi discutido informalmente, sem nenhum documento formal."
+            },
+            {
+              "value": 4,
+              "description": "Está documentado, mas ainda não foi revisado com todos os stakeholders relevantes."
+            },
+            {
+              "value": 5,
+              "description": "Está formalizado e revisado periodicamente com todos os stakeholders relevantes."
+            }
+          ]
+        },
+        {
+          "id": "GR10",
+          "tier": "complementar",
+          "text": "Existe um rito periódico institucional para revisar e ajustar a prática de IA, independentemente de crises ou reclamações.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "O6",
+            "csf_name": "Ciclo de revisão formal",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "O ajuste só acontece de forma reativa, depois de uma crise ou reclamação."
+            },
+            {
+              "value": 2,
+              "description": "A revisão ocorre, mas sem periodicidade definida."
+            },
+            {
+              "value": 3,
+              "description": "O rito existe, mas acontece de forma irregular."
+            },
+            {
+              "value": 4,
+              "description": "O rito ocorre na maioria dos ciclos previstos."
+            },
+            {
+              "value": 5,
+              "description": "O rito periódico é consistente e independe da ocorrência de crises."
+            }
+          ]
+        },
+        {
+          "id": "GR11",
+          "tier": "complementar",
+          "text": "Sabemos o que muda nas exigências legais de IA caso a empresa expanda para outro estado ou país.",
+          "origin": {
+            "type": "nova",
+            "csf_id": "R4",
+            "csf_name": "Contexto cultural/legal",
+            "note": null
+          },
+          "weight": 1,
+          "options": [
+            {
+              "value": 1,
+              "description": "Isso nunca foi mapeado."
+            },
+            {
+              "value": 2,
+              "description": "Existe um mapeamento informal, feito individualmente por alguém."
+            },
+            {
+              "value": 3,
+              "description": "O mapeamento é parcial ou está desatualizado."
+            },
+            {
+              "value": 4,
+              "description": "O mapeamento está atualizado, mas ainda não integrado ao planejamento formal de expansão."
+            },
+            {
+              "value": 5,
+              "description": "O mapeamento está atualizado e integrado ao planejamento formal de expansão da empresa."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scoring_logic": {
+    "basico": {
+      "level_1": {
+        "min": 12,
+        "max": 24,
+        "label": "Iniciação (Ad Hoc)",
+        "description": "Uso individual e isolado. Sem estratégia centralizada."
+      },
+      "level_2": {
+        "min": 25,
+        "max": 36,
+        "label": "Experimentação",
+        "description": "PoCs em departamentos específicos. Dados em silos."
+      },
+      "level_3": {
+        "min": 37,
+        "max": 48,
+        "label": "Prontidão",
+        "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."
+      },
+      "level_4": {
+        "min": 49,
+        "max": 56,
+        "label": "Otimização/Escala",
+        "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."
+      },
+      "level_5": {
+        "min": 57,
+        "max": 60,
+        "label": "Transformação (AI-First)",
+        "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."
+      }
+    },
+    "completo": {
+      "level_1": {
+        "min": 32,
+        "max": 64,
+        "label": "Iniciação (Ad Hoc)",
+        "description": "Uso individual e isolado. Sem estratégia centralizada."
+      },
+      "level_2": {
+        "min": 65,
+        "max": 96,
+        "label": "Experimentação",
+        "description": "PoCs em departamentos específicos. Dados em silos."
+      },
+      "level_3": {
+        "min": 97,
+        "max": 128,
+        "label": "Prontidão",
+        "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."
+      },
+      "level_4": {
+        "min": 129,
+        "max": 149,
+        "label": "Otimização/Escala",
+        "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."
+      },
+      "level_5": {
+        "min": 150,
+        "max": 160,
+        "label": "Transformação (AI-First)",
+        "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."
+      }
+    },
+    "complementar": {
+      "level_1": {
+        "min": 48,
+        "max": 96,
+        "label": "Iniciação (Ad Hoc)",
+        "description": "Uso individual e isolado. Sem estratégia centralizada."
+      },
+      "level_2": {
+        "min": 97,
+        "max": 144,
+        "label": "Experimentação",
+        "description": "PoCs em departamentos específicos. Dados em silos."
+      },
+      "level_3": {
+        "min": 145,
+        "max": 192,
+        "label": "Prontidão",
+        "description": "IA como prioridade estratégica. Infraestrutura de dados em construção."
+      },
+      "level_4": {
+        "min": 193,
+        "max": 224,
+        "label": "Otimização/Escala",
+        "description": "Modelo Hub-and-Spoke ativo. IA integrada a processos operacionais."
+      },
+      "level_5": {
+        "min": 225,
+        "max": 240,
+        "label": "Transformação (AI-First)",
+        "description": "IA no núcleo do modelo de negócio. Cultura data-driven absoluta."
+      }
+    }
+  },
+  "overlap_notes": [
+    {
+      "pair": [
+        "EV8",
+        "GR6"
+      ],
+      "distinction": "EV8 avalia a entrega de projetos de IA (escopo/prazo/orçamento); GR6 avalia a governança de risco e ética."
+    },
+    {
+      "pair": [
+        "DI1",
+        "DI4"
+      ],
+      "distinction": "DI1 avalia a prontidão estrutural dos dados; DI4 avalia a confiabilidade dos dados no uso diário."
+    },
+    {
+      "pair": [
+        "DI3",
+        "DI15"
+      ],
+      "distinction": "DI3 avalia a governança de dados voltada à LGPD; DI15 avalia a política de controle de acesso aos dados."
+    },
+    {
+      "pair": [
+        "PC1",
+        "PC7"
+      ],
+      "distinction": "PC1 avalia o clima geral de segurança para experimentar; PC7 avalia a consequência concreta de errar ao experimentar."
+    },
+    {
+      "pair": [
+        "EV6",
+        "PC4"
+      ],
+      "distinction": "EV6 avalia a existência de uma métrica oficial institucional; PC4 avalia a capacidade prática das equipes de medir seu próprio ganho."
+    },
+    {
+      "pair": [
+        "GR1",
+        "GR8"
+      ],
+      "distinction": "GR1 avalia a existência e maturidade do conteúdo da política; GR8 avalia a origem proativa e a periodicidade de revisão dessa política."
+    }
+  ]
+}
