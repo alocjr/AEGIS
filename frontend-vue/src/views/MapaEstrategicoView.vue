@@ -32,6 +32,7 @@ const openKeys = ref<Set<string>>(new Set())
 const linkPanel = ref<string | null>(null)
 
 const dimFilter = ref('')
+const onlyWithTows = ref(true)
 const onlyWithProjects = ref(false)
 const query = ref('')
 const quadOn = reactive<Record<SwotListField, boolean>>({
@@ -208,9 +209,15 @@ function itemMatchesSearch(item: StrategicMapItem): boolean {
   ) || item.projects.some((project) => matches(project.title))
 }
 
+/** Item entrou no TOWS como lado interno (tem estratégias) ou como contraparte externa. */
+function hasTows(item: StrategicMapItem): boolean {
+  return item.initiatives.length > 0 || item.used_in > 0
+}
+
 function visibleItems(question: StrategicMapQuestion, questionMatched: boolean): StrategicMapItem[] {
   return question.items.filter((item) => {
     if (!quadOn[item.quadrant]) return false
+    if (onlyWithTows.value && !hasTows(item)) return false
     if (onlyWithProjects.value && itemProjectCount(item) === 0) return false
     return questionMatched || itemMatchesSearch(item)
   })
@@ -226,8 +233,11 @@ const filteredDimensions = computed<StrategicMapDimension[]>(() => {
         .map((question) => {
           const questionMatched = matches(question.text) || matches(question.id)
           const items = visibleItems(question, questionMatched)
+          // Pontos de atenção (nota 3) ficam fora do SWOT/TOWS por definição
           const watchlist =
-            onlyWithProjects.value || !questionMatched ? [] : question.watchlist
+            onlyWithTows.value || onlyWithProjects.value || !questionMatched
+              ? []
+              : question.watchlist
           return { ...question, items, watchlist }
         })
         .filter((question) => question.items.length > 0 || question.watchlist.length > 0)
@@ -252,16 +262,15 @@ const hiddenCount = computed(() => {
   return Math.max(0, linkedTotal - shown)
 })
 
+const unlinkedItems = computed<StrategicMapItem[]>(() => {
+  const items = map.value?.unlinked.swot_items ?? []
+  return onlyWithTows.value ? items.filter(hasTows) : items
+})
+
 const hasUnlinked = computed(() => {
   const doc = map.value
   if (!doc) return false
-  const { swot_items, initiatives, watchlist, projects: orphanProjects } = doc.unlinked
-  return (
-    swot_items.length > 0 ||
-    initiatives.length > 0 ||
-    watchlist.length > 0 ||
-    orphanProjects.length > 0
-  )
+  return unlinkedItems.value.length > 0 || doc.unlinked.projects.length > 0
 })
 
 function projectById(id: string): CanvasProjectSummary | undefined {
@@ -577,6 +586,10 @@ onMounted(() => {
               </button>
             </div>
             <label class="check">
+              <input v-model="onlyWithTows" type="checkbox" />
+              Só com estratégia TOWS
+            </label>
+            <label class="check">
               <input v-model="onlyWithProjects" type="checkbox" />
               Só ramos com projeto
             </label>
@@ -661,6 +674,9 @@ onMounted(() => {
                           <span v-if="item.impacto" class="tag">impacto {{ item.impacto }}</span>
                           <span v-if="item.initiatives.length" class="tag">
                             {{ item.initiatives.length }} estratégia(s)
+                          </span>
+                          <span v-else-if="item.used_in" class="tag">
+                            em {{ item.used_in }} estratégia(s)
                           </span>
                           <span v-if="itemProjectCount(item)" class="tag tag--proj">
                             {{ itemProjectCount(item) }} projeto(s)
@@ -849,7 +865,7 @@ onMounted(() => {
           >
             <span class="sec-title">Fora da árvore</span>
             <span class="tag muted">
-              {{ map?.unlinked.swot_items.length ?? 0 }} item(ns) ·
+              {{ unlinkedItems.length }} item(ns) ·
               {{ map?.unlinked.projects.length ?? 0 }} projeto(s)
             </span>
           </button>
@@ -857,8 +873,8 @@ onMounted(() => {
             <p class="panel-label">
               Itens sem pergunta de origem (criados à mão ou importados) e projetos sem vínculo.
             </p>
-            <ul v-if="map?.unlinked.swot_items.length" class="plain-list">
-              <li v-for="item in map.unlinked.swot_items" :key="item.id">
+            <ul v-if="unlinkedItems.length" class="plain-list">
+              <li v-for="item in unlinkedItems" :key="item.id">
                 <span class="quad-badge" :class="`quad-badge--${item.quadrant}`">
                   {{ QUADRANT_LABEL[item.quadrant] }}
                 </span>

@@ -49,6 +49,8 @@ export interface StrategicMapItem {
   prioridade: number | null
   tows: boolean
   initiatives: StrategicMapInitiative[]
+  /** Quantas estratégias TOWS usam este item como contraparte externa. */
+  used_in: number
   projects: StrategicMapProject[]
 }
 

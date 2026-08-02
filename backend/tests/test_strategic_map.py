@@ -179,6 +179,21 @@ class StrategicMapTests(unittest.TestCase):
         self.assertEqual([p["id"] for p in linked["projects"]], [str(project["_id"])])
         self.assertTrue(linked["counterparts"], "iniciativa sem contraparte externa")
 
+    def test_external_items_report_tows_usage(self) -> None:
+        """Oportunidade/ameaça entra no TOWS como contraparte — `used_in` sustenta o filtro."""
+        db, user, _project, _initiative = self._fixture()
+        payload = _map_for(db, user)
+        items = {
+            item["id"]: item
+            for dim in payload["dimensions"]
+            for question in dim["questions"]
+            for item in question["items"]
+        }
+        opportunity = items["o_ev1"]
+        self.assertEqual(opportunity["initiatives"], [])
+        self.assertGreater(opportunity["used_in"], 0)
+        self.assertEqual(items["f_ev1"]["used_in"], 0)
+
     def test_question_id_falls_back_to_item_id_convention(self) -> None:
         db, user, _project, _initiative = self._fixture(drop_question_id=True)
         payload = _map_for(db, user)

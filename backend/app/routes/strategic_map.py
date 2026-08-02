@@ -188,6 +188,7 @@ def _item_node(
     item: dict,
     initiatives_by_item: dict[str, list[dict]],
     projects_by_item: dict[str, list[dict]],
+    external_usage: dict[str, int],
 ) -> dict:
     item_id = item.get("id") or ""
     return {
@@ -203,6 +204,8 @@ def _item_node(
         "prioridade": item.get("prioridade"),
         "tows": bool(item.get("tows", True)),
         "initiatives": initiatives_by_item.get(item_id, []),
+        # Quantas estratégias TOWS usam este item como contraparte externa
+        "used_in": external_usage.get(item_id, 0),
         "projects": [_project_ref(p) for p in projects_by_item.get(item_id, [])],
     }
 
@@ -262,6 +265,7 @@ def get_strategic_map(
                 projects_by_tows.setdefault(ref, []).append(project)
 
     initiatives_by_item: dict[str, list[dict]] = {}
+    external_usage: dict[str, int] = {}
     orphan_initiatives: list[dict] = []
     initiative_count = 0
     if swot:
@@ -269,6 +273,10 @@ def get_strategic_map(
             for raw in swot.get(field) or []:
                 node = _initiative_node(field, raw, items_by_id, projects_by_tows)
                 initiative_count += 1
+                for counterpart in node["counterparts"]:
+                    ref = counterpart["id"]
+                    if ref in items_by_id:
+                        external_usage[ref] = external_usage.get(ref, 0) + 1
                 internos = [ref for ref in node["itens_internos"] if ref in items_by_id]
                 if not internos:
                     orphan_initiatives.append(node)
@@ -303,7 +311,7 @@ def get_strategic_map(
             levels = question.get("levels") or {}
             qkey = _key(qid)
             item_nodes = [
-                _item_node(item, initiatives_by_item, projects_by_item)
+                _item_node(item, initiatives_by_item, projects_by_item, external_usage)
                 for item in items_by_question.get(qkey, [])
             ]
             used_item_ids.update(node["id"] for node in item_nodes)
@@ -342,7 +350,7 @@ def get_strategic_map(
         )
 
     orphan_items = [
-        _item_node(item, initiatives_by_item, projects_by_item)
+        _item_node(item, initiatives_by_item, projects_by_item, external_usage)
         for item_id, item in items_by_id.items()
         if item_id not in used_item_ids
     ]
