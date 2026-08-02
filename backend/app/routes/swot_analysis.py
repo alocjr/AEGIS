@@ -7,7 +7,7 @@ import secrets
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
@@ -20,7 +20,7 @@ from app.schemas import (
     SwotPilaresPorQuadrante,
     SwotWatchlistItem,
 )
-from app.swot_from_maturity import build_swot_fields_from_maturity
+from app.swot_from_maturity import build_swot_fields_from_maturity, build_tows_from_swot
 
 router = APIRouter(prefix="/api/swot-analysis", tags=["swot-analysis"])
 
@@ -104,6 +104,7 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
             "probabilidade": None,
             "evidencia": "",
             "prioridade": None,
+            "tows": True,
         }
 
     if isinstance(raw, SwotItem):
@@ -132,6 +133,10 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
     viabilidade = _score(data.get("viabilidade")) if field in _INTERNAL_FIELDS else None
     probabilidade = _score(data.get("probabilidade")) if field not in _INTERNAL_FIELDS else None
 
+    tows_flag = data.get("tows")
+    if tows_flag is None:
+        tows_flag = True
+
     return {
         "id": item_id,
         "texto": texto,
@@ -141,6 +146,7 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
         "probabilidade": probabilidade,
         "evidencia": evidencia,
         "prioridade": _priority(data.get("prioridade")),
+        "tows": bool(tows_flag),
     }
 
 
@@ -379,6 +385,43 @@ def _get_by_maturity(db: Database, user_id, maturity_response_id: ObjectId) -> d
     )
 
 
+def _model_for_swot(db: Database, doc: dict, user_id) -> dict | None:
+    """Modelo de maturidade ligado à SWOT (via maturity_response), senão o ativo."""
+    from app.routes.maturity import _load_model, _serialize_model
+
+    mid = doc.get("maturity_response_id")
+    if mid:
+        mat = db.maturity_responses.find_one({"_id": mid, "user_id": user_id})
+        if mat and mat.get("model_id"):
+            model_doc = db.ai_maturity_model.find_one({"_id": mat["model_id"]})
+            if model_doc and model_doc.get("dimensions"):
+                return _serialize_model(model_doc)
+    try:
+        return _load_model(db)
+    except HTTPException:
+        return None
+
+
+def _rebuild_tows_on_doc(doc: dict, db: Database, user_id) -> dict:
+    """Recalcula TOWS a partir dos itens SWOT com tows=True e persiste."""
+    model = _model_for_swot(db, doc, user_id)
+    tows = build_tows_from_swot(
+        forcas=doc.get("forcas") or [],
+        fraquezas=doc.get("fraquezas") or [],
+        oportunidades=doc.get("oportunidades") or [],
+        ameacas=doc.get("ameacas") or [],
+        model=model,
+    )
+    now = datetime.now(timezone.utc)
+    db.swot_analyses.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {**tows, "updated_at": now}},
+    )
+    doc.update(tows)
+    doc["updated_at"] = now
+    return doc
+
+
 def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> dict:
     updates = body.model_dump(exclude_unset=True)
 
@@ -581,12 +624,15 @@ def get_swot_by_id(
 @router.put("")
 def update_swot(
     body: SwotAnalysisUpdateRequest,
+    rebuild_tows: bool = Query(False, description="Recalcular TOWS a partir dos itens marcados"),
     user=Depends(get_verified_user),
     db: Database = Depends(get_db),
 ):
     """Atualiza a SWOT mais recente do mentorado."""
     doc = _get_or_create_latest(db, user["_id"])
     refreshed = _apply_updates(doc, body, db)
+    if rebuild_tows:
+        refreshed = _rebuild_tows_on_doc(refreshed, db, user["_id"])
     return _to_item(refreshed)
 
 
@@ -594,12 +640,15 @@ def update_swot(
 def update_swot_by_id(
     swot_id: str,
     body: SwotAnalysisUpdateRequest,
+    rebuild_tows: bool = Query(False, description="Recalcular TOWS a partir dos itens marcados"),
     user=Depends(get_verified_user),
     db: Database = Depends(get_db),
 ):
     """Atualiza uma SWOT específica."""
     doc = _require_owned(db, user["_id"], swot_id)
     refreshed = _apply_updates(doc, body, db)
+    if rebuild_tows:
+        refreshed = _rebuild_tows_on_doc(refreshed, db, user["_id"])
     return _to_item(refreshed)
 
 

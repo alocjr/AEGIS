@@ -324,6 +324,7 @@ function emptyItem(pilar: string = ''): SwotItem {
     probabilidade: null,
     evidencia: '',
     prioridade: null,
+    tows: true,
   }
 }
 
@@ -344,6 +345,7 @@ function normalizeItem(raw: SwotItem | string | Partial<SwotItem>): SwotItem {
     probabilidade: raw.probabilidade ?? null,
     evidencia: raw.evidencia || '',
     prioridade: raw.prioridade ?? null,
+    tows: raw.tows !== false,
   }
 }
 
@@ -453,7 +455,10 @@ async function loadSwot() {
   }
 }
 
-async function persist() {
+let pendingRebuildTows = false
+
+async function persist(opts?: { rebuildTows?: boolean }) {
+  if (opts?.rebuildTows) pendingRebuildTows = true
   if (saving) {
     pendingSave = true
     return
@@ -461,9 +466,11 @@ async function persist() {
   saving = true
   saveState.value = 'saving'
   saveError.value = null
+  const rebuildTows = pendingRebuildTows
+  pendingRebuildTows = false
   const payload: SwotAnalysisPayload = { ...form.value }
   try {
-    const updated = await updateSwotAnalysis(payload, currentSwotId.value)
+    const updated = await updateSwotAnalysis(payload, currentSwotId.value, { rebuildTows })
     applyDoc(updated)
     saveState.value = 'saved'
     window.setTimeout(() => {
@@ -577,12 +584,21 @@ function addItem(field: SwotListField, pilar: string) {
   if (form.value[field].length >= 40) return
   form.value[field] = [...form.value[field], { ...emptyItem(pilar), texto: text }]
   drafts[key] = ''
-  void persist()
+  void persist({ rebuildTows: true })
 }
 
 function removeItem(field: SwotListField, index: number) {
   form.value[field] = form.value[field].filter((_, i) => i !== index)
-  void persist()
+  void persist({ rebuildTows: true })
+}
+
+function toggleItemTows(field: SwotListField, index: number) {
+  const list = form.value[field].map((item) => ({ ...item }))
+  const current = list[index]
+  if (!current) return
+  list[index] = { ...current, tows: !current.tows }
+  form.value[field] = list
+  void persist({ rebuildTows: true })
 }
 
 function onItemBlur(field: SwotListField, index: number, ev: Event) {
@@ -591,9 +607,11 @@ function onItemBlur(field: SwotListField, index: number, ev: Event) {
   const list = form.value[field].map((item) => ({ ...item }))
   if (!next) {
     list.splice(index, 1)
-  } else {
-    list[index] = { ...list[index], texto: next }
+    form.value[field] = list
+    void persist({ rebuildTows: true })
+    return
   }
+  list[index] = { ...list[index], texto: next }
   form.value[field] = list
   void persist()
 }
@@ -870,7 +888,7 @@ onUnmounted(() => {
           <p class="hint">
             No interno (Forças / Fraquezas), o repertório de partida usa as quatro dimensões do Modelo de
             Maturidade. No externo, o foco é ambiente. Inclua outro pilar se precisar. Priorize 2–3 itens por
-            quadrante. Toque no ? para o repertório.
+            quadrante. Marque o checkbox dos itens que entram no cruzamento TOWS. Toque no ? para o repertório.
           </p>
         </div>
         <div class="axis-top"><span>Interno</span><span>Externo</span></div>
@@ -925,7 +943,16 @@ onUnmounted(() => {
                   v-for="{ item, index } in unassignedItems(q.field)"
                   :key="item.id || q.field + '-u-' + index"
                   class="item-row"
+                  :class="{ 'tows-off': !item.tows }"
                 >
+                  <label class="item-tows" :title="item.tows ? 'No TOWS — clique para excluir' : 'Fora do TOWS — clique para incluir'">
+                    <input
+                      type="checkbox"
+                      :checked="item.tows"
+                      @change="toggleItemTows(q.field, index)"
+                    />
+                    <span class="sr-only">Incluir no TOWS</span>
+                  </label>
                   <input
                     :value="item.texto"
                     class="item-input"
@@ -951,7 +978,16 @@ onUnmounted(() => {
                   v-for="{ item, index } in itemsForPilar(q.field, p.id)"
                   :key="item.id || q.field + p.id + index"
                   class="item-row"
+                  :class="{ 'tows-off': !item.tows }"
                 >
+                  <label class="item-tows" :title="item.tows ? 'No TOWS — clique para excluir' : 'Fora do TOWS — clique para incluir'">
+                    <input
+                      type="checkbox"
+                      :checked="item.tows"
+                      @change="toggleItemTows(q.field, index)"
+                    />
+                    <span class="sr-only">Incluir no TOWS</span>
+                  </label>
                   <input
                     :value="item.texto"
                     class="item-input"
@@ -1047,8 +1083,8 @@ onUnmounted(() => {
           <div class="eyebrow">{{ towsStep }} · Cruzamento TOWS</div>
           <h2>Do diagnóstico à decisão</h2>
           <p class="hint">
-            Cada cruzamento vira uma iniciativa (ação, dono, horizonte). Comece pelo f × A — é onde a estratégia pode
-            quebrar.
+            Gerado só com os itens marcados na matriz (F×O, F×A, f×O, f×A). Cada cruzamento vira uma iniciativa.
+            Comece pelo f × A — é onde a estratégia pode quebrar.
           </p>
         </div>
         <div class="tows">
@@ -1772,6 +1808,37 @@ onUnmounted(() => {
   display: flex;
   gap: 4px;
   align-items: center;
+}
+.item-row.tows-off .item-input {
+  color: var(--muted);
+  opacity: 0.72;
+}
+.item-tows {
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  cursor: pointer;
+}
+.item-tows input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .item-input {
   flex: 1;

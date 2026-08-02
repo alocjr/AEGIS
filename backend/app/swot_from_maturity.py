@@ -159,6 +159,126 @@ def _tows_label(q: dict[str, Any], key: str) -> str:
     return _label_from_map(labels, keys)[:1000]
 
 
+def _tows_selected(items: list[dict] | None) -> list[dict]:
+    """Itens do SWOT marcados para entrar no cruzamento TOWS (`tows=True`; default True)."""
+    out: list[dict] = []
+    for raw in items or []:
+        if not isinstance(raw, dict):
+            continue
+        if raw.get("tows") is False:
+            continue
+        if not str(raw.get("texto") or "").strip():
+            continue
+        if not str(raw.get("id") or "").strip():
+            continue
+        out.append(raw)
+    return out
+
+
+def _question_map(model: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    qmap: dict[str, dict[str, Any]] = {}
+    if not isinstance(model, dict):
+        return qmap
+    for dimension in model.get("dimensions") or []:
+        for q in dimension.get("questions") or []:
+            qid = str(q.get("id") or "").strip().lower()
+            if qid:
+                qmap[qid] = q
+    return qmap
+
+
+def _qid_from_swot_item_id(item_id: str) -> str:
+    """f_ev1 / fx_ev2 / o_ev1 / a_di3 → ev1 / ev2 / …"""
+    parts = str(item_id or "").strip().lower().split("_", 1)
+    return parts[1] if len(parts) == 2 else ""
+
+
+def build_tows_from_swot(
+    *,
+    forcas: list[dict] | None,
+    fraquezas: list[dict] | None,
+    oportunidades: list[dict] | None,
+    ameacas: list[dict] | None,
+    model: dict[str, Any] | None = None,
+) -> dict[str, list[dict]]:
+    """
+    Monta TOWS só com itens SWOT marcados (`tows=True`).
+
+    Regras (towsFramework):
+    - Força marcada × Oportunidade(s) marcada(s) → SO (towsLabels.SO)
+    - Força marcada × Ameaça(s) marcada(s) → ST
+    - Fraqueza marcada × Oportunidade(s) → WO
+    - Fraqueza marcada × Ameaça(s) → WT
+    """
+    forces = _tows_selected(forcas)
+    weaknesses = _tows_selected(fraquezas)
+    opps = _tows_selected(oportunidades)
+    threats = _tows_selected(ameacas)
+
+    opp_ids = [str(i["id"]) for i in opps][:10]
+    threat_ids = [str(i["id"]) for i in threats][:10]
+    has_opp = bool(opp_ids)
+    has_threat = bool(threat_ids)
+    qmap = _question_map(model)
+
+    tows_out: dict[str, list[dict]] = {
+        "tows_fo": [],
+        "tows_fa": [],
+        "tows_fxo": [],
+        "tows_fxa": [],
+    }
+
+    def append_init(field: str, prefix: str, acao: str, internal_id: str, external_ids: list[str]) -> None:
+        if not acao or not external_ids:
+            return
+        tows_out[field].append(
+            {
+                "id": _nid(prefix),
+                "acao": acao[:1000],
+                "dono": "",
+                "horizonte": "",
+                "itens_internos": [internal_id],
+                "itens_externos": list(external_ids),
+            }
+        )
+
+    for item in forces:
+        item_id = str(item["id"])
+        q = qmap.get(_qid_from_swot_item_id(item_id))
+        if has_opp:
+            acao = _tows_label(q, "SO") if q else ""
+            append_init("tows_fo", "fo", acao, item_id, opp_ids)
+        if has_threat:
+            acao = _tows_label(q, "ST") if q else ""
+            append_init("tows_fa", "fa", acao, item_id, threat_ids)
+
+    for item in weaknesses:
+        item_id = str(item["id"])
+        q = qmap.get(_qid_from_swot_item_id(item_id))
+        if has_opp:
+            acao = _tows_label(q, "WO") if q else ""
+            append_init("tows_fxo", "fxo", acao, item_id, opp_ids)
+        if has_threat:
+            acao = _tows_label(q, "WT") if q else ""
+            append_init("tows_fxa", "fxa", acao, item_id, threat_ids)
+
+    for key in tows_out:
+        tows_out[key] = tows_out[key][:20]
+
+    # Fallback legado se nenhum towsLabels casou, mas há lados marcados
+    if not any(tows_out.values()) and (forces or weaknesses) and (opps or threats):
+        tows_out = _legacy_pair_tows(
+            {
+                "forcas": forces,
+                "fraquezas": weaknesses,
+                "oportunidades": opps,
+                "ameacas": threats,
+            }
+        )
+
+    return tows_out
+
+
 def build_swot_fields_from_maturity(
     *,
     model: dict[str, Any],
@@ -178,8 +298,6 @@ def build_swot_fields_from_maturity(
         "ameacas": [],
     }
     watchlist: list[dict[str, Any]] = []
-    # Metadados internos para TOWS (qid → pergunta + item de força/fraqueza)
-    internal_hits: list[dict[str, Any]] = []
 
     for dimension in model.get("dimensions") or []:
         dim_id = str(dimension.get("id") or "")
@@ -226,8 +344,6 @@ def build_swot_fields_from_maturity(
                 )
                 continue
 
-            strength_id = ""
-            weakness_id = ""
             for quad in quadrants:
                 field = _QUADRANT_TO_FIELD.get(quad)
                 if not field:
@@ -256,23 +372,8 @@ def build_swot_fields_from_maturity(
                         "probabilidade": lvl if field in ("oportunidades", "ameacas") else None,
                         "evidencia": evid,
                         "prioridade": None,
+                        "tows": True,
                         **base_meta,
-                    }
-                )
-                if quad == "strength":
-                    strength_id = item_id
-                elif quad == "weakness":
-                    weakness_id = item_id
-
-            if strength_id or weakness_id:
-                internal_hits.append(
-                    {
-                        "qid": qid,
-                        "lvl": lvl,
-                        "q": q,
-                        "strength_id": strength_id,
-                        "weakness_id": weakness_id,
-                        "_dim_id": dim_id,
                     }
                 )
 
@@ -290,88 +391,14 @@ def build_swot_fields_from_maturity(
         )
     )
 
-    # --- TOWS via towsFramework + towsLabels ---
-    opp_ids = [i["id"] for i in buckets["oportunidades"]]
-    threat_ids = [i["id"] for i in buckets["ameacas"]]
-    has_opp = bool(opp_ids)
-    has_threat = bool(threat_ids)
-
-    tows_out: dict[str, list[dict]] = {
-        "tows_fo": [],
-        "tows_fa": [],
-        "tows_fxo": [],
-        "tows_fxa": [],
-    }
-
-    internal_hits.sort(key=lambda h: _dim_sort_key(str(h.get("_dim_id") or ""), str(h.get("qid") or "")))
-
-    for hit in internal_hits:
-        q = hit["q"]
-        lvl = hit["lvl"]
-        # Forças (4–5): SO / ST
-        if hit["strength_id"] and lvl >= 4:
-            if has_opp:
-                acao = _tows_label(q, "SO")
-                if acao:
-                    tows_out["tows_fo"].append(
-                        {
-                            "id": _nid("fo"),
-                            "acao": acao,
-                            "dono": "",
-                            "horizonte": "",
-                            "itens_internos": [hit["strength_id"]],
-                            "itens_externos": list(opp_ids[:10]),
-                        }
-                    )
-            if has_threat:
-                acao = _tows_label(q, "ST")
-                if acao:
-                    tows_out["tows_fa"].append(
-                        {
-                            "id": _nid("fa"),
-                            "acao": acao,
-                            "dono": "",
-                            "horizonte": "",
-                            "itens_internos": [hit["strength_id"]],
-                            "itens_externos": list(threat_ids[:10]),
-                        }
-                    )
-        # Fraquezas (1–2): WO / WT
-        if hit["weakness_id"] and lvl <= 2:
-            if has_opp:
-                acao = _tows_label(q, "WO")
-                if acao:
-                    tows_out["tows_fxo"].append(
-                        {
-                            "id": _nid("fxo"),
-                            "acao": acao,
-                            "dono": "",
-                            "horizonte": "",
-                            "itens_internos": [hit["weakness_id"]],
-                            "itens_externos": list(opp_ids[:10]),
-                        }
-                    )
-            if has_threat:
-                acao = _tows_label(q, "WT")
-                if acao:
-                    tows_out["tows_fxa"].append(
-                        {
-                            "id": _nid("fxa"),
-                            "acao": acao,
-                            "dono": "",
-                            "horizonte": "",
-                            "itens_internos": [hit["weakness_id"]],
-                            "itens_externos": list(threat_ids[:10]),
-                        }
-                    )
-
-    # Limite de iniciativas por cruzamento (UI / schema)
-    for key in tows_out:
-        tows_out[key] = tows_out[key][:20]
-
-    # Fallback legado se não houver towsLabels no modelo
-    if not any(tows_out.values()) and (buckets["forcas"] or buckets["fraquezas"]):
-        tows_out = _legacy_pair_tows(buckets)
+    tows_out = build_tows_from_swot(
+        forcas=buckets["forcas"],
+        fraquezas=buckets["fraquezas"],
+        oportunidades=buckets["oportunidades"],
+        ameacas=buckets["ameacas"],
+        model=model,
+    )
+    has_opp = bool(_tows_selected(buckets["oportunidades"]))
 
     result = result or {}
     level = result.get("level") or {}
@@ -406,9 +433,11 @@ def build_swot_fields_from_maturity(
             f" Pontos de Atenção (nota 3, fora do SWOT/TOWS): {len(watchlist)} — {codes}{extra}."
         )
     empty_opp_note = ""
-    if tows_fw and not has_opp and (buckets["forcas"] or buckets["fraquezas"]):
+    if tows_fw and not has_opp and (
+        _tows_selected(buckets["forcas"]) or _tows_selected(buckets["fraquezas"])
+    ):
         empty_opp_note = (
-            " Sem oportunidades no SWOT, as estratégias ofensivas (SO/WO) ficam vazias — "
+            " Sem oportunidades marcadas para o TOWS, as estratégias ofensivas (SO/WO) ficam vazias — "
             "sinal de posicionamento de mercado insuficiente para ofensiva."
         )
     veredito_texto = (

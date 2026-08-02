@@ -35,6 +35,8 @@ export interface SwotItem {
   probabilidade: number | null
   evidencia: string
   prioridade: number | null
+  /** Incluir este item no cruzamento TOWS. */
+  tows: boolean
 }
 
 export interface SwotInitiative {
@@ -250,12 +252,14 @@ export function createSwotFromMaturity(maturityResponseId: string): Promise<Swot
 
 export function updateSwotAnalysis(
   body: SwotAnalysisPayload,
-  swotId?: string | null
+  swotId?: string | null,
+  opts?: { rebuildTows?: boolean }
 ): Promise<SwotAnalysis> {
+  const q = opts?.rebuildTows ? '?rebuild_tows=true' : ''
   if (swotId) {
-    return put<SwotAnalysis>(`/api/swot-analysis/${encodeURIComponent(swotId)}`, body)
+    return put<SwotAnalysis>(`/api/swot-analysis/${encodeURIComponent(swotId)}${q}`, body)
   }
-  return put<SwotAnalysis>('/api/swot-analysis', body)
+  return put<SwotAnalysis>(`/api/swot-analysis${q}`, body)
 }
 
 export function importSwotAnalysis(body: SwotImportDocument): Promise<SwotAnalysis> {

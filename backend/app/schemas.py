@@ -116,6 +116,8 @@ class SwotItem(BaseModel):
     probabilidade: int | None = Field(None, ge=1, le=5)
     evidencia: str | None = Field(None, max_length=1000)
     prioridade: int | None = Field(None, ge=1, le=40)
+    # Incluir este item no cruzamento TOWS
+    tows: bool = True
 
 
 class SwotPilarSlot(BaseModel):
