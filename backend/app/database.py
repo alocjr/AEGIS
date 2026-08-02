@@ -179,15 +179,16 @@ def init_indexes() -> None:
     db.ai_maturity_model.create_index("version")
     seed_maturity_model_from_file()
     # Múltiplas respostas por organização: remover índices antigos por user_id se existirem
-    try:
-        db.maturity_responses.drop_index("user_id_1_model_version_1")
-    except Exception:
-        pass  # índice já não existe ou nome diferente
-    try:
-        db.maturity_responses.drop_index("user_id_1_submitted_at_-1")
-        db.maturity_responses.drop_index("user_id_1_model_id_1_submitted_at_-1")
-    except Exception:
-        pass
+    # (cada drop_index no seu próprio try — um nome que não existe não pode impedir os outros)
+    for _old_index in (
+        "user_id_1_model_version_1",
+        "user_id_1_submitted_at_-1",
+        "user_id_1_model_id_1_submitted_at_-1",
+    ):
+        try:
+            db.maturity_responses.drop_index(_old_index)
+        except Exception:
+            pass  # índice já não existe ou nome diferente
     # Respostas completas são visíveis para toda a organização
     db.maturity_responses.create_index([("organization_id", 1), ("submitted_at", -1)])
     db.maturity_responses.create_index([("organization_id", 1), ("model_id", 1), ("submitted_at", -1)])
@@ -209,12 +210,11 @@ def init_indexes() -> None:
         pass
     db.canvas_projects.create_index([("organization_id", 1), ("updated_at", -1)])
     # SWOT: vários docs por organização (um por resposta de maturidade + manuais)
-    try:
-        db.swot_analyses.drop_index("user_id_1")
-        db.swot_analyses.drop_index("user_id_1_updated_at_-1")
-        db.swot_analyses.drop_index("user_id_1_maturity_response_id_1")
-    except Exception:
-        pass
+    for _old_index in ("user_id_1", "user_id_1_updated_at_-1", "user_id_1_maturity_response_id_1"):
+        try:
+            db.swot_analyses.drop_index(_old_index)
+        except Exception:
+            pass
     db.swot_analyses.create_index([("organization_id", 1), ("updated_at", -1)])
     db.swot_analyses.create_index(
         [("organization_id", 1), ("maturity_response_id", 1)],
@@ -227,10 +227,13 @@ def init_indexes() -> None:
 
     # Módulo de Governança de IA
     db.ai_systems.create_index([("organization_id", 1), ("updated_at", -1)])
+    # Índices parciais do Mongo não suportam $ne (compila para $not, proibido aqui) —
+    # $type exclui null e "ausente" ao mesmo tempo, já que canvas_project_id só é
+    # ObjectId quando presente (None nos sistemas cadastrados manualmente).
     db.ai_systems.create_index(
         [("organization_id", 1), ("canvas_project_id", 1)],
         unique=True,
-        partialFilterExpression={"canvas_project_id": {"$exists": True, "$ne": None}},
+        partialFilterExpression={"canvas_project_id": {"$type": "objectId"}},
     )
     db.ai_governance_audit_log.create_index(
         [("organization_id", 1), ("entity_type", 1), ("entity_id", 1), ("at", -1)]
