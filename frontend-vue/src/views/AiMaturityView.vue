@@ -801,7 +801,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   --tier-completo: #b79a3e;
   --tier-complementar: #3d6fa8;
 
-  max-width: 920px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 20px 16px 64px;
   color: var(--ink);
@@ -1136,8 +1136,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   margin-top: 4px;
 }
 .matrix-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: visible;
 }
 .col-legend {
   display: none;
@@ -1328,6 +1327,9 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 }
 .cell .txt {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .footnote {
@@ -1428,15 +1430,20 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   .scale-legend {
     margin-left: auto;
   }
+}
+
+/* Matriz lado a lado só quando há largura suficiente — sem min-width forçado */
+@media (min-width: 1100px) {
+  .wrap {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
   .col-legend {
     display: grid;
-    grid-template-columns: 240px repeat(5, minmax(160px, 1fr));
-    gap: 10px;
+    grid-template-columns: minmax(200px, 1.15fr) repeat(5, minmax(0, 1fr));
+    gap: 8px;
     padding: 0 0 10px;
-    min-width: 1120px;
-  }
-  .pillar-section {
-    min-width: 1120px;
+    width: 100%;
   }
   .pillar-band {
     position: sticky;
@@ -1445,17 +1452,21 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   }
   .csf-row {
     display: grid;
-    grid-template-columns: 240px repeat(5, minmax(160px, 1fr));
-    gap: 10px;
+    grid-template-columns: minmax(200px, 1.15fr) repeat(5, minmax(0, 1fr));
+    gap: 8px;
     padding: 10px 0;
+    width: 100%;
   }
   .stem {
-    padding: 4px 10px 4px 0;
+    padding: 4px 8px 4px 0;
+    min-width: 0;
   }
   .cell {
     align-items: flex-start;
-    font-size: 12.5px;
+    font-size: 12px;
     min-height: auto;
+    min-width: 0;
+    padding: 10px;
   }
   .cell:hover {
     transform: translateY(-1px);
