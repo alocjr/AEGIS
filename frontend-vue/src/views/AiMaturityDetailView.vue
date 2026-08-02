@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import Plotly from 'plotly.js-dist-min'
 import {
   fetchMaturityModel,
   fetchMaturityResponseById,
   type MaturityModel,
   type MaturityResult,
+  type MaturityTier,
 } from '@/api/maturity'
 
 const route = useRoute()
@@ -18,26 +18,48 @@ const model = ref<MaturityModel | null>(null)
 const displayedResult = ref<MaturityResult | null>(null)
 const submittedAt = ref<string | null>(null)
 
-const gaugeEl = ref<HTMLDivElement | null>(null)
-const radarEl = ref<HTMLDivElement | null>(null)
-const dimBarsEl = ref<HTMLDivElement | null>(null)
+const TIER_LABELS: Record<string, string> = {
+  basico: 'Básico',
+  completo: 'Completo',
+  complementar: 'Complementar',
+}
 
-const CHART_COLORS = {
-  navy: '#0c2340',
-  gold: '#9b7e46',
-  step0: '#e2e2e7',
-  step1: 'rgba(155, 126, 70, 0.18)',
-  step2: 'rgba(155, 126, 70, 0.4)',
-  step3: '#9b7e46',
-  step4: '#0c2340',
-  radarFill: 'rgba(155, 126, 70, 0.25)',
+const DIMENSION_ACCENT: Record<string, string> = {
+  strategy: '#7a5aa3',
+  data_infra: '#3d6fa8',
+  people_culture: '#b9822f',
+  gov_risk: '#a3453f',
+}
+
+type DimRow = {
+  id: string
+  name: string
+  score: number
+  max: number
+  avg: number
+  pct: number
+  accent: string
+  initials: string
+}
+
+const RADAR_CX = 100
+const RADAR_CY = 100
+const RADAR_R = 68
+const RADAR_LABEL_R = 88
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (!words.length) return '?'
+  const a = words[0]?.[0] ?? ''
+  const b = words[1]?.[0] ?? ''
+  return (a + b).toUpperCase().slice(0, 2) || '?'
 }
 
 function getLevelByScore(score: number): { label?: string; description?: string } | null {
   const m = model.value
   const tier = displayedResult.value?.tier
   const bands =
-    (tier && m?.scoring?.[tier as keyof NonNullable<typeof m.scoring>]) ||
+    (tier && m?.scoring?.[tier as MaturityTier]) ||
     m?.scoring?.basico ||
     m?.scoring_logic
   if (!bands) return null
@@ -63,6 +85,104 @@ function formatDate(iso: string | null): string {
   }
 }
 
+const levelInfo = computed(() => {
+  const result = displayedResult.value
+  if (!result) return { label: '—', description: '' }
+  return (
+    result.level ??
+    getLevelByScore(result.total_score) ?? { label: '—', description: '' }
+  )
+})
+
+const tierLabel = computed(() => {
+  const tier = displayedResult.value?.tier
+  if (!tier) return null
+  return TIER_LABELS[tier] || tier
+})
+
+const dimRows = computed<DimRow[]>(() => {
+  const result = displayedResult.value
+  const dims = model.value?.dimensions ?? []
+  if (!result || !dims.length) return []
+  return dims.map((dim) => {
+    const ds = result.dimension_scores?.[dim.id] || {
+      name: dim.name,
+      score: 0,
+      max: 0,
+      avg: 0,
+    }
+    const max = ds.max || 0
+    const score = ds.score || 0
+    const pct = max ? Math.round((score / max) * 100) : 0
+    return {
+      id: dim.id,
+      name: ds.name || dim.name,
+      score,
+      max,
+      avg: ds.avg ?? 0,
+      pct,
+      accent: DIMENSION_ACCENT[dim.id] || 'var(--gold)',
+      initials: getInitials(ds.name || dim.name),
+    }
+  })
+})
+
+const strongest = computed(() => {
+  if (!dimRows.value.length) return null
+  return dimRows.value.reduce((a, b) => (b.avg > a.avg ? b : a))
+})
+
+const weakest = computed(() => {
+  if (!dimRows.value.length) return null
+  return dimRows.value.reduce((a, b) => (b.avg < a.avg ? b : a))
+})
+
+/** Anel SVG: circunferência com r=54 */
+const RING_R = 54
+const RING_C = 2 * Math.PI * RING_R
+const ringOffset = computed(() => {
+  const pct = Math.min(100, Math.max(0, displayedResult.value?.percent_score ?? 0))
+  return RING_C * (1 - pct / 100)
+})
+
+function radarPoint(i: number, n: number, pct: number): { x: number; y: number } {
+  const angle = -Math.PI / 2 + (2 * Math.PI * i) / n
+  const r = (pct / 100) * RADAR_R
+  return {
+    x: RADAR_CX + r * Math.cos(angle),
+    y: RADAR_CY + r * Math.sin(angle),
+  }
+}
+
+function radarAxisEnd(i: number, n: number): { x: number; y: number } {
+  const angle = -Math.PI / 2 + (2 * Math.PI * i) / n
+  return {
+    x: RADAR_CX + RADAR_R * Math.cos(angle),
+    y: RADAR_CY + RADAR_R * Math.sin(angle),
+  }
+}
+
+function radarLabelPos(i: number, n: number): { x: number; y: number } {
+  const angle = -Math.PI / 2 + (2 * Math.PI * i) / n
+  return {
+    x: RADAR_CX + RADAR_LABEL_R * Math.cos(angle),
+    y: RADAR_CY + RADAR_LABEL_R * Math.sin(angle),
+  }
+}
+
+const radarPolygon = computed(() => {
+  const rows = dimRows.value
+  if (!rows.length) return ''
+  return rows
+    .map((d, i) => {
+      const p = radarPoint(i, rows.length, d.pct)
+      return `${p.x},${p.y}`
+    })
+    .join(' ')
+})
+
+const gridRings = [0.2, 0.4, 0.6, 0.8, 1]
+
 onMounted(async () => {
   if (!responseId) {
     error.value = 'Resposta não encontrada.'
@@ -84,188 +204,181 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-watch(
-  () => displayedResult.value,
-  async (result) => {
-    await nextTick()
-    const m = model.value
-    if (!m || !result) {
-      if (gaugeEl.value) Plotly.purge(gaugeEl.value)
-      if (radarEl.value) Plotly.purge(radarEl.value)
-      if (dimBarsEl.value) Plotly.purge(dimBarsEl.value)
-      return
-    }
-    const level =
-      result.level ?? getLevelByScore(result.total_score) ?? { label: '-', description: '-' }
-
-    if (gaugeEl.value) {
-      Plotly.newPlot(
-        gaugeEl.value,
-        [{
-          type: 'indicator',
-          mode: 'gauge+number',
-          value: result.percent_score,
-          number: { suffix: '%', font: { size: 36 } },
-          gauge: {
-            axis: { range: [0, 100], tickwidth: 1 },
-            bar: { color: CHART_COLORS.navy },
-            bgcolor: 'white',
-            borderwidth: 2,
-            bordercolor: CHART_COLORS.navy,
-            steps: [
-              { range: [0, 20], color: CHART_COLORS.step0 },
-              { range: [20, 40], color: CHART_COLORS.step1 },
-              { range: [40, 60], color: CHART_COLORS.step2 },
-              { range: [60, 80], color: CHART_COLORS.step3 },
-              { range: [80, 100], color: CHART_COLORS.step4 },
-            ],
-            threshold: { line: { color: CHART_COLORS.gold, width: 3 }, value: result.percent_score },
-          },
-        }],
-        { margin: { t: 20, r: 30, b: 20, l: 30 }, paper_bgcolor: 'rgba(0,0,0,0)' },
-        { displayModeBar: false, responsive: true }
-      )
-    }
-    const dims = m.dimensions ?? []
-    if (radarEl.value && dims.length) {
-      const dimNames = dims.map((d) => d.name)
-      const dimValues = dims.map((d) => (result.dimension_scores?.[d.id] || {}).avg || 0)
-      Plotly.newPlot(
-        radarEl.value,
-        [{
-          type: 'scatterpolar',
-          r: [...dimValues, dimValues[0]],
-          theta: [...dimNames, dimNames[0]],
-          fill: 'toself',
-          line: { color: CHART_COLORS.navy, width: 2 },
-          fillcolor: CHART_COLORS.radarFill,
-          marker: { size: 8, color: CHART_COLORS.gold, line: { color: '#fff', width: 1.5 } },
-        }],
-        {
-          autosize: true,
-          margin: { t: 36, r: 80, b: 36, l: 80 },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          polar: {
-            bgcolor: 'rgba(0,0,0,0)',
-            radialaxis: { visible: true, range: [0, 5], tickvals: [1, 2, 3, 4, 5] },
-          },
-          showlegend: false,
-        },
-        { displayModeBar: false, responsive: true }
-      )
-    }
-    if (dimBarsEl.value && dims.length) {
-      const dimNames = dims.map((d) => d.name)
-      const dimPcts = dims.map((d) => {
-        const ds = result.dimension_scores?.[d.id] || {}
-        const max = ds.max || 1
-        return max ? Math.round((ds.score / max) * 100) : 0
-      })
-      Plotly.newPlot(
-        dimBarsEl.value,
-        [{
-          type: 'bar',
-          y: dimNames,
-          x: dimPcts,
-          orientation: 'h',
-          marker: {
-            color: dimPcts.map((p) => {
-              if (p >= 80) return CHART_COLORS.step4
-              if (p >= 60) return CHART_COLORS.step3
-              if (p >= 40) return CHART_COLORS.step2
-              if (p >= 20) return CHART_COLORS.step1
-              return CHART_COLORS.step0
-            }),
-          },
-          text: dimPcts.map((p) => p + '%'),
-          textposition: 'outside',
-        }],
-        {
-          margin: { t: 10, r: 60, b: 40, l: 140 },
-          xaxis: { range: [0, 105], title: 'Percentual', ticksuffix: '%' },
-          yaxis: { automargin: true },
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-        },
-        { displayModeBar: false, responsive: true }
-      )
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
   <div class="wrap">
-    <div class="back-row">
-      <RouterLink to="/ai-maturity" class="back-link">← Voltar à lista</RouterLink>
-    </div>
-    <div v-if="loading" class="card">Carregando...</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <nav class="back-row">
+      <RouterLink to="/ai-maturity" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Voltar às autoavaliações
+      </RouterLink>
+    </nav>
+
+    <div v-if="loading" class="state-card">Carregando resultado…</div>
+    <div v-else-if="error" class="state-card error">{{ error }}</div>
+
     <template v-else-if="model && displayedResult">
-      <div class="card card-header">
-        <h1 class="title">{{ model.assessment_title ?? 'Diagnóstico' }}</h1>
-        <p class="muted">Realizada em {{ formatDate(submittedAt) }}</p>
-      </div>
-      <div class="results-top">
-        <div class="card">
-          <h3>Pontuação Geral</h3>
-          <div class="results-chart-wrap">
-            <div class="score-card">
-              <div class="score-value">{{ displayedResult.total_score }}</div>
-              <div class="score-max">/ {{ displayedResult.max_score }}</div>
-              <div class="score-pct">{{ displayedResult.percent_score }}%</div>
-              <div class="level-badge">
-                {{ (displayedResult.level ?? getLevelByScore(displayedResult.total_score))?.label ?? '-' }}
-              </div>
-              <div class="level-desc">
-                {{ (displayedResult.level ?? getLevelByScore(displayedResult.total_score))?.description ?? '' }}
-              </div>
-            </div>
-            <div ref="gaugeEl" class="chart-gauge"></div>
-          </div>
+      <header class="page-header">
+        <p class="eyebrow">Resultado · Maturidade em IA</p>
+        <h1 class="page-title">
+          {{ model.assessment_title || model.title || 'Diagnóstico de Maturidade em IA' }}
+        </h1>
+        <div class="meta-row">
+          <span class="meta-item">{{ formatDate(submittedAt) }}</span>
+          <span v-if="tierLabel" class="meta-pill">{{ tierLabel }}</span>
+          <span v-if="model.version" class="meta-pill muted">v{{ model.version }}</span>
         </div>
-        <div class="card">
-          <h3>Radar por Dimensão</h3>
-          <div ref="radarEl" class="chart-radar"></div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Pontuação por Dimensão</h3>
-        <div ref="dimBarsEl" class="chart-dimbars"></div>
-        <div class="dim-cards">
-          <div
-            v-for="dim in (model.dimensions ?? [])"
-            :key="dim.id"
-            class="dim-card"
-          >
-            <div class="dim-name">
-              {{ (displayedResult.dimension_scores?.[dim.id] || {}).name || dim.name }}
-            </div>
-            <div class="dim-bar-wrap">
-              <div
-                class="dim-bar"
-                :style="{
-                  width:
-                    (() => {
-                      const ds = displayedResult.dimension_scores?.[dim.id] || { score: 0, max: 1 }
-                      return ds.max ? Math.round((ds.score / ds.max) * 100) : 0
-                    })() + '%',
-                }"
-              ></div>
-            </div>
-            <div class="dim-nums">
-              {{
-                (() => {
-                  const ds =
-                    displayedResult.dimension_scores?.[dim.id] || { score: 0, max: 0, avg: 0 }
-                  return `${ds.score} / ${ds.max} (média ${ds.avg})`
-                })()
-              }}
+      </header>
+
+      <!-- Hero: score + nível -->
+      <section class="hero card">
+        <div class="hero-score">
+          <div class="score-ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120" class="ring-svg">
+              <circle class="ring-bg" cx="60" cy="60" :r="RING_R" />
+              <circle
+                class="ring-fill"
+                cx="60"
+                cy="60"
+                :r="RING_R"
+                fill="none"
+                :stroke-dasharray="RING_C"
+                :stroke-dashoffset="ringOffset"
+                transform="rotate(-90 60 60)"
+              />
+            </svg>
+            <div class="ring-center">
+              <span class="ring-pct">{{ Math.round(displayedResult.percent_score) }}%</span>
             </div>
           </div>
+          <div class="hero-nums">
+            <div class="score-line">
+              <span class="score-value">{{ displayedResult.total_score }}</span>
+              <span class="score-max">/ {{ displayedResult.max_score }} pts</span>
+            </div>
+            <div class="level-badge">{{ levelInfo.label }}</div>
+            <p v-if="levelInfo.description" class="level-desc">{{ levelInfo.description }}</p>
+          </div>
         </div>
+      </section>
+
+      <!-- KPIs -->
+      <section class="kpi-grid" v-if="dimRows.length">
+        <div class="kpi-card">
+          <div class="kpi-label">Dimensões</div>
+          <div class="kpi-value">{{ dimRows.length }}</div>
+          <div class="kpi-sub">avaliadas</div>
+        </div>
+        <div class="kpi-card" v-if="strongest">
+          <div class="kpi-label">Mais madura</div>
+          <div class="kpi-value gold">{{ strongest.avg.toFixed(1) }}</div>
+          <div class="kpi-sub">{{ strongest.name }}</div>
+        </div>
+        <div class="kpi-card" v-if="weakest">
+          <div class="kpi-label">Mais frágil</div>
+          <div class="kpi-value">{{ weakest.avg.toFixed(1) }}</div>
+          <div class="kpi-sub">{{ weakest.name }}</div>
+        </div>
+      </section>
+
+      <!-- Radar + dimensões -->
+      <section class="split">
+        <div class="card radar-card">
+          <h2 class="sec-title">Radar por dimensão</h2>
+          <div class="radar-wrap" v-if="dimRows.length">
+            <svg viewBox="0 0 200 200" class="radar-svg" role="img" aria-label="Radar de maturidade por dimensão">
+              <defs>
+                <linearGradient id="maturityRadarFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--gold)" stop-opacity="0.28" />
+                  <stop offset="100%" stop-color="var(--k0)" stop-opacity="0.18" />
+                </linearGradient>
+              </defs>
+              <g v-for="(ring, ri) in gridRings" :key="'ring-' + ri">
+                <polygon
+                  class="radar-grid"
+                  :points="
+                    dimRows
+                      .map((_, i) => {
+                        const p = radarPoint(i, dimRows.length, ring * 100)
+                        return `${p.x},${p.y}`
+                      })
+                      .join(' ')
+                  "
+                />
+              </g>
+              <g v-for="(d, idx) in dimRows" :key="'ax-' + d.id">
+                <line
+                  class="radar-axis"
+                  :x1="RADAR_CX"
+                  :y1="RADAR_CY"
+                  :x2="radarAxisEnd(idx, dimRows.length).x"
+                  :y2="radarAxisEnd(idx, dimRows.length).y"
+                />
+              </g>
+              <polygon
+                class="radar-poly"
+                :points="radarPolygon"
+                fill="url(#maturityRadarFill)"
+              />
+              <g v-for="(d, idx) in dimRows" :key="'pt-' + d.id">
+                <circle
+                  class="radar-dot"
+                  :cx="radarPoint(idx, dimRows.length, d.pct).x"
+                  :cy="radarPoint(idx, dimRows.length, d.pct).y"
+                  r="3.5"
+                  :fill="d.accent"
+                />
+              </g>
+              <text
+                v-for="(d, idx) in dimRows"
+                :key="'lb-' + d.id"
+                class="radar-label"
+                :x="radarLabelPos(idx, dimRows.length).x"
+                :y="radarLabelPos(idx, dimRows.length).y"
+                text-anchor="middle"
+                dominant-baseline="middle"
+              >{{ d.initials }}</text>
+            </svg>
+            <ul class="radar-legend">
+              <li v-for="d in dimRows" :key="'lg-' + d.id">
+                <span class="dot" :style="{ background: d.accent }" />
+                <span class="lg-name">{{ d.name }}</span>
+                <span class="lg-avg">{{ d.avg.toFixed(1) }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card dims-card">
+          <h2 class="sec-title">Pontuação por dimensão</h2>
+          <ul class="dim-list">
+            <li v-for="d in dimRows" :key="d.id" class="dim-row">
+              <div class="dim-head">
+                <span class="dim-accent" :style="{ background: d.accent }" aria-hidden="true" />
+                <span class="dim-name">{{ d.name }}</span>
+                <span class="dim-pct">{{ d.pct }}%</span>
+              </div>
+              <div class="dim-bar-track" role="meter" :aria-valuenow="d.pct" aria-valuemin="0" aria-valuemax="100">
+                <div
+                  class="dim-bar-fill"
+                  :style="{ width: d.pct + '%', background: `linear-gradient(90deg, var(--k0), ${d.accent})` }"
+                />
+              </div>
+              <div class="dim-meta">
+                <span>{{ d.score }} / {{ d.max }} pts</span>
+                <span>média {{ d.avg.toFixed(1) }} / 5</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="actions">
+        <RouterLink to="/ai-maturity/new" class="btn-primary">Nova autoavaliação</RouterLink>
+        <RouterLink to="/ai-maturity" class="btn-ghost">Ver todas</RouterLink>
       </div>
     </template>
   </div>
@@ -273,154 +386,480 @@ watch(
 
 <style scoped>
 .wrap {
-  max-width: 1080px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 22px 16px 40px;
+  padding: 16px 16px 48px;
 }
+
 .back-row {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .back-link {
-  font-size: 14px;
-  color: var(--k0);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--k3);
   text-decoration: none;
+  transition: color 0.15s;
+}
+.back-link svg {
+  width: 18px;
+  height: 18px;
 }
 .back-link:hover {
-  text-decoration: underline;
+  color: var(--k0);
 }
+
+.state-card {
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--k5);
+}
+.state-card.error {
+  color: var(--low);
+  text-align: left;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+.page-title {
+  font-family: var(--serif);
+  font-size: clamp(22px, 5.5vw, 28px);
+  font-weight: 400;
+  color: var(--k0);
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.meta-item {
+  font-size: 13px;
+  color: var(--k3);
+}
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--golddim);
+  border: 1px solid var(--goldbd);
+  color: var(--gold2);
+}
+.meta-pill.muted {
+  background: var(--k8);
+  border-color: var(--bd);
+  color: var(--k4);
+}
+
 .card {
   background: var(--wh);
   border: 1px solid var(--bd);
+  border-radius: 6px;
   padding: 18px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
   margin-bottom: 14px;
-  border-radius: 8px;
 }
-.card-header .title {
-  font-family: var(--serif);
-  font-size: 24px;
-  margin: 0 0 6px 0;
-  color: var(--k0);
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--k0) 0%, var(--gold) 100%);
 }
-.muted {
-  font-size: 14px;
-  color: var(--k5);
-  margin: 0;
-}
-.error-msg {
-  color: #8f2b2b;
-}
-.card h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 14px;
-  color: var(--k0);
-}
-.results-top {
-  display: grid;
-  grid-template-columns: minmax(260px, 360px) minmax(260px, 1fr);
-  gap: 18px;
-  margin-bottom: 20px;
-}
-.results-chart-wrap {
+.hero-score {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  padding-top: 6px;
 }
-.chart-gauge {
-  max-width: 320px;
-  margin: 0 auto;
-  height: 220px;
+.score-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
 }
-.chart-radar {
-  min-height: 420px;
-  max-width: 420px;
-  margin: 0 auto;
+.ring-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.chart-dimbars {
-  height: 260px;
+.ring-bg {
+  fill: none;
+  stroke: var(--k7);
+  stroke-width: 8;
 }
-.score-card {
-  padding: 20px 20px 18px;
-  border-radius: 12px;
-  background: linear-gradient(160deg, #fafaf9 0%, #f5f3f0 100%);
-  color: var(--k0);
-  border: 1px solid var(--bd);
-  box-shadow: 0 2px 12px rgba(12, 35, 64, 0.06);
+.ring-fill {
+  stroke: var(--gold);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
 }
-.score-card .score-value {
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ring-pct {
   font-family: var(--serif);
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 1.1;
-  margin-bottom: 2px;
+  color: var(--k0);
+  line-height: 1;
 }
-.score-card .score-max {
-  font-size: 14px;
+.hero-nums {
+  min-width: 0;
+}
+.score-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.score-value {
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--k0);
+  line-height: 1;
+}
+.score-max {
+  font-size: 15px;
   color: var(--k4);
 }
-.score-card .score-pct {
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--gold2);
-  margin-top: 8px;
-}
-.score-card .level-badge {
-  display: inline-block;
-  margin-top: 10px;
+.level-badge {
+  display: inline-flex;
+  margin-top: 12px;
   padding: 6px 14px;
-  background: rgba(155, 126, 70, 0.12);
+  background: var(--golddim);
+  border: 1px solid var(--goldbd);
   border-radius: 999px;
-  border: 1px solid rgba(155, 126, 70, 0.35);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--gold2);
 }
-.score-card .level-desc {
+.level-desc {
+  margin: 12px 0 0;
   font-size: 13px;
-  color: var(--k4);
-  margin-top: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
+  color: var(--k3);
+  max-width: 36em;
 }
-.dim-cards {
+
+.kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
 }
-.dim-card {
+.kpi-card {
   background: var(--wh);
   border: 1px solid var(--bd);
-  padding: 16px;
   border-radius: 6px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
 }
-.dim-card .dim-name {
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gold);
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k5);
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--k0);
+  line-height: 1.1;
+}
+.kpi-value.gold {
+  color: var(--gold);
+}
+.kpi-sub {
+  font-size: 12px;
+  color: var(--k5);
+  margin-top: 4px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.sec-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--k5);
+  margin: 0 0 16px;
+}
+
+.radar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.radar-svg {
+  width: min(100%, 280px);
+  aspect-ratio: 1;
+  display: block;
+}
+.radar-grid {
+  fill: none;
+  stroke: var(--k7);
+  stroke-width: 0.8;
+}
+.radar-axis {
+  stroke: var(--k7);
+  stroke-width: 0.9;
+}
+.radar-poly {
+  stroke: var(--k0);
+  stroke-width: 1.6;
+  transition: opacity 0.2s;
+}
+.radar-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--k4);
+  font-family: var(--sans);
+}
+.radar-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.radar-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
+}
+.radar-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.radar-legend .lg-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--k0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.radar-legend .lg-avg {
+  font-family: var(--serif);
   font-weight: 600;
   color: var(--k0);
-  margin-bottom: 10px;
+  flex-shrink: 0;
 }
-.dim-card .dim-bar-wrap {
-  height: 10px;
-  background: var(--k7);
-  border-radius: 5px;
+
+.dim-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dim-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dim-accent {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dim-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--k0);
+  line-height: 1.3;
+}
+.dim-pct {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--k0);
+  flex-shrink: 0;
+}
+.dim-bar-track {
+  height: 8px;
+  background: var(--k8);
+  border-radius: 4px;
   overflow: hidden;
   margin-bottom: 6px;
 }
-.dim-card .dim-bar {
+.dim-bar-fill {
   height: 100%;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--k0), var(--gold));
+  border-radius: 4px;
+  min-width: 2px;
+  transition: width 0.45s ease;
 }
-.dim-card .dim-nums {
+.dim-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   color: var(--k5);
 }
-@media (max-width: 760px) {
-  .results-top {
-    grid-template-columns: 1fr;
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.btn-primary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+}
+.btn-primary {
+  background: var(--k0);
+  color: var(--wh);
+  border: 1px solid var(--k0);
+}
+.btn-primary:hover {
+  opacity: 0.92;
+}
+.btn-ghost {
+  background: var(--wh);
+  color: var(--k0);
+  border: 1px solid var(--bd);
+}
+.btn-ghost:hover {
+  border-color: var(--goldbd);
+  background: var(--k9);
+}
+
+/* —— Tablet+ —— */
+@media (min-width: 560px) {
+  .wrap {
+    padding: 22px 20px 56px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .hero-score {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 28px;
+    padding: 8px 8px 4px;
+  }
+  .score-line {
+    justify-content: flex-start;
+  }
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .btn-primary,
+  .btn-ghost {
+    width: auto;
+    min-width: 160px;
+  }
+}
+
+@media (min-width: 800px) {
+  .card {
+    padding: 22px;
+  }
+  .hero {
+    margin-bottom: 16px;
+  }
+  .split {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.95fr) minmax(280px, 1.05fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .radar-svg {
+    width: min(100%, 300px);
+  }
+  .score-ring {
+    width: 156px;
+    height: 156px;
+  }
+  .ring-pct {
+    font-size: 32px;
+  }
+  .score-value {
+    font-size: 40px;
   }
 }
 </style>
