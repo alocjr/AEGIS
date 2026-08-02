@@ -10,6 +10,7 @@ from app.mcp.util import call_route, parse_json_object, validate_model
 from app.routes import canvas_projects as canvas_routes
 from app.routes import course as course_routes
 from app.routes import maturity as maturity_routes
+from app.routes import strategic_map as strategic_map_routes
 from app.routes import swot_analysis as swot_routes
 from app.schemas import CanvasImportRequest, CanvasProjectUpdateRequest, SwotImportRequest
 
@@ -104,3 +105,18 @@ def register_learner_tools(mcp) -> None:
         """Lista as autoavaliações de maturidade do mentorado."""
         user = require_verified_user()
         return call_route(maturity_routes.list_my_responses, user=user, db=get_db())
+
+    @mcp.tool
+    def strategic_map(
+        maturity_response_id: str | None = None,
+        swot_id: str | None = None,
+    ) -> dict:
+        """Mapa Estratégico: árvore maturidade → itens SWOT → estratégias TOWS → projetos."""
+        user = require_verified_user()
+        return call_route(
+            strategic_map_routes.get_strategic_map,
+            maturity_response_id=maturity_response_id,
+            swot_id=swot_id,
+            user=user,
+            db=get_db(),
+        )

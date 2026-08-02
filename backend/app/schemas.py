@@ -89,6 +89,10 @@ class CanvasProjectUpdateRequest(BaseModel):
     score_valor: int | None = Field(None, ge=1, le=5)
     score_viabilidade: int | None = Field(None, ge=1, le=5)
     proximo_passo: str | None = Field(None, max_length=4000)
+    # Origem estratégica: SWOT (e itens/iniciativas TOWS) que motivou o projeto
+    swot_id: str | None = Field(None, max_length=24)
+    swot_item_ids: list[str] | None = Field(None, max_length=20)
+    tows_ids: list[str] | None = Field(None, max_length=20)
 
 
 class CanvasImportRequest(BaseModel):
@@ -111,6 +115,8 @@ class SwotItem(BaseModel):
     id: str = Field(default="", max_length=64)
     texto: str = Field(default="", max_length=500)
     pilar: str = Field(default="", max_length=40)
+    # Pergunta do Modelo de Maturidade que originou o item (rastreabilidade)
+    question_id: str = Field(default="", max_length=40)
     impacto: int | None = Field(None, ge=1, le=5)
     viabilidade: int | None = Field(None, ge=1, le=5)
     probabilidade: int | None = Field(None, ge=1, le=5)

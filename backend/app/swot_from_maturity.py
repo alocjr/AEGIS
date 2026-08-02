@@ -367,6 +367,7 @@ def build_swot_fields_from_maturity(
                         "id": item_id,
                         "texto": texto,
                         "pilar": pilar,
+                        "question_id": qid,
                         "impacto": lvl,
                         "viabilidade": lvl if field in ("forcas", "fraquezas") else None,
                         "probabilidade": lvl if field in ("oportunidades", "ameacas") else None,

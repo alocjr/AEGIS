@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'projetos', name: 'ProjetosList', component: () => import('@/views/ProjetosListView.vue'), meta: { title: 'Projetos' } },
       { path: 'projetos/:id', name: 'ProjetoCanvas', component: () => import('@/views/ProjetoCanvasView.vue'), meta: { title: 'Canvas · Projeto' } },
       { path: 'swot/:id?', name: 'SwotAnalysis', component: () => import('@/views/SwotAnalysisView.vue'), meta: { title: 'SWOT de IA' } },
+      {
+        path: 'mapa-estrategico',
+        name: 'MapaEstrategico',
+        component: () => import('@/views/MapaEstrategicoView.vue'),
+        meta: { title: 'Mapa Estratégico' },
+      },
       { path: 'quiz-respostas', name: 'QuizRespostas', component: () => import('@/views/QuizRespostasView.vue'), meta: { title: 'Quiz Respostas' } },
       { path: 'quiz/q/:quizId', name: 'QuizById', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
       { path: 'quiz/:encontroId(\\d+)', name: 'Quiz', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
@@ -59,7 +65,7 @@ const router = createRouter({
   routes,
 })
 
-const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz']
+const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico']
 const adminPathPrefix = '/admin'
 
 router.beforeEach(async (to, _from, next) => {

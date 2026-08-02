@@ -29,6 +29,12 @@ export interface CanvasProjectSummary {
   quadrant: CanvasQuadrant
   score_valor: number | null
   score_viabilidade: number | null
+  /** SWOT de origem do projeto (rastreabilidade no Mapa Estratégico). */
+  swot_id: string | null
+  /** Itens SWOT que motivaram o projeto. */
+  swot_item_ids: string[]
+  /** Iniciativas TOWS que motivaram o projeto. */
+  tows_ids: string[]
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
@@ -60,6 +66,9 @@ export type CanvasProjectPayload = Partial<{
   score_valor: number | null
   score_viabilidade: number | null
   proximo_passo: string
+  swot_id: string | null
+  swot_item_ids: string[]
+  tows_ids: string[]
 }>
 
 export function listCanvasProjects(): Promise<{ items: CanvasProjectSummary[] }> {

@@ -61,6 +61,9 @@ _EMPTY_FIELDS = {
     "score_valor": None,
     "score_viabilidade": None,
     "proximo_passo": "",
+    "swot_id": None,
+    "swot_item_ids": [],
+    "tows_ids": [],
 }
 
 
@@ -80,6 +83,20 @@ def _clean_item_list(value: list[str] | None) -> list[str]:
     if not value:
         return []
     return [str(x).strip() for x in value if str(x).strip()][:40]
+
+
+def _clean_ref_ids(value) -> list[str]:
+    """Ids de itens SWOT / iniciativas TOWS que originaram o projeto."""
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for raw in value:
+        ref = str(raw or "").strip()[:64]
+        if ref and ref not in out:
+            out.append(ref)
+        if len(out) >= 20:
+            break
+    return out
 
 
 def _quadrant(score_valor: int | None, score_viabilidade: int | None) -> str | None:
@@ -114,6 +131,9 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         ),
         "score_valor": score_valor,
         "score_viabilidade": score_viabilidade,
+        "swot_id": str(doc["swot_id"]) if doc.get("swot_id") else None,
+        "swot_item_ids": _clean_ref_ids(doc.get("swot_item_ids")),
+        "tows_ids": _clean_ref_ids(doc.get("tows_ids")),
     }
     if summary:
         return {
@@ -137,6 +157,21 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "proximo_passo": doc.get("proximo_passo") or "",
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
     }
+
+
+def _owned_swot_id(db: Database, user_id, raw) -> str | None:
+    """Valida que a SWOT de origem existe e pertence ao mentorado."""
+    swot_id = str(raw or "").strip()
+    if not swot_id:
+        return None
+    if not ObjectId.is_valid(swot_id):
+        raise HTTPException(status_code=400, detail="SWOT de origem invalida")
+    exists = db.swot_analyses.find_one(
+        {"_id": ObjectId(swot_id), "user_id": user_id}, {"_id": 1}
+    )
+    if not exists:
+        raise HTTPException(status_code=404, detail="SWOT de origem nao encontrada")
+    return swot_id
 
 
 def _get_owned(db: Database, user_id, project_id: str) -> dict:
@@ -438,8 +473,14 @@ def update_project(
         cleaned = [t for t in data["oportunidade_tipos"] if t in allowed]
         updates["oportunidade_tipos"] = cleaned
 
+    if "swot_id" in data:
+        updates["swot_id"] = _owned_swot_id(db, user["_id"], data["swot_id"])
+    for key in ("swot_item_ids", "tows_ids"):
+        if key in data:
+            updates[key] = _clean_ref_ids(data[key])
+
     for key, value in data.items():
-        if key == "oportunidade_tipos":
+        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids"):
             continue
         if key in _LIST_FIELDS:
             updates[key] = _clean_item_list(value)

@@ -18,6 +18,7 @@ Auth: `Authorization: Bearer <JWT>` em todas as tools autenticadas.
 | `course_get` | `course_slug?: str` | course + progress |
 | `maturity_model` | — | model |
 | `maturity_my_responses` | — | `{ items }` |
+| `strategic_map` | `maturity_response_id?`, `swot_id?` | `{ source, sources, dimensions, unlinked, stats }` |
 
 ## Admin tools
 

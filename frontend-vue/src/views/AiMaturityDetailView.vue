@@ -424,6 +424,10 @@ onMounted(async () => {
         >
           {{ swotBusy ? 'Gerando…' : swotId ? 'Abrir SWOT' : 'Criar SWOT' }}
         </button>
+        <RouterLink
+          :to="`/mapa-estrategico?maturidade=${responseId}`"
+          class="btn-ghost"
+        >Mapa Estratégico</RouterLink>
         <RouterLink to="/ai-maturity/new" class="btn-ghost">Nova autoavaliação</RouterLink>
         <RouterLink to="/ai-maturity" class="btn-ghost">Ver todas</RouterLink>
         <p v-if="swotError" class="swot-error">{{ swotError }}</p>

@@ -86,6 +86,16 @@ def _priority(value) -> int | None:
     return n if 1 <= n <= 40 else None
 
 
+def _question_id(raw_value, item_id: str, field: str) -> str:
+    """Pergunta de origem: campo explícito ou sufixo do id gerado (`f_ev1` → `ev1`)."""
+    explicit = str(raw_value or "").strip()[:40]
+    if explicit:
+        return explicit
+    prefix = _FIELD_ID_PREFIX[field]
+    head, _, tail = str(item_id or "").partition("_")
+    return tail[:40] if head.lower() == prefix and tail else ""
+
+
 def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
     """Aceita string (v1) ou dict/SwotItem (v2) e devolve dict limpo."""
     prefix = _FIELD_ID_PREFIX[field]
@@ -99,6 +109,7 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
             "id": item_id,
             "texto": texto,
             "pilar": "",
+            "question_id": "",
             "impacto": None,
             "viabilidade": None,
             "probabilidade": None,
@@ -141,6 +152,7 @@ def _normalize_item(raw, field: str, used_ids: set[str]) -> dict | None:
         "id": item_id,
         "texto": texto,
         "pilar": pilar,
+        "question_id": _question_id(data.get("question_id"), item_id, field),
         "impacto": impacto,
         "viabilidade": viabilidade,
         "probabilidade": probabilidade,

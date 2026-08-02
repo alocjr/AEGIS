@@ -30,6 +30,8 @@ export interface SwotItem {
   id: string
   texto: string
   pilar: SwotPilarId | string
+  /** Pergunta do Modelo de Maturidade que originou o item. */
+  question_id: string
   impacto: number | null
   viabilidade: number | null
   probabilidade: number | null
