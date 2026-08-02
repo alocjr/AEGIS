@@ -66,6 +66,12 @@ async function goSwot(ev: Event) {
         <RouterLink to="/mapa-estrategico" class="tb-pill" @click="menuOpen = false">Mapa Estratégico</RouterLink>
         <RouterLink to="/governanca/inventario" class="tb-pill" @click="menuOpen = false">Governança</RouterLink>
         <RouterLink
+          v-if="auth.isOrgAdmin"
+          to="/organizacao/usuarios"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >Minha Organização</RouterLink>
+        <RouterLink
           v-if="(auth.user?.course_slugs?.length ?? 0) > 1"
           to="/trilhas"
           class="tb-pill tb-pill-g"

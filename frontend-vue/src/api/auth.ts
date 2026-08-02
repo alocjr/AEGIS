@@ -19,6 +19,7 @@ export interface AuthUser {
   name: string
   email: string
   is_admin: boolean
+  is_org_admin?: boolean
   email_verified?: boolean
   /** Trilhas (course_slug) em que o aluno tem progresso. Só presente quando carregado por /me. */
   course_slugs?: string[]

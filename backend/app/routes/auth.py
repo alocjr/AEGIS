@@ -44,6 +44,7 @@ def _user_payload(user: dict, db: Database) -> dict:
         "name": user["name"],
         "email": user["email"],
         "is_admin": bool(user.get("is_admin", False)),
+        "is_org_admin": bool(user.get("is_org_admin", False)),
         "email_verified": is_email_verified(user),
         "organization_id": str(org_id) if org_id else None,
         "organization_name": (org or {}).get("name") or "",

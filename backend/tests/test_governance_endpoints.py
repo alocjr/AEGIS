@@ -95,8 +95,14 @@ class _FakeDb:
         return self._col(name)
 
 
-def _add_user(db: _FakeDb, org_id: ObjectId, *, is_admin: bool = False) -> dict:
-    user = {"_id": ObjectId(), "organization_id": org_id, "is_admin": is_admin, "name": "U"}
+def _add_user(db: _FakeDb, org_id: ObjectId, *, is_admin: bool = False, is_org_admin: bool = False) -> dict:
+    user = {
+        "_id": ObjectId(),
+        "organization_id": org_id,
+        "is_admin": is_admin,
+        "is_org_admin": is_org_admin,
+        "name": "U",
+    }
     db.users.insert_one(user)
     return user
 
@@ -320,6 +326,21 @@ class GateEndpointTests(unittest.TestCase):
 
         refreshed = gov_routes.get_system(system["id"], user=user, org_id=org_id, db=db)
         self.assertEqual(refreshed["status"], "producao")
+
+    def test_org_admin_can_also_approve(self) -> None:
+        db = _FakeDb()
+        org_id = ObjectId()
+        user = _add_user(db, org_id)
+        org_admin = _add_user(db, org_id, is_org_admin=True)
+        system = gov_routes.create_system(
+            AiSystemCreateRequest(nome="Sistema"), user=user, org_id=org_id, db=db
+        )
+        gate = gov_routes.create_gate(system["id"], user=user, org_id=org_id, db=db)
+        self._approve_all_critical(db, org_id, user, gate["id"])
+
+        body = GateDecisionRequest(decisao=GateDecisao(resultado="go", aprovador_user_id=str(org_admin["_id"])))
+        decided = gov_routes.decide_gate(gate["id"], body, user=user, org_id=org_id, db=db)
+        self.assertEqual(decided["decisao"]["resultado"], "go")
 
     def test_decide_no_go_moves_system_back_to_avaliado(self) -> None:
         db = _FakeDb()

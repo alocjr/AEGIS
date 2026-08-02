@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/governanca/GovernanceGateView.vue'),
         meta: { title: 'Governança · Gate' },
       },
+      {
+        path: 'organizacao/usuarios',
+        name: 'OrgMembers',
+        component: () => import('@/views/organizacao/OrgMembersView.vue'),
+        meta: { title: 'Minha Organização' },
+      },
       { path: 'quiz-respostas', name: 'QuizRespostas', component: () => import('@/views/QuizRespostasView.vue'), meta: { title: 'Quiz Respostas' } },
       { path: 'quiz/q/:quizId', name: 'QuizById', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
       { path: 'quiz/:encontroId(\\d+)', name: 'Quiz', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
@@ -89,8 +95,9 @@ const router = createRouter({
   routes,
 })
 
-const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico', '/governanca']
+const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico', '/governanca', '/organizacao']
 const adminPathPrefix = '/admin'
+const orgAdminPathPrefix = '/organizacao'
 
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
@@ -104,6 +111,14 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
+  const isOrgAdminRoute = to.path === orgAdminPathPrefix || to.path.startsWith(orgAdminPathPrefix + '/')
+  if (isOrgAdminRoute) {
+    if (!auth.isLoggedIn || !(auth.isOrgAdmin || auth.isAdmin)) {
+      next('/')
+      return
+    }
+  }
+
   const isProtected = protectedPaths.some(
     (p) =>
       to.path === p ||
@@ -111,7 +126,8 @@ router.beforeEach(async (to, _from, next) => {
       to.path.startsWith('/ai-maturity') ||
       to.path.startsWith('/projetos') ||
       to.path.startsWith('/swot') ||
-      to.path.startsWith('/governanca')
+      to.path.startsWith('/governanca') ||
+      to.path.startsWith('/organizacao')
   )
   if (isProtected && !auth.isLoggedIn) {
     next('/')

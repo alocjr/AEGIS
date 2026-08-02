@@ -393,6 +393,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
                 "course_slug": 1,
                 "course_slugs": 1,
                 "is_admin": 1,
+                "is_org_admin": 1,
                 "created_at": 1,
                 "phone": 1,
                 "organization_id": 1,
@@ -418,6 +419,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
             "course_slug": slugs[0] if slugs else u.get("course_slug", ""),
             "course_slugs": slugs,
             "is_admin": u.get("is_admin", False),
+            "is_org_admin": u.get("is_org_admin", False),
             "created_at": _serialize_created_at(u),
             "organization_id": str(org_id) if org_id else None,
             "organization_name": org_names.get(org_id, "") if org_id else "",
@@ -448,6 +450,7 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         "course_slug": slugs[0] if slugs else user.get("course_slug", ""),
         "course_slugs": slugs,
         "is_admin": user.get("is_admin", False),
+        "is_org_admin": user.get("is_org_admin", False),
         "created_at": _serialize_created_at(user),
         "encontro_agendas": progress.get("encontro_agendas", {}) if progress else {},
         "organization_id": str(org_id) if org_id else None,
@@ -494,6 +497,8 @@ def update_user(
         updates["phone"] = payload.phone.strip() if payload.phone.strip() else ""
     if payload.is_admin is not None:
         updates["is_admin"] = payload.is_admin
+    if payload.is_org_admin is not None:
+        updates["is_org_admin"] = payload.is_org_admin
     if payload.organization_id is not None:
         if not ObjectId.is_valid(payload.organization_id):
             raise HTTPException(status_code=400, detail="Organizacao invalida")

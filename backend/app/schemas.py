@@ -241,8 +241,26 @@ class AdminUpdateUserRequest(BaseModel):
     course_slugs: list[str] | None = Field(None, min_length=1, max_length=50)  # uma ou mais trilhas
     phone: str | None = Field(None, max_length=30)
     is_admin: bool | None = None
+    is_org_admin: bool | None = None
     encontro_agendas: dict[str, str] | None = None
     organization_id: str | None = Field(None, max_length=24)  # move o usuário para outra organização
+
+
+class OrgMemberCreateRequest(BaseModel):
+    """Usuário criado por um admin de organização — nunca ganha trilha (só o admin da
+    plataforma atribui mentoria)."""
+
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
+    phone: str | None = Field(None, max_length=30)
+
+
+class OrgMemberUpdateRequest(BaseModel):
+    name: str | None = Field(None, min_length=2, max_length=120)
+    email: EmailStr | None = None
+    password: str | None = Field(None, min_length=6, max_length=128)
+    phone: str | None = Field(None, max_length=30)
 
 
 class OrganizationCreateRequest(BaseModel):

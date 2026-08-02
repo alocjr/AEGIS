@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.is_admin ?? false)
+  const isOrgAdmin = computed(() => user.value?.is_org_admin ?? false)
 
   async function loadUser() {
     try {
@@ -46,5 +47,5 @@ export const useAuthStore = defineStore('auth', () => {
     currentCourseSlug.value = null
   }
 
-  return { user, loaded, currentCourseSlug, isLoggedIn, isAdmin, loadUser, setUser, setCurrentCourseSlug, logout }
+  return { user, loaded, currentCourseSlug, isLoggedIn, isAdmin, isOrgAdmin, loadUser, setUser, setCurrentCourseSlug, logout }
 })

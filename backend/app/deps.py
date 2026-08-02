@@ -64,6 +64,16 @@ def get_current_admin(user=Depends(get_verified_user)):
     return {**user, "is_admin": True}
 
 
+def get_current_org_admin(user=Depends(get_verified_user)):
+    """Admin da plataforma OU admin da própria organização (gestão de membros, sem trilha)."""
+    if not (user.get("is_admin") or user.get("is_org_admin")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores da organização",
+        )
+    return user
+
+
 def get_current_organization_id(user=Depends(get_verified_user)) -> ObjectId:
     """Organizacao do usuario logado — chave de escopo para dados compartilhados pelo time."""
     org_id = user.get("organization_id")

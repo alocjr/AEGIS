@@ -10,6 +10,8 @@ export interface AdminUser {
   course_slug: string
   course_slugs: string[]
   is_admin: boolean
+  /** Pode criar/editar/remover membros da própria organização (sem trilha/mentoria). */
+  is_org_admin: boolean
   created_at: string | null
   /** Organização (time) à qual o usuário pertence — SWOT/Canvas/Maturidade são compartilhados nela. */
   organization_id: string | null
@@ -49,6 +51,7 @@ export function updateUser(
     course_slugs?: string[]
     phone?: string
     is_admin?: boolean
+    is_org_admin?: boolean
     encontro_agendas?: Record<string, string>
     organization_id?: string
   }

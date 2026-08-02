@@ -411,12 +411,12 @@ def decide_gate(
     decisao = body.decisao
 
     aprovador = _require_org_member(db, org_id, decisao.aprovador_user_id)
-    if not aprovador.get("is_admin"):
+    if not (aprovador.get("is_admin") or aprovador.get("is_org_admin")):
         raise HTTPException(
             status_code=422,
             detail={
                 "code": "SINGLE_APPROVER_VIOLATION",
-                "message": "O aprovador precisa ser administrador da organização.",
+                "message": "O aprovador precisa ser administrador da plataforma ou da organização.",
             },
         )
     for consultado_id in decisao.consultados_user_ids:

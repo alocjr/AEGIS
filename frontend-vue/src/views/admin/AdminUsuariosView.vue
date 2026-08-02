@@ -54,6 +54,7 @@ const form = ref<{
   course_slugs: string[]
   phone: string
   is_admin: boolean
+  is_org_admin: boolean
   organization_id: string
 }>({
   name: '',
@@ -62,6 +63,7 @@ const form = ref<{
   course_slugs: [],
   phone: '',
   is_admin: false,
+  is_org_admin: false,
   organization_id: '',
 })
 
@@ -77,6 +79,7 @@ function resetForm() {
     course_slugs: courses.value[0]?.slug ? [courses.value[0].slug] : [],
     phone: '',
     is_admin: false,
+    is_org_admin: false,
     organization_id: '',
   }
   editingId.value = null
@@ -113,6 +116,7 @@ async function openEdit(user: AdminUser) {
       course_slugs: [...slugs],
       phone: detail.phone || '',
       is_admin: detail.is_admin,
+      is_org_admin: detail.is_org_admin,
       organization_id: detail.organization_id || '',
     }
   } catch (e) {
@@ -141,7 +145,7 @@ function formatDate(iso: string | null | undefined) {
 
 async function saveModal() {
   modalError.value = null
-  const { name, email, password, course_slugs, phone, is_admin } = form.value
+  const { name, email, password, course_slugs, phone, is_admin, is_org_admin } = form.value
   if (!name.trim()) {
     modalError.value = 'Nome é obrigatório.'
     return
@@ -185,6 +189,7 @@ async function saveModal() {
         course_slugs: slugs,
         phone: phone.trim() || '',
         is_admin,
+        is_org_admin,
       }
       if (password.trim()) body.password = password
       if (form.value.organization_id) body.organization_id = form.value.organization_id
@@ -312,6 +317,7 @@ onMounted(async () => {
             </td>
             <td>
               <span v-if="u?.is_admin" class="badge badge-admin">Admin</span>
+              <span v-else-if="u?.is_org_admin" class="badge badge-org-admin">Admin da org.</span>
               <span v-else class="muted">—</span>
             </td>
             <td>{{ formatDate(u?.created_at) }}</td>
@@ -427,6 +433,15 @@ onMounted(async () => {
                 Administrador
               </label>
               <span class="form-hint">Usuários admin podem acessar o painel e gerir a plataforma.</span>
+            </div>
+            <div v-if="modalMode === 'edit'" class="form-group form-group-check">
+              <label>
+                <input v-model="form.is_org_admin" type="checkbox" />
+                Admin da organização
+              </label>
+              <span class="form-hint">
+                Pode criar/editar/remover membros da própria organização (sem atribuir trilha/mentoria).
+              </span>
             </div>
           </div>
           <div class="modal-footer">
@@ -566,6 +581,17 @@ onMounted(async () => {
   color: var(--k0);
   background: var(--golddim);
   border: 1px solid var(--goldbd);
+  border-radius: 6px;
+}
+
+.badge-org-admin {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--k4);
+  background: var(--k8);
+  border: 1px solid var(--bd2);
   border-radius: 6px;
 }
 
