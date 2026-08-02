@@ -643,6 +643,16 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
               <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
               <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
             </button>
+            <span
+              class="save-pill"
+              :data-state="saveState"
+              :title="saveError || undefined"
+            >
+              <template v-if="saveState === 'saving'">Salvando…</template>
+              <template v-else-if="saveState === 'saved'">Salvo</template>
+              <template v-else-if="saveState === 'error'">Falha ao salvar</template>
+              <template v-else>Respostas salvas ao clicar</template>
+            </span>
           </div>
           <p v-if="selectedTierDescription" class="tier-hint">{{ selectedTierDescription }}</p>
         </div>
@@ -673,19 +683,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
           </button>
         </nav>
 
-        <div class="toolbar-actions">
-          <span
-            class="save-pill"
-            :data-state="saveState"
-            :title="saveError || undefined"
-          >
-            <template v-if="saveState === 'saving'">Salvando…</template>
-            <template v-else-if="saveState === 'saved'">Salvo</template>
-            <template v-else-if="saveState === 'error'">Falha ao salvar</template>
-            <template v-else>Respostas salvas ao clicar</template>
-          </span>
+        <div v-if="isComplete" class="toolbar-actions">
           <button
-            v-if="isComplete"
             type="button"
             class="btn-swot"
             @click="openSwot"
@@ -986,6 +985,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .tier-label {
   margin: 0;
@@ -997,6 +998,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 }
 .tier-select {
   display: flex;
+  align-items: stretch;
   gap: 6px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1006,6 +1008,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
   gap: 2px;
   padding: 8px 12px;
   border-radius: 999px;
@@ -1130,8 +1133,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  padding: 6px 12px;
+  box-sizing: border-box;
+  padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: #fff;
@@ -1140,7 +1143,9 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
-  width: 100%;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 .save-pill[data-state='saving'] {
   color: var(--navy);
@@ -1156,6 +1161,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   background: #f1e1dd;
   text-transform: none;
   letter-spacing: 0;
+  white-space: normal;
 }
 
 .matrix-wrap {
@@ -1430,10 +1436,9 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
     flex-direction: row;
     flex-wrap: wrap;
   }
-  .btn-swot,
-  .save-pill {
+  .btn-swot {
     width: auto;
-    min-width: 140px;
+    min-width: 150px;
   }
 }
 
