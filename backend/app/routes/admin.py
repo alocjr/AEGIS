@@ -9,7 +9,7 @@ from pymongo.database import Database
 
 from app.database import get_db, provision_solo_organization
 from app.deps import get_current_admin
-from app.routes.course import COURSE_SLUG, _progress_with_quiz_effect
+from app.routes.course import NoTrilhaAssignedError, _progress_with_quiz_effect, _require_primary_course_slug
 from app.utils.course_payload import payload_for_json
 from app.utils.material_gratuito import (
     ALLOWED_EXTENSIONS,
@@ -596,7 +596,9 @@ def get_user_course_and_progress(
         if course_slug not in slugs and not db.progress.find_one({"user_id": uid, "course_slug": course_slug}):
             raise HTTPException(status_code=404, detail="Trilha nao encontrada para este usuario")
     else:
-        course_slug = slugs[0] if slugs else user.get("course_slug") or COURSE_SLUG
+        if not slugs:
+            raise NoTrilhaAssignedError()
+        course_slug = slugs[0]
     course = db.courses.find_one({"slug": course_slug})
     if not course:
         raise HTTPException(status_code=404, detail="Trilha do aluno nao encontrada")
@@ -686,11 +688,11 @@ def liberar_encontro(
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     uid = ObjectId(user_id)
-    user = db.users.find_one({"_id": uid}, {"course_slug": 1})
+    user = db.users.find_one({"_id": uid}, {"course_slug": 1, "course_slugs": 1})
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     encontro_id = body.encontro_id
-    course_slug = user.get("course_slug") or COURSE_SLUG
+    course_slug = _require_primary_course_slug(user)
     course = db.courses.find_one({"slug": course_slug})
     if not course:
         raise HTTPException(status_code=404, detail="Trilha do aluno nao encontrada")

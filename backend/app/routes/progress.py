@@ -5,7 +5,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_verified_user
-from app.routes.course import COURSE_SLUG, _user_has_course
+from app.routes.course import COURSE_SLUG, _require_primary_course_slug, _user_has_course
 from app.schemas import CompleteProgressResponse, MaterialCheckRequest
 from app.utils.progress_liberados import find_encontro, recompute_liberados
 
@@ -15,7 +15,7 @@ def _resolve_course_slug(user: dict, db: Database, slug_param: str | None) -> st
         if not _user_has_course(user, slug_param, db):
             raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta trilha")
         return slug_param
-    return user.get("course_slug") or ((user.get("course_slugs") or [])[0] if (user.get("course_slugs")) else None) or COURSE_SLUG
+    return _require_primary_course_slug(user)
 
 
 router = APIRouter(prefix="/api/progress", tags=["progress"])

@@ -15,6 +15,33 @@ COURSE_SLUG = "trilha-ia-executiva"
 router = APIRouter(prefix="/api/course", tags=["course"])
 
 
+class NoTrilhaAssignedError(HTTPException):
+    """Usuário sem nenhuma trilha atribuída (ex.: membro de organização criado pelo admin
+    de organização — só o admin da plataforma atribui mentoria). Nunca cai num default."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=404,
+            detail={
+                "code": "NO_TRILHA_ASSIGNED",
+                "message": "Nenhuma trilha de mentoria atribuída a este usuário.",
+            },
+        )
+
+
+def _primary_course_slug(user: dict) -> str | None:
+    """Trilha principal do usuário (legado `course_slug` ou primeira de `course_slugs`).
+    `None` quando o usuário não tem nenhuma trilha — não confundir com "trilha inválida"."""
+    return user.get("course_slug") or ((user.get("course_slugs") or [])[0] if user.get("course_slugs") else None)
+
+
+def _require_primary_course_slug(user: dict) -> str:
+    slug = _primary_course_slug(user)
+    if not slug:
+        raise NoTrilhaAssignedError()
+    return slug
+
+
 def _get_total_encontros(course_payload: dict) -> int:
     total = 0
     for semana in course_payload.get("jornada_aprendizagem", []):
@@ -91,7 +118,7 @@ def get_current_course(
 ):
     chosen = course_slug
     if not chosen:
-        chosen = user.get("course_slug") or ((user.get("course_slugs") or [])[0] if (user.get("course_slugs")) else None) or COURSE_SLUG
+        chosen = _require_primary_course_slug(user)
     elif not _user_has_course(user, chosen, db):
         raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta trilha")
     course_slug = chosen

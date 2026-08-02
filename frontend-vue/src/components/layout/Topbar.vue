@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -7,6 +7,10 @@ const auth = useAuthStore()
 const menuOpen = ref(false)
 const route = useRoute()
 const router = useRouter()
+
+/** Membros de organização sem trilha (ex.: criados por um admin de organização) não têm
+ * progresso/materiais/agenda/quiz de mentoria — só as ferramentas do AI Hub. */
+const hasTrilha = computed(() => (auth.user?.course_slugs?.length ?? 0) > 0)
 
 onMounted(() => {
   auth.loadUser()
@@ -56,10 +60,12 @@ async function goSwot(ev: Event) {
     </button>
     <nav class="tb-right" :class="{ 'tb-right--open': menuOpen }">
       <template v-if="auth.isLoggedIn">
-        <RouterLink to="/programa" class="tb-pill" @click="menuOpen = false">Progresso</RouterLink>
-        <RouterLink to="/materiais" class="tb-pill" @click="menuOpen = false">Materiais</RouterLink>
-        <RouterLink to="/agenda" class="tb-pill" @click="menuOpen = false">Agenda</RouterLink>
-        <RouterLink to="/quiz-respostas" class="tb-pill" @click="menuOpen = false">Quiz</RouterLink>
+        <template v-if="hasTrilha">
+          <RouterLink to="/programa" class="tb-pill" @click="menuOpen = false">Progresso</RouterLink>
+          <RouterLink to="/materiais" class="tb-pill" @click="menuOpen = false">Materiais</RouterLink>
+          <RouterLink to="/agenda" class="tb-pill" @click="menuOpen = false">Agenda</RouterLink>
+          <RouterLink to="/quiz-respostas" class="tb-pill" @click="menuOpen = false">Quiz</RouterLink>
+        </template>
         <RouterLink to="/ai-maturity" class="tb-pill" @click="menuOpen = false">Modelo de Maturidade</RouterLink>
         <a href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
         <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">AI Canvas</RouterLink>

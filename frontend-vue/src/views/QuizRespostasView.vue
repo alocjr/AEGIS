@@ -2,10 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchQuizList } from '@/api/quiz'
+import { ApiError } from '@/api/client'
 import type { QuizListItem } from '@/api/quiz'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
+const noTrilha = ref(false)
 const list = ref<QuizListItem[]>([])
 const ativo = ref<number>(999)
 
@@ -15,7 +17,11 @@ onMounted(async () => {
     list.value = data.items ?? []
     ativo.value = data.ativo != null ? data.ativo : 999
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erro ao carregar quiz.'
+    if (e instanceof ApiError && e.code === 'NO_TRILHA_ASSIGNED') {
+      noTrilha.value = true
+    } else {
+      error.value = e instanceof Error ? e.message : 'Erro ao carregar quiz.'
+    }
   } finally {
     loading.value = false
   }
@@ -99,6 +105,11 @@ function ringStrokeOffset(pct: number | null): number {
     </header>
 
     <div v-if="loading" class="loading">Carregando...</div>
+
+    <div v-else-if="noTrilha" class="empty-trilha">
+      <h2>Você ainda não tem uma trilha de mentoria</h2>
+      <p>Os quizzes ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta.</p>
+    </div>
 
     <template v-else-if="error">
       <div class="error-msg">{{ error }}</div>
@@ -314,6 +325,26 @@ function ringStrokeOffset(pct: number | null): number {
 .error-msg {
   padding: 24px 0;
   color: #b63737;
+}
+.empty-trilha {
+  max-width: 560px;
+  margin: 40px auto;
+  padding: 32px;
+  text-align: center;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+.empty-trilha h2 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--k0);
+  margin-bottom: 12px;
+}
+.empty-trilha p {
+  font-size: 14px;
+  color: var(--k5);
+  line-height: 1.6;
 }
 .empty-wrap {
   margin-top: 0;

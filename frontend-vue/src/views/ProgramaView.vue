@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { fetchCurrentCourse } from '@/api/course'
 import { updateMaterialCheck, completeEncontro } from '@/api/progress'
 import { useAuthStore } from '@/stores/auth'
+import { ApiError } from '@/api/client'
 import type { CurrentCourseResponse } from '@/api/course'
 import type {
   Encontro,
@@ -33,6 +34,7 @@ function parseMatItem(item: string): { tipo: string; nome: string } {
 const auth = useAuthStore()
 const loading = ref(true)
 const error = ref<string | null>(null)
+const noTrilha = ref(false)
 const data = ref<CurrentCourseResponse | null>(null)
 const expandedId = ref<number | null>(null)
 const expandedSemana = ref<number | null>(null)
@@ -246,13 +248,18 @@ async function onCompleteEncontro(encId: number) {
 async function loadProgram() {
   loading.value = true
   error.value = null
+  noTrilha.value = false
   try {
     data.value = await fetchCurrentCourse(auth.currentCourseSlug ?? undefined)
     if (expandedId.value === null && progress.value?.ativo_efetivo) {
       expandedId.value = progress.value.ativo_efetivo
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erro ao carregar programa.'
+    if (e instanceof ApiError && e.code === 'NO_TRILHA_ASSIGNED') {
+      noTrilha.value = true
+    } else {
+      error.value = e instanceof Error ? e.message : 'Erro ao carregar programa.'
+    }
     data.value = null
   } finally {
     loading.value = false
@@ -265,6 +272,13 @@ onMounted(() => loadProgram())
 <template>
   <div class="wrap">
     <div v-if="loading" class="loading"><div class="spin"></div><div>Carregando programa...</div></div>
+    <div v-else-if="noTrilha" class="empty-trilha">
+      <h2>Você ainda não tem uma trilha de mentoria</h2>
+      <p>
+        Sua conta participa da organização e já pode usar as ferramentas do AI Hub (Modelo de
+        Maturidade, SWOT, Canvas, Governança). O acesso à mentoria é atribuído pela equipe Valorian.
+      </p>
+    </div>
     <div v-else-if="error" class="error-msg">{{ error }}</div>
 
     <template v-else-if="data && programa">
@@ -1041,6 +1055,29 @@ onMounted(() => loadProgram())
   padding: 40px 20px;
   text-align: center;
   color: #8f2b2b;
+}
+
+.empty-trilha {
+  max-width: 560px;
+  margin: 60px auto;
+  padding: 32px;
+  text-align: center;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.empty-trilha h2 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--k0);
+  margin-bottom: 12px;
+}
+
+.empty-trilha p {
+  font-size: 14px;
+  color: var(--k5);
+  line-height: 1.6;
 }
 
 .intro {

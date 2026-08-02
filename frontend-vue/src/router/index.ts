@@ -140,7 +140,10 @@ router.beforeEach(async (to, _from, next) => {
 
   if (to.path === '/') {
     if (auth.isLoggedIn && !auth.isAdmin && auth.user?.email_verified !== false) {
-      next('/programa')
+      // Membro de organização sem trilha (ex.: criado por um admin de organização) não tem
+      // "/programa" — cai nas ferramentas do AI Hub, que são por organização, não por trilha.
+      const hasTrilha = (auth.user?.course_slugs?.length ?? 0) > 0
+      next(hasTrilha ? '/programa' : '/ai-maturity')
       return
     }
   }

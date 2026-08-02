@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
+import { ApiError } from '@/api/client'
 import type { JornadaSemana, Encontro } from '@/types'
 
 interface AgendaItem {
@@ -13,6 +14,7 @@ interface AgendaItem {
 
 const loading = ref(true)
 const error = ref<string | null>(null)
+const noTrilha = ref(false)
 const courseTitle = ref('')
 const numSemanas = ref(0)
 const numEncontros = ref(0)
@@ -247,7 +249,11 @@ onMounted(async () => {
     })
     itemsByWeek.value = byWeek
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Erro ao carregar agenda.'
+    if (e instanceof ApiError && e.code === 'NO_TRILHA_ASSIGNED') {
+      noTrilha.value = true
+    } else {
+      error.value = e instanceof Error ? e.message : 'Erro ao carregar agenda.'
+    }
   } finally {
     loading.value = false
   }
@@ -259,6 +265,10 @@ onMounted(async () => {
     <div v-if="loading" class="loading">
       <div class="spin"></div>
       <span>Carregando agenda…</span>
+    </div>
+    <div v-else-if="noTrilha" class="empty-trilha">
+      <h2>Você ainda não tem uma trilha de mentoria</h2>
+      <p>A agenda de encontros fica disponível quando a equipe Valorian atribuir uma trilha à sua conta.</p>
     </div>
     <div v-else-if="error" class="error-msg">{{ error }}</div>
     <template v-else>
@@ -347,6 +357,29 @@ onMounted(async () => {
   text-align: center;
   padding: 60px 24px;
   color: var(--k4);
+}
+
+.empty-trilha {
+  max-width: 560px;
+  margin: 60px auto;
+  padding: 32px;
+  text-align: center;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+}
+
+.empty-trilha h2 {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--k0);
+  margin-bottom: 12px;
+}
+
+.empty-trilha p {
+  font-size: 14px;
+  color: var(--k5);
+  line-height: 1.6;
 }
 
 .agenda-head {
