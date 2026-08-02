@@ -81,10 +81,13 @@ function sortedQuestions(dim: MaturityDimension): MaturityQuestion[] {
 }
 
 function originLine(q: MaturityQuestion): string {
-  if (q.originType === 'modelo_rapido') {
-    return `Pergunta base do Modelo Rápido (${q.ref ?? '—'})`
+  if (q.originType === 'modelo_rapido' || q.tier === 'basico') {
+    return `Abrangência Básico${q.ref ? ` · ${q.ref}` : ''}`
   }
-  return `Deriva do CSF ${q.csfId ?? '—'} · ${q.csfName ?? ''}`
+  if (q.csfId) {
+    return `Abrangência ${TIER_LABEL_SHORT[q.tier]} · CSF ${q.csfId}${q.csfName ? ` · ${q.csfName}` : ''}`
+  }
+  return `Abrangência ${TIER_LABEL_SHORT[q.tier]}`
 }
 
 const visibleQuestionIds = computed(() =>
@@ -114,9 +117,13 @@ const progressLabel = computed(() => {
   if (answered === 0) return 'Nenhuma pergunta respondida ainda'
   if (answered === total) {
     const v = computeVerdict()
-    return `Diagnóstico ${TIER_LABEL_SHORT[selectedTier.value].toLowerCase()} completo · ${v.sum}/${v.maxScore} pts · ${v.band.label}`
+    return `Abrangência ${TIER_LABEL_SHORT[selectedTier.value]} concluída · ${v.sum}/${v.maxScore} pts · ${v.band.label}`
   }
-  return `${total - answered} pergunta(s) restante(s) no nível ${TIER_LABEL_SHORT[selectedTier.value]}`
+  return `${total - answered} pergunta(s) restante(s) na abrangência ${TIER_LABEL_SHORT[selectedTier.value]}`
+})
+
+const selectedTierDescription = computed(() => {
+  return model.value?.levels?.[selectedTier.value]?.description ?? ''
 })
 
 function dimVisibleQuestions(dim: MaturityDimension): MaturityQuestion[] {
@@ -318,112 +325,104 @@ function towsItemsHtml(sentences: string[]): string {
 
 const SWOT_PAGE_CSS = `
   :root{
-    --ink:#171b20; --paper:#f4f1ea; --panel:#12181f;
-    --hairline:#2c3743; --card:#fffdf8; --card-border:#e4ddc9;
-    --gold:#c8963e; --gold-strong:#a8752a; --muted:#6b7280; --muted-inv:#9aa7b4;
-    --lvl1:#b6543f; --lvl5:#3f8563; --dim-data:#3d6fa8; --radius:3px;
+    --navy:#0e1b33; --ink:#242a33; --gold:#c6a15b; --gold-2:#e3cb93;
+    --ivory:#f6f1e7; --ivory-2:#fbf8f1; --muted:#6e6a60;
+    --line:rgba(198,161,91,.32); --serif:Cambria,'Hoefler Text',Georgia,'Times New Roman',serif;
+    --lvl1:#b6543f; --lvl5:#3f8563; --dim-data:#3d6fa8; --radius:4px;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    background:var(--paper); color:var(--ink);
-    font-family:'Inter', system-ui, sans-serif;
+    background:#f8f8f6; color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  .page-header{
-    background:var(--panel); color:var(--paper);
-    padding:28px 18px; border-bottom:1px solid var(--hairline);
-  }
+  .page-header{ background:var(--ivory-2); border-bottom:1px solid var(--line); padding:28px 18px; }
   .page-header .inner{ max-width:920px; margin:0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
   .page-header .eyebrow{
-    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em;
-    text-transform:uppercase; color:var(--gold); margin:0 0 8px;
+    font-size:.7rem; letter-spacing:.22em; text-transform:uppercase; color:var(--gold);
+    font-weight:600; margin:0 0 6px;
   }
   .page-header h1{
-    font-family:'Fraunces', serif; font-weight:600; font-size:clamp(22px,4.5vw,32px);
-    margin:0 0 6px; letter-spacing:-.01em;
+    font-family:var(--serif); font-weight:600; font-size:clamp(22px,4.5vw,32px);
+    margin:0 0 6px; color:var(--navy);
   }
-  .page-header .meta{ font-size:12px; color:var(--muted-inv); margin:0; }
+  .page-header .meta{ font-size:13px; color:var(--muted); margin:0; }
   .print-btn{
-    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
-    letter-spacing:.04em; text-transform:uppercase;
-    padding:9px 16px; border-radius:99px; border:1px solid var(--gold);
-    background:transparent; color:var(--gold); cursor:pointer; flex:0 0 auto;
+    font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    padding:9px 16px; border-radius:99px; border:1px solid var(--line);
+    background:#fff; color:var(--navy); cursor:pointer; flex:0 0 auto;
   }
-  .print-btn:hover{ background:var(--gold); color:#1a1005; }
+  .print-btn:hover{ border-color:var(--gold); color:var(--gold); }
   main{ max-width:920px; margin:0 auto; padding:26px 18px 60px; }
   .swot-section{ margin-bottom:30px; }
   .swot-section-title{
-    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.08em;
-    text-transform:uppercase; color:var(--gold-strong); margin:0 0 12px;
-    padding-bottom:6px; border-bottom:1px solid var(--card-border);
+    font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+    font-weight:600; margin:0 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line);
   }
   .swot-rule{ font-size:13px; line-height:1.6; color:var(--muted); max-width:760px; margin:0 0 14px; }
-  .swot-rule strong{ color:var(--ink); }
+  .swot-rule strong{ color:var(--navy); }
   .swot-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
   .swot-quad{
-    background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius);
+    background:var(--ivory-2); border:1px solid var(--line); border-radius:var(--radius);
     border-top:4px solid; padding:14px 16px 16px; break-inside:avoid;
   }
   .swot-quad[data-q="s"]{ border-top-color:var(--lvl5); }
   .swot-quad[data-q="w"]{ border-top-color:var(--lvl1); }
   .swot-quad[data-q="o"]{ border-top-color:var(--dim-data); }
-  .swot-quad[data-q="t"]{ border-top-color:var(--gold-strong); }
+  .swot-quad[data-q="t"]{ border-top-color:var(--gold); }
   .swot-quad h3{
-    font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin:0 0 10px;
-    display:flex; align-items:center; gap:8px; color:var(--ink);
+    font-family:var(--serif); font-weight:600; font-size:16px; margin:0 0 10px;
+    display:flex; align-items:center; gap:8px; color:var(--navy);
   }
   .swot-quad[data-q="s"] h3{ color:var(--lvl5); }
   .swot-quad[data-q="w"] h3{ color:var(--lvl1); }
   .swot-quad[data-q="o"] h3{ color:var(--dim-data); }
-  .swot-quad[data-q="t"] h3{ color:var(--gold-strong); }
+  .swot-quad[data-q="t"] h3{ color:var(--gold); }
   .swot-count{
-    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--muted);
-    background:var(--paper); border-radius:99px; padding:1px 8px;
+    font-size:11px; font-weight:700; color:var(--muted);
+    background:#fff; border:1px solid var(--line); border-radius:99px; padding:1px 8px;
   }
   .swot-quad ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-  .swot-quad li{ display:flex; align-items:flex-start; gap:8px; padding:9px 10px; background:var(--paper); border-radius:3px; }
+  .swot-quad li{ display:flex; align-items:flex-start; gap:8px; padding:9px 10px; background:#fff; border-radius:3px; border:1px solid rgba(14,27,51,.06); }
   .swot-quad li .code{
-    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; flex:0 0 auto;
-    padding:1px 6px; border-radius:3px; background:var(--card); border:1px solid var(--card-border); margin-top:1px;
+    font-size:10.5px; font-weight:700; flex:0 0 auto;
+    padding:1px 6px; border-radius:3px; background:var(--ivory); border:1px solid var(--line); margin-top:1px; color:var(--navy);
   }
   .swot-quad li .lbl{ color:var(--ink); flex:1; min-width:0; }
   .swot-quad li .lbl .item-title{ font-size:12.5px; font-weight:600; line-height:1.35; display:block; }
   .swot-quad li .lbl .pillar-tag{ display:block; font-size:10px; color:var(--muted); font-style:italic; margin-top:2px; }
   .swot-quad li .lbl .why{
     display:block; font-size:11.5px; line-height:1.45; color:var(--muted);
-    margin-top:5px; padding-top:5px; border-top:1px dashed var(--card-border);
+    margin-top:5px; padding-top:5px; border-top:1px dashed var(--line);
   }
-  .swot-quad li .lbl .why b{ color:var(--ink); font-weight:600; }
+  .swot-quad li .lbl .why b{ color:var(--navy); font-weight:600; }
   .swot-quad .empty{ font-size:12px; color:var(--muted); font-style:italic; }
   .tows-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-  .tows-cell{ background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:14px 16px 16px; break-inside:avoid; }
-  .tows-cell h4{ font-family:'Fraunces', serif; font-weight:600; font-size:14.5px; margin:0 0 10px; color:var(--ink); display:flex; flex-direction:column; gap:2px; }
-  .tows-cell h4 span{ font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .tows-cell{ background:var(--ivory-2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px 16px; break-inside:avoid; }
+  .tows-cell h4{ font-family:var(--serif); font-weight:600; font-size:14.5px; margin:0 0 10px; color:var(--navy); display:flex; flex-direction:column; gap:2px; }
+  .tows-cell h4 span{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
   .tows-cell[data-t="so"]{ border-left:4px solid var(--lvl5); }
   .tows-cell[data-t="st"]{ border-left:4px solid var(--dim-data); }
-  .tows-cell[data-t="wo"]{ border-left:4px solid var(--gold-strong); }
+  .tows-cell[data-t="wo"]{ border-left:4px solid var(--gold); }
   .tows-cell[data-t="wt"]{ border-left:4px solid var(--lvl1); }
   .tows-cell ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
-  .tows-cell li{ font-size:12px; line-height:1.45; color:var(--ink); padding:8px 10px; background:var(--paper); border-radius:3px; }
+  .tows-cell li{ font-size:12px; line-height:1.45; color:var(--ink); padding:8px 10px; background:#fff; border-radius:3px; }
   .tows-cell .empty{ font-size:12px; color:var(--muted); font-style:italic; }
-  .verdict-card{ display:flex; flex-direction:column; gap:14px; background:var(--panel); color:var(--paper); border-radius:6px; padding:22px; break-inside:avoid; }
-  .verdict-score{ display:flex; align-items:baseline; gap:4px; font-family:'Fraunces', serif; font-weight:700; }
+  .verdict-card{ display:flex; flex-direction:column; gap:14px; background:var(--navy); color:#fff; border-radius:6px; padding:22px; break-inside:avoid; }
+  .verdict-score{ display:flex; align-items:baseline; gap:4px; font-family:var(--serif); font-weight:700; }
   .verdict-number{ font-size:44px; color:var(--gold); line-height:1; }
-  .verdict-max{ font-size:16px; color:var(--muted-inv); }
-  .verdict-band{ font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold); margin:0; font-weight:700; }
-  .verdict-text{ font-size:13.5px; line-height:1.6; color:var(--muted-inv); margin:0; }
-  .verdict-text b{ color:var(--paper); }
+  .verdict-max{ font-size:16px; color:rgba(255,255,255,.65); }
+  .verdict-band{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-2); margin:0; font-weight:700; }
+  .verdict-text{ font-size:13.5px; line-height:1.6; color:rgba(255,255,255,.78); margin:0; }
+  .verdict-text b{ color:#fff; }
   @media (min-width: 700px){
     .swot-grid{ grid-template-columns:1fr 1fr; }
     .tows-grid{ grid-template-columns:1fr 1fr; }
     .verdict-card{ flex-direction:row; align-items:center; gap:26px; }
     .verdict-score{ flex:0 0 auto; }
   }
-  @media print{
-    .print-btn{ display:none; }
-    body{ background:#fff; }
-  }
+  @media print{ .print-btn{ display:none; } body{ background:#fff; } }
 `
 
 function buildSwotPageHtml(
@@ -440,16 +439,13 @@ function buildSwotPageHtml(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Matriz SWOT — ${escapeHtml(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${SWOT_PAGE_CSS}</style>
 </head>
 <body>
   <header class="page-header">
     <div class="inner">
       <div>
-        <p class="eyebrow">Gerado a partir de ${total} respostas · nível ${TIER_LABEL_SHORT[selectedTier.value]} · ${escapeHtml(stamp)}</p>
+        <p class="eyebrow">Gerado a partir de ${total} respostas · abrangência ${TIER_LABEL_SHORT[selectedTier.value]} · ${escapeHtml(stamp)}</p>
         <h1>Matriz SWOT — ${escapeHtml(title)}</h1>
         <p class="meta">Página independente — pode ser impressa, salva ou compartilhada separadamente do formulário.</p>
       </div>
@@ -460,7 +456,7 @@ function buildSwotPageHtml(
     <section class="swot-section">
       <h2 class="swot-section-title">1 · Como lemos suas respostas</h2>
       <p class="swot-rule">
-        Perguntas ligadas a dimensões internas <strong>(Estratégia e Visão, Dados e Infraestrutura, Pessoas e Cultura, e a parte de Governança de Governança e Risco)</strong> com nível 4–5 viram <strong>Força</strong>, com nível 1–3 viram <strong>Fraqueza</strong>. Perguntas ligadas a requisitos regulatórios <strong>(CSFs de origem "R" dentro de Governança e Risco)</strong> com nível 4–5 viram <strong>Oportunidade</strong>, com nível 1–3 viram <strong>Ameaça</strong>. Cada item abaixo traz a evidência (sua resposta) e a regra aplicada.
+        Perguntas das dimensões internas <strong>(Estratégia e Visão, Dados e Infraestrutura, Pessoas e Cultura, e Governança e Risco — exceto requisitos regulatórios)</strong> com maturidade 4–5 viram <strong>Força</strong>; com 1–3, <strong>Fraqueza</strong>. Perguntas ligadas a requisitos regulatórios <strong>(CSFs de origem "R")</strong> com maturidade 4–5 viram <strong>Oportunidade</strong>; com 1–3, <strong>Ameaça</strong>. Cada item traz a evidência (sua resposta) e a regra aplicada.
       </p>
     </section>
     <section class="swot-section">
@@ -527,7 +523,7 @@ function openSwot() {
 
 async function saveAnswers() {
   if (!model.value || !isComplete.value) {
-    alert('Responda todas as perguntas do nível selecionado antes de salvar.')
+    alert('Responda todas as perguntas da abrangência selecionada antes de salvar.')
     return
   }
   saving.value = true
@@ -560,47 +556,42 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 </script>
 
 <template>
-  <div class="maturity">
+  <div class="wrap">
     <div v-if="loading" class="state-card">Carregando diagnóstico…</div>
     <div v-else-if="error" class="state-card error">{{ error }}</div>
 
     <template v-else-if="model">
-      <header class="top">
-        <div class="header-flex">
-          <div class="header-text">
-            <p class="eyebrow">
-              Diagnóstico de Maturidade em IA · Valorian 4 Future · v{{ model.version ?? '3.0' }}
-            </p>
-            <h1>{{ model.assessment_title || model.title || 'Diagnóstico de Maturidade em IA' }}</h1>
-            <p class="lede">
-              Formulário único e progressivo em 3 níveis — cada nível contém integralmente as perguntas do
-              anterior. As linhas são perguntas agrupadas pelas 4 dimensões do modelo; as colunas são níveis
-              de maturidade (1 a 5), com alternativas próprias por pergunta. Escolha o nível de profundidade
-              abaixo e clique na célula que melhor descreve a realidade da empresa.
-            </p>
-          </div>
-          <div class="header-chart">
-            <p class="chart-title">Nível médio por dimensão</p>
-            <div class="chart-bars">
-              <div
-                v-for="dim in model.dimensions"
-                :key="'bar-' + dim.id"
-                class="chart-bar-col"
-              >
-                <span class="chart-bar-value">
-                  {{ dimAvg(dim) == null ? '–' : dimAvg(dim)!.toFixed(1) }}
-                </span>
-                <div class="chart-bar-track">
-                  <div
-                    class="chart-bar-fill"
-                    :style="{
-                      background: DIMENSION_COLORS[dim.id] || '#666',
-                      height: dimAvg(dim) == null ? '0%' : (dimAvg(dim)! / 5) * 100 + '%',
-                    }"
-                  />
-                </div>
-                <span class="chart-bar-label">{{ DIMENSION_ABBR[dim.id] || dim.name.slice(0, 3) }}</span>
+      <header class="page-header">
+        <div class="header-main">
+          <p class="eyebrow">Instrumento diagnóstico · Valorian</p>
+          <h1 class="page-title">Maturidade em <em>IA</em></h1>
+          <p class="page-desc">
+            Avalie a organização em quatro dimensões. Escolha a abrangência do diagnóstico
+            (Básico, Completo ou Complementar) e, em cada pergunta, selecione a alternativa
+            na escala de maturidade de 1 a 5 que melhor descreve a realidade da empresa.
+          </p>
+        </div>
+        <div class="header-chart" aria-label="Média por dimensão">
+          <p class="chart-title">Média por dimensão</p>
+          <div class="chart-bars">
+            <div
+              v-for="dim in model.dimensions"
+              :key="'bar-' + dim.id"
+              class="chart-bar-col"
+            >
+              <span class="chart-bar-value">
+                {{ dimAvg(dim) == null ? '–' : dimAvg(dim)!.toFixed(1) }}
+              </span>
+              <div class="chart-bar-track">
+                <div
+                  class="chart-bar-fill"
+                  :style="{
+                    background: DIMENSION_COLORS[dim.id] || 'var(--gold)',
+                    height: dimAvg(dim) == null ? '0%' : (dimAvg(dim)! / 5) * 100 + '%',
+                  }"
+                />
               </div>
+              <span class="chart-bar-label">{{ DIMENSION_ABBR[dim.id] || dim.name.slice(0, 3) }}</span>
             </div>
           </div>
         </div>
@@ -609,7 +600,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
       <div class="toolbar">
         <div class="progress-block">
           <div class="num">{{ answeredCount }}/{{ totalVisible }}</div>
-          <div>
+          <div class="progress-meta">
             <div class="progress-track">
               <div class="progress-fill" :style="{ width: progressPct + '%' }" />
             </div>
@@ -617,22 +608,27 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
           </div>
         </div>
 
-        <div class="tier-select" role="tablist" aria-label="Profundidade do diagnóstico">
-          <button
-            v-for="key in TIER_KEYS"
-            :key="key"
-            type="button"
-            class="tier-btn"
-            :class="{ active: selectedTier === key }"
-            @click="setTier(key)"
-          >
-            <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
-            <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
-          </button>
+        <div class="tier-block">
+          <p class="tier-label">Abrangência do diagnóstico</p>
+          <div class="tier-select" role="tablist" aria-label="Abrangência do diagnóstico">
+            <button
+              v-for="key in TIER_KEYS"
+              :key="key"
+              type="button"
+              class="tier-btn"
+              :class="{ active: selectedTier === key }"
+              :title="model.levels?.[key]?.description || ''"
+              @click="setTier(key)"
+            >
+              <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
+              <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
+            </button>
+          </div>
+          <p v-if="selectedTierDescription" class="tier-hint">{{ selectedTierDescription }}</p>
         </div>
 
-        <div class="scale-legend">
-          <span>Maturidade&nbsp;</span>
+        <div class="scale-legend" title="Escala de resposta por pergunta">
+          <span>Escala&nbsp;</span>
           <div class="swatch">
             <span style="background: var(--lvl1)" />
             <span style="background: var(--lvl2)" />
@@ -643,7 +639,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
           <span>1 → 5</span>
         </div>
 
-        <nav class="pillar-nav">
+        <nav class="pillar-nav" aria-label="Dimensões">
           <button
             v-for="(dim, dIdx) in model.dimensions"
             :key="'nav-' + dim.id"
@@ -651,7 +647,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
             class="pillar-chip"
             @click="scrollToDim(dIdx)"
           >
-            <span class="dot" :style="{ background: DIMENSION_COLORS[dim.id] || '#666' }" />
+            <span class="dot" :style="{ background: DIMENSION_COLORS[dim.id] || 'var(--gold)' }" />
             {{ dim.name }}
             <span class="n">{{ dimAnswered(dim).length }}/{{ dimVisibleQuestions(dim).length }}</span>
           </button>
@@ -664,7 +660,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
             class="btn-swot"
             @click="openSwot"
           >
-            {{ swotCreated ? 'SWOT' : 'Criar SWOT' }}
+            {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
           </button>
           <button
             type="button"
@@ -681,20 +677,24 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 
       <div class="matrix-wrap">
         <div class="matrix-scroll">
-          <div class="col-legend">
+          <div class="col-legend" aria-hidden="true">
             <div class="stem-head" />
             <div v-for="n in 5" :key="'lh-' + n" class="lvl-head" :data-l="n">
-              <span class="tag">Nível {{ n }}</span>
+              <span class="tag">{{ n }}</span>
+              <span class="word">Maturidade</span>
             </div>
           </div>
 
-          <div
+          <section
             v-for="(dim, dIdx) in model.dimensions"
             :id="'dim-' + dIdx"
             :key="dim.id"
             class="pillar-section"
           >
-            <div class="pillar-band" :style="{ background: DIMENSION_COLORS[dim.id] || '#666' }">
+            <div
+              class="pillar-band"
+              :style="{ '--dim-color': DIMENSION_COLORS[dim.id] || 'var(--gold)' }"
+            >
               <h2>{{ dim.name }}</h2>
               <div class="pillar-meta">
                 <span class="avg">
@@ -721,8 +721,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
                 <span
                   class="code"
                   :style="{
-                    background: (DIMENSION_COLORS[dim.id] || '#666') + '22',
-                    color: DIMENSION_COLORS[dim.id] || '#666',
+                    background: 'color-mix(in srgb, ' + (DIMENSION_COLORS[dim.id] || 'var(--gold)') + ' 18%, transparent)',
+                    color: DIMENSION_COLORS[dim.id] || 'var(--gold)',
                   }"
                 >{{ q.id }}</span>
                 <span class="tier-pill" :data-tier="q.tier">{{ TIER_LABEL_SHORT[q.tier] }}</span>
@@ -736,7 +736,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
                 class="cell"
                 :class="{
                   selected: answers[q.id] === lvl,
-                  dim: answers[q.id] != null && answers[q.id] !== lvl,
+                  faded: answers[q.id] != null && answers[q.id] !== lvl,
                 }"
                 :data-l="lvl"
                 tabindex="0"
@@ -748,14 +748,15 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
                 <span class="txt">{{ q.levels[String(lvl)] }}</span>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         <div class="footnote">
-          <b>Como funciona:</b> mudar o nível de profundidade (Básico/Completo/Complementar) mostra ou
-          esconde perguntas, mas não apaga respostas já dadas. Em telas estreitas, cada pergunta vira um
-          cartão com os 5 níveis empilhados; em telas largas, a matriz aparece completa. Ao concluir o
-          diagnóstico você pode gerar a SWOT e salvar as respostas na plataforma.
+          <b>Como funciona:</b> a abrangência (Básico → Completo → Complementar) é progressiva —
+          cada opção inclui todas as perguntas da anterior. Trocar a abrangência só mostra ou
+          esconde perguntas; as respostas já dadas permanecem. Em cada pergunta, escolha uma
+          alternativa na escala de maturidade 1–5. No celular, as alternativas aparecem empilhadas;
+          em telas largas, em matriz. Ao concluir, você pode gerar a SWOT e salvar na plataforma.
         </div>
 
         <details v-if="model.overlaps?.length" class="overlap-notes">
@@ -775,21 +776,18 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-.maturity {
-  --ink: #171b20;
-  --paper: #f4f1ea;
-  --panel: #12181f;
-  --panel-2: #1b232c;
-  --hairline: #2c3743;
-  --hairline-light: #ddd6c6;
-  --card: #fffdf8;
-  --card-border: #e4ddc9;
-  --gold: #c8963e;
-  --gold-strong: #a8752a;
-  --muted: #6b7280;
-  --muted-inv: #9aa7b4;
+.wrap {
+  --navy: #0e1b33;
+  --navy-2: #16243f;
+  --ink: #242a33;
+  --gold: #c6a15b;
+  --gold-2: #e3cb93;
+  --ivory: #f6f1e7;
+  --ivory-2: #fbf8f1;
+  --oxblood: #7c3a3a;
+  --muted: #6e6a60;
+  --line: rgba(198, 161, 91, 0.32);
+  --serif: Cambria, 'Hoefler Text', Georgia, 'Times New Roman', serif;
   --lvl1: #b6543f;
   --lvl2: #c07a44;
   --lvl3: #b79a3e;
@@ -802,77 +800,77 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   --tier-basico: #6f9457;
   --tier-completo: #b79a3e;
   --tier-complementar: #3d6fa8;
-  --radius: 3px;
 
-  margin: 0 calc(50% - 50vw);
-  width: 100vw;
-  min-height: calc(100vh - var(--bar-h, 56px));
-  background: var(--panel);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px 16px 64px;
   color: var(--ink);
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
 }
 
 .state-card {
-  margin: 24px 18px;
-  padding: 18px;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  color: var(--ink);
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 24px 18px;
+  text-align: center;
+  color: var(--muted);
 }
 .state-card.error {
-  color: #a3453f;
+  color: var(--oxblood);
+  text-align: left;
 }
 
-.top {
-  background: var(--panel);
-  color: var(--paper);
-  padding: 26px 18px 22px;
-  border-bottom: 1px solid var(--hairline);
-}
-.eyebrow {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin: 0 0 8px;
-}
-.top h1 {
-  font-family: 'Fraunces', serif;
-  font-weight: 600;
-  font-size: clamp(24px, 6.4vw, 42px);
-  line-height: 1.08;
-  margin: 0 0 10px;
-  letter-spacing: -0.01em;
-  color: var(--paper);
-}
-.lede {
-  max-width: 640px;
-  color: var(--muted-inv);
-  font-size: 13.5px;
-  line-height: 1.55;
-  margin: 0;
-}
-.header-flex {
+.page-header {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 22px;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.page-title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(1.9rem, 5.5vw, 2.6rem);
+  line-height: 1.05;
+  color: var(--navy);
+  margin: 0 0 8px;
+}
+.page-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+.page-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 52ch;
+}
+.header-chart {
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 16px;
 }
 .chart-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted-inv);
+  color: var(--muted);
+  font-weight: 600;
   margin: 0 0 10px;
 }
 .chart-bars {
   display: flex;
   align-items: flex-end;
-  gap: 11px;
+  gap: 14px;
   height: 88px;
 }
 .chart-bar-col {
@@ -880,19 +878,19 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  width: 26px;
+  width: 28px;
 }
 .chart-bar-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-family: var(--serif);
+  font-size: 12px;
   font-weight: 600;
-  color: var(--gold);
-  min-height: 13px;
+  color: var(--navy);
+  min-height: 14px;
 }
 .chart-bar-track {
   width: 10px;
-  height: 56px;
-  background: var(--hairline);
+  height: 52px;
+  background: rgba(14, 27, 51, 0.08);
   border-radius: 99px;
   display: flex;
   align-items: flex-end;
@@ -904,25 +902,26 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   transition: height 0.4s ease;
 }
 .chart-bar-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 8.5px;
-  letter-spacing: 0.03em;
+  font-size: 9px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted-inv);
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .toolbar {
   position: sticky;
-  top: var(--bar-h, 56px);
+  top: var(--bar-h, 64px);
   z-index: 40;
-  background: rgba(18, 24, 31, 0.97);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--hairline);
-  padding: 12px 18px;
+  background: rgba(251, 248, 241, 0.96);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px;
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
+  gap: 14px;
 }
 .progress-block {
   display: flex;
@@ -930,113 +929,108 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   gap: 12px;
 }
 .progress-block .num {
-  font-family: 'Fraunces', serif;
+  font-family: var(--serif);
   font-size: 22px;
-  color: var(--paper);
+  color: var(--navy);
   font-weight: 600;
-  min-width: 54px;
+  min-width: 52px;
+}
+.progress-meta {
+  flex: 1;
+  min-width: 0;
 }
 .progress-track {
   width: 100%;
-  max-width: 220px;
+  max-width: 240px;
   height: 6px;
-  background: var(--hairline);
+  background: rgba(14, 27, 51, 0.08);
   border-radius: 99px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--gold-strong), var(--gold));
+  background: linear-gradient(90deg, var(--navy), var(--gold));
   transition: width 0.35s ease;
 }
 .progress-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted-inv);
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.tier-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tier-label {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
 }
 .tier-select {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
 }
 .tier-btn {
-  font-family: 'JetBrains Mono', monospace;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--hairline);
-  background: transparent;
-  color: var(--muted-inv);
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
   cursor: pointer;
   flex: 0 0 auto;
   white-space: nowrap;
+  font-family: inherit;
   transition: 0.15s;
 }
 .tier-btn:hover {
   border-color: var(--gold);
-  color: var(--paper);
+  color: var(--navy);
 }
 .tier-btn .tier-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 .tier-btn .tier-count {
-  font-size: 9px;
-  opacity: 0.7;
+  font-size: 10px;
+  opacity: 0.75;
 }
 .tier-btn.active {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: #1a1005;
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
 }
-.pillar-nav {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
+.tier-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
 }
-.pillar-chip {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.03em;
-  padding: 6px 10px;
-  border-radius: 99px;
-  border: 1px solid var(--hairline);
-  color: var(--muted-inv);
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  transition: 0.15s;
-}
-.pillar-chip:hover {
-  border-color: var(--gold);
-  color: var(--paper);
-}
-.pillar-chip .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-.pillar-chip .n {
-  opacity: 0.65;
-}
+
 .scale-legend {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--muted-inv);
-  order: 3;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .scale-legend .swatch {
   display: flex;
@@ -1048,130 +1042,167 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   border-radius: 2px;
   display: block;
 }
+
+.pillar-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pillar-chip {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: 0.15s;
+}
+.pillar-chip:hover {
+  border-color: var(--gold);
+  color: var(--navy);
+}
+.pillar-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.pillar-chip .n {
+  opacity: 0.7;
+}
+
 .toolbar-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 .btn-swot,
 .btn-save {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  font-weight: 600;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 11px 18px;
-  border-radius: 99px;
   cursor: pointer;
+  font-family: inherit;
   transition: 0.15s;
   width: 100%;
 }
 .btn-swot {
   border: 1px solid var(--gold);
   background: var(--gold);
-  color: #1a1005;
+  color: var(--navy);
 }
 .btn-swot:hover {
-  background: var(--gold-strong);
-  border-color: var(--gold-strong);
+  background: var(--gold-2);
+  border-color: var(--gold-2);
 }
 .btn-save {
-  border: 1px solid var(--hairline);
-  background: transparent;
-  color: var(--paper);
+  border: 1px solid var(--navy);
+  background: var(--navy);
+  color: #fff;
 }
 .btn-save:hover:not(:disabled) {
-  border-color: var(--gold);
-  color: var(--gold);
+  opacity: 0.92;
 }
 .btn-save:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 .save-banner {
-  margin: 0;
-  padding: 10px 18px;
-  background: var(--lvl5);
-  color: #fff;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  background: #e8f0e7;
+  border: 1px solid #bbd3b7;
+  border-radius: 4px;
+  color: #2f6e4a;
+  font-size: 12px;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .matrix-wrap {
-  background: var(--paper);
-  padding: 0 18px 56px;
+  margin-top: 4px;
 }
 .matrix-scroll {
   overflow-x: auto;
-  padding-top: 18px;
+  -webkit-overflow-scrolling: touch;
 }
 .col-legend {
   display: none;
 }
 .lvl-head {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 0.04em;
-  color: #6b6250;
+  color: var(--muted);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 6px;
   padding: 0 4px 6px;
   border-bottom: 2px solid;
 }
 .lvl-head .tag {
   font-weight: 700;
   font-size: 13px;
+  font-family: var(--serif);
 }
-.lvl-head[data-l='1'] {
-  border-color: var(--lvl1);
-  color: var(--lvl1);
+.lvl-head .word {
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
 }
-.lvl-head[data-l='2'] {
-  border-color: var(--lvl2);
-  color: var(--lvl2);
-}
-.lvl-head[data-l='3'] {
-  border-color: var(--lvl3);
-  color: var(--lvl3);
-}
-.lvl-head[data-l='4'] {
-  border-color: var(--lvl4);
-  color: var(--lvl4);
-}
-.lvl-head[data-l='5'] {
-  border-color: var(--lvl5);
-  color: var(--lvl5);
-}
+.lvl-head[data-l='1'] { border-color: var(--lvl1); color: var(--lvl1); }
+.lvl-head[data-l='2'] { border-color: var(--lvl2); color: var(--lvl2); }
+.lvl-head[data-l='3'] { border-color: var(--lvl3); color: var(--lvl3); }
+.lvl-head[data-l='4'] { border-color: var(--lvl4); color: var(--lvl4); }
+.lvl-head[data-l='5'] { border-color: var(--lvl5); color: var(--lvl5); }
 
 .pillar-section {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 .pillar-band {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 8px 12px;
   padding: 12px 14px;
-  margin-top: 16px;
-  border-radius: var(--radius);
-  color: #fff;
+  margin-top: 14px;
+  border-radius: 4px;
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--dim-color, var(--gold));
+  color: var(--navy);
 }
 .pillar-band h2 {
-  font-family: 'Fraunces', serif;
+  font-family: var(--serif);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 17px;
   margin: 0;
-  color: #fff;
+  color: var(--navy);
 }
 .pillar-meta {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   flex-wrap: wrap;
 }
 .avg {
@@ -1184,14 +1215,14 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   gap: 3px;
 }
 .bulbs i {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(14, 27, 51, 0.12);
   display: inline-block;
 }
 .bulbs i.on {
-  background: #fff;
+  background: var(--gold);
 }
 
 .csf-row {
@@ -1199,153 +1230,134 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   flex-direction: column;
   gap: 8px;
   padding: 14px 0;
-  border-bottom: 1px solid var(--hairline-light);
+  border-bottom: 1px solid rgba(14, 27, 51, 0.08);
 }
 .stem .code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
   display: inline-block;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 3px;
   margin-bottom: 6px;
 }
 .stem .tier-pill {
-  font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   display: inline-block;
-  padding: 1px 7px;
-  border-radius: 99px;
+  padding: 2px 8px;
+  border-radius: 999px;
   margin: 0 0 6px 6px;
   color: #fff;
 }
-.stem .tier-pill[data-tier='basico'] {
-  background: var(--tier-basico);
-}
-.stem .tier-pill[data-tier='completo'] {
-  background: var(--tier-completo);
-  color: #1a1005;
-}
-.stem .tier-pill[data-tier='complementar'] {
-  background: var(--tier-complementar);
-}
+.stem .tier-pill[data-tier='basico'] { background: var(--tier-basico); }
+.stem .tier-pill[data-tier='completo'] { background: var(--tier-completo); color: var(--navy); }
+.stem .tier-pill[data-tier='complementar'] { background: var(--tier-complementar); }
 .stem .title {
   font-weight: 600;
   font-size: 14px;
-  line-height: 1.3;
+  line-height: 1.35;
   margin: 0 0 4px;
-  color: var(--ink);
+  color: var(--navy);
 }
 .stem .q {
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
   font-style: italic;
   margin: 0;
 }
+
 .cell {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
   padding: 11px 12px;
   font-size: 13px;
   line-height: 1.42;
   cursor: pointer;
-  position: relative;
   min-height: 44px;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background 0.12s ease;
   display: flex;
   align-items: center;
   gap: 10px;
+  color: var(--ink);
 }
 .cell::before {
   content: attr(data-l);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--serif);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
 }
-.cell[data-l='1']::before {
-  background: var(--lvl1);
-}
-.cell[data-l='2']::before {
-  background: var(--lvl2);
-}
-.cell[data-l='3']::before {
-  background: var(--lvl3);
-}
-.cell[data-l='4']::before {
-  background: var(--lvl4);
-}
-.cell[data-l='5']::before {
-  background: var(--lvl5);
-}
+.cell[data-l='1']::before { background: var(--lvl1); }
+.cell[data-l='2']::before { background: var(--lvl2); }
+.cell[data-l='3']::before { background: var(--lvl3); }
+.cell[data-l='4']::before { background: var(--lvl4); }
+.cell[data-l='5']::before { background: var(--lvl5); }
 .cell:hover {
   border-color: var(--gold);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(14, 27, 51, 0.06);
 }
 .cell:focus-visible {
-  outline: 2px solid var(--gold-strong);
+  outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
-.cell.dim {
+.cell.faded {
   opacity: 0.42;
 }
 .cell.selected {
-  background: #20262d;
-  border-color: #20262d;
-  color: #f4f1ea;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--ivory);
+  box-shadow: 0 4px 14px rgba(14, 27, 51, 0.16);
 }
 .cell.selected::before {
   background: var(--gold);
-  color: #20262d;
+  color: var(--navy);
 }
 .cell .txt {
   flex: 1;
 }
 
 .footnote {
-  margin: 22px 0 0;
+  margin: 18px 0 0;
   padding: 12px 14px;
-  background: #eee7d3;
-  border: 1px dashed #c9bd9a;
-  border-radius: var(--radius);
-  font-size: 11.5px;
-  color: #5c5340;
+  background: var(--ivory);
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
   line-height: 1.55;
 }
 .footnote b {
-  color: #3d3627;
+  color: var(--navy);
 }
 .overlap-notes {
-  margin: 14px 0 0;
+  margin: 12px 0 0;
   padding: 12px 14px;
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
+  background: var(--ivory-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
   font-size: 12px;
   color: var(--muted);
 }
 .overlap-notes summary {
   cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold-strong);
+  color: var(--gold);
   font-weight: 700;
 }
 .overlap-notes ul {
@@ -1359,121 +1371,95 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .overlap-notes li {
   line-height: 1.5;
   padding: 8px 10px;
-  background: var(--paper);
+  background: #fff;
   border-radius: 3px;
+  border: 1px solid rgba(14, 27, 51, 0.06);
 }
 .overlap-pair {
-  font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--navy);
   margin-right: 2px;
 }
 
-@media (min-width: 700px) {
-  .top {
-    padding: 38px 40px 26px;
+@media (min-width: 640px) {
+  .wrap {
+    padding: 28px 20px 72px;
   }
-  .header-flex {
+  .page-header {
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 48px;
+    gap: 28px;
+  }
+  .header-chart {
+    flex: 0 0 auto;
   }
   .chart-bars {
+    height: 100px;
     gap: 16px;
-    height: 112px;
-  }
-  .chart-bar-col {
-    width: 30px;
-    gap: 8px;
-  }
-  .chart-bar-track {
-    width: 12px;
-    height: 70px;
-  }
-  .toolbar {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px 28px;
-    padding: 14px 40px;
-  }
-  .progress-track {
-    width: 180px;
-  }
-  .pillar-nav {
-    margin-left: auto;
-    overflow-x: visible;
-    flex-wrap: wrap;
-  }
-  .scale-legend {
-    order: 0;
   }
   .toolbar-actions {
-    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
   .btn-swot,
   .btn-save {
     width: auto;
-    padding: 9px 18px;
+    min-width: 150px;
   }
 }
 
 @media (min-width: 860px) {
-  .matrix-wrap {
-    padding: 0 40px 80px;
+  .toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 20px;
+    padding: 14px 18px;
   }
-  .matrix-scroll {
-    padding-top: 28px;
+  .tier-block {
+    flex: 1 1 280px;
+  }
+  .pillar-nav {
+    flex: 1 1 100%;
+    overflow-x: visible;
+    flex-wrap: wrap;
+  }
+  .scale-legend {
+    margin-left: auto;
   }
   .col-legend {
     display: grid;
-    grid-template-columns: 300px repeat(5, minmax(210px, 1fr));
+    grid-template-columns: 240px repeat(5, minmax(160px, 1fr));
     gap: 10px;
     padding: 0 0 10px;
-    min-width: 1360px;
+    min-width: 1120px;
   }
   .pillar-section {
-    min-width: 1360px;
-    margin-bottom: 6px;
+    min-width: 1120px;
   }
   .pillar-band {
-    flex-wrap: nowrap;
-    gap: 14px;
-    padding: 14px 16px;
-    margin-top: 22px;
     position: sticky;
-    top: calc(var(--bar-h, 56px) + 64px);
+    top: calc(var(--bar-h, 64px) + 12px);
     z-index: 20;
-  }
-  .pillar-band h2 {
-    font-size: 19px;
   }
   .csf-row {
     display: grid;
-    grid-template-columns: 300px repeat(5, minmax(210px, 1fr));
+    grid-template-columns: 240px repeat(5, minmax(160px, 1fr));
     gap: 10px;
     padding: 10px 0;
   }
   .stem {
-    padding: 6px 14px 6px 0;
-    position: sticky;
-    left: 0;
+    padding: 4px 10px 4px 0;
   }
   .cell {
-    padding: 10px 12px;
-    font-size: 12.5px;
     align-items: flex-start;
+    font-size: 12.5px;
     min-height: auto;
   }
   .cell:hover {
     transform: translateY(-1px);
   }
-  .footnote,
-  .overlap-notes {
-    max-width: 1360px;
-    margin-left: auto;
-    margin-right: auto;
-  }
 }
 </style>
+
