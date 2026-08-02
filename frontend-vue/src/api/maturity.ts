@@ -2,6 +2,31 @@ import { get, post } from './client'
 
 export type MaturityTier = 'basico' | 'completo' | 'complementar'
 
+export type MaturitySwotCategory =
+  | 'internal_capability'
+  | 'market_strategy'
+  | 'risk_compliance'
+  | string
+
+export interface MaturitySwotScoreRule {
+  quadrants: string[]
+  opportunity_label?: string
+  threat_label?: string
+  threat_mitigated?: boolean
+}
+
+export interface MaturitySwotCategoryConfig {
+  label?: string
+  rationale?: string
+  score_rules?: Record<string, MaturitySwotScoreRule>
+}
+
+export interface MaturitySwotFramework {
+  description?: string
+  categories?: Record<string, MaturitySwotCategoryConfig>
+  aggregation_logic?: string[]
+}
+
 export interface MaturityQuestion {
   id: string
   tier: MaturityTier
@@ -11,6 +36,8 @@ export interface MaturityQuestion {
   csfId?: string | null
   csfName?: string | null
   ref?: string | null
+  /** Categoria-ponte do swotFramework (modelo v3+). */
+  swotCategory?: MaturitySwotCategory | null
   levels: Record<string, string>
 }
 
@@ -48,6 +75,8 @@ export interface MaturityModel {
   dimensions?: MaturityDimension[]
   scoring?: Record<MaturityTier, Record<string, MaturityScoreBand>>
   overlaps?: MaturityOverlap[]
+  /** Regras de agregação pergunta → quadrantes SWOT. */
+  swotFramework?: MaturitySwotFramework
 }
 
 export interface MaturityResult {

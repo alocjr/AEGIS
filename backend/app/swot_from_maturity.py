@@ -1,4 +1,4 @@
-"""Gera payload SWOT (v3) a partir de uma resposta do Modelo de Maturidade."""
+"""Gera payload SWOT (v3) a partir do Modelo de Maturidade via swotFramework."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ _DIM_TO_PILLAR = {
     "people_culture": "talento",
     "gov_risk": "governanca",
 }
+
+_DIM_ORDER = ("strategy", "data_infra", "people_culture", "gov_risk")
 
 _TIER_LABEL = {
     "basico": "Básico",
@@ -33,17 +35,24 @@ _DEFAULT_PILARES = {
         {"id": "governanca", "nome": "Governança e Risco"},
     ],
     "oportunidades": [
-        {"id": "ecossistema", "nome": "Tecnologia e ecossistema"},
         {"id": "portfolio", "nome": "Mercado e clientes"},
+        {"id": "dados", "nome": "Dados e Infraestrutura"},
+        {"id": "talento", "nome": "Pessoas e Cultura"},
         {"id": "governanca", "nome": "Ambiente regulatório"},
-        {"id": "talento", "nome": "Talento e incentivos"},
     ],
     "ameacas": [
         {"id": "portfolio", "nome": "Concorrência"},
         {"id": "governanca", "nome": "Regulação e risco"},
-        {"id": "ecossistema", "nome": "Fornecedores e modelos"},
+        {"id": "dados", "nome": "Dados e Infraestrutura"},
         {"id": "talento", "nome": "Talento e ritmo"},
     ],
+}
+
+_QUADRANT_TO_FIELD = {
+    "strength": "forcas",
+    "weakness": "fraquezas",
+    "opportunity": "oportunidades",
+    "threat": "ameacas",
 }
 
 _FIELD_PREFIX = {
@@ -62,6 +71,39 @@ def _visible(question_tier: str, selected_tier: str, order: dict[str, int]) -> b
     return order.get(question_tier, 99) <= order.get(selected_tier, 0)
 
 
+def _dim_sort_key(dim_id: str, qid: str) -> tuple[int, str]:
+    try:
+        idx = _DIM_ORDER.index(dim_id)
+    except ValueError:
+        idx = 99
+    return (idx, qid)
+
+
+def _fallback_rules(lvl: int) -> dict[str, Any]:
+    """Fallback se o modelo não tiver swotFramework (legado)."""
+    if lvl == 3:
+        return {"quadrants": ["watchlist"]}
+    if lvl >= 4:
+        return {"quadrants": ["strength"]}
+    return {"quadrants": ["weakness"]}
+
+
+def _rule_for_answer(
+    framework: dict[str, Any] | None,
+    category: str | None,
+    lvl: int,
+) -> dict[str, Any]:
+    cats = (framework or {}).get("categories") or {}
+    cat_cfg = cats.get(category or "") if category else None
+    if not isinstance(cat_cfg, dict):
+        return _fallback_rules(lvl)
+    rules = cat_cfg.get("score_rules") or {}
+    rule = rules.get(str(lvl)) or rules.get(lvl)
+    if isinstance(rule, dict) and rule.get("quadrants"):
+        return rule
+    return _fallback_rules(lvl)
+
+
 def build_swot_fields_from_maturity(
     *,
     model: dict[str, Any],
@@ -69,14 +111,17 @@ def build_swot_fields_from_maturity(
     tier: str,
     result: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Devolve campos editáveis da SWOT preenchidos a partir do diagnóstico."""
+    """Agrega respostas pelo swotFramework → Forças / Fraquezas / Oportunidades / Ameaças."""
     order = {"basico": 0, "completo": 1, "complementar": 2}
+    framework = model.get("swotFramework") if isinstance(model.get("swotFramework"), dict) else None
+
     buckets: dict[str, list[dict]] = {
         "forcas": [],
         "fraquezas": [],
         "oportunidades": [],
         "ameacas": [],
     }
+    watchlist: list[dict[str, Any]] = []
 
     for dimension in model.get("dimensions") or []:
         dim_id = str(dimension.get("id") or "")
@@ -92,36 +137,87 @@ def build_swot_fields_from_maturity(
             lvl = int(answers[qid])
             if lvl < 1 or lvl > 5:
                 continue
+
             levels = q.get("levels") or {}
             evidence = str(levels.get(str(lvl)) or levels.get(lvl) or "")[:1000]
-            csf = q.get("csfId") or q.get("csf_id")
-            is_external = bool(csf and str(csf).startswith("R"))
-            if is_external:
-                field = "oportunidades" if lvl >= 4 else "ameacas"
-            else:
-                field = "forcas" if lvl >= 4 else "fraquezas"
-            prefix = _FIELD_PREFIX[field]
-            buckets[field].append(
-                {
-                    "id": f"{prefix}_{qid.lower()}",
-                    "texto": str(q.get("text") or qid)[:500],
-                    "pilar": pilar,
-                    "impacto": lvl,
-                    "viabilidade": lvl if field in ("forcas", "fraquezas") else None,
-                    "probabilidade": lvl if field in ("oportunidades", "ameacas") else None,
-                    "evidencia": evidence,
-                    "prioridade": None,
-                    "_dim": dim_name,
-                    "_code": qid,
-                }
-            )
+            category = q.get("swotCategory") or q.get("swot_category")
+            category = str(category) if category else None
+            rule = _rule_for_answer(framework, category, lvl)
+            quadrants = [str(x) for x in (rule.get("quadrants") or [])]
+
+            base_meta = {
+                "_dim_id": dim_id,
+                "_dim": dim_name,
+                "_code": qid,
+                "_category": category or "",
+            }
+
+            if "watchlist" in quadrants or (quadrants == ["watchlist"]):
+                watchlist.append(
+                    {
+                        "id": qid,
+                        "texto": str(q.get("text") or qid)[:500],
+                        "pilar": pilar,
+                        "dimensao": dim_name,
+                        "nota": lvl,
+                        "evidencia": evidence,
+                        "swotCategory": category,
+                    }
+                )
+                # Nota 3 não entra nos quadrantes SWOT
+                continue
+
+            for quad in quadrants:
+                field = _QUADRANT_TO_FIELD.get(quad)
+                if not field:
+                    continue
+                prefix = _FIELD_PREFIX[field]
+                if field == "oportunidades":
+                    label = str(rule.get("opportunity_label") or "").strip()
+                    texto = (label or str(q.get("text") or qid))[:500]
+                    evid = (
+                        f"{qid} · N{lvl} · {str(q.get('text') or '')}. {evidence}"
+                    ).strip()[:1000]
+                elif field == "ameacas":
+                    label = str(rule.get("threat_label") or "").strip()
+                    texto = (label or str(q.get("text") or qid))[:500]
+                    evid = (
+                        f"{qid} · N{lvl} · {str(q.get('text') or '')}. {evidence}"
+                    ).strip()[:1000]
+                else:
+                    texto = str(q.get("text") or qid)[:500]
+                    evid = evidence
+                    if rule.get("threat_mitigated") and field == "forcas":
+                        evid = (
+                            f"{evidence} · Ameaça regulatória/reputacional mitigada "
+                            f"(risk_compliance N{lvl})."
+                        ).strip()[:1000]
+
+                buckets[field].append(
+                    {
+                        "id": f"{prefix}_{qid.lower()}",
+                        "texto": texto,
+                        "pilar": pilar,
+                        "impacto": lvl,
+                        "viabilidade": lvl if field in ("forcas", "fraquezas") else None,
+                        "probabilidade": lvl if field in ("oportunidades", "ameacas") else None,
+                        "evidencia": evid,
+                        "prioridade": None,
+                        **base_meta,
+                    }
+                )
 
     for field, items in buckets.items():
-        items.sort(key=lambda it: it.get("_code") or "")
+        items.sort(key=lambda it: _dim_sort_key(str(it.get("_dim_id") or ""), str(it.get("_code") or "")))
         for i, it in enumerate(items, start=1):
             it["prioridade"] = i
-            it.pop("_dim", None)
-            it.pop("_code", None)
+            for k in ("_dim_id", "_dim", "_code", "_category"):
+                it.pop(k, None)
+
+    watchlist.sort(key=lambda it: _dim_sort_key(
+        next((d for d, p in _DIM_TO_PILLAR.items() if p == it.get("pilar")), ""),
+        str(it.get("id") or ""),
+    ))
 
     def pair(
         internos: list[dict],
@@ -208,8 +304,16 @@ def build_swot_fields_from_maturity(
         f"{len(buckets['forcas'])} força(s), {len(buckets['fraquezas'])} fraqueza(s), "
         f"{len(buckets['oportunidades'])} oportunidade(s) e {len(buckets['ameacas'])} ameaça(s)."
     )
+    watch_note = ""
+    if watchlist:
+        codes = ", ".join(w["id"] for w in watchlist[:12])
+        extra = f" (+{len(watchlist) - 12})" if len(watchlist) > 12 else ""
+        watch_note = (
+            f" Pontos de Atenção (nota 3, fora do SWOT): {len(watchlist)} — {codes}{extra}."
+        )
     veredito_texto = (
-        f"{band_desc} Gerado a partir do Modelo de Maturidade em IA. No total: {counts}"
+        f"{band_desc} Gerado via swotFramework do Modelo de Maturidade em IA. "
+        f"No total: {counts}{watch_note}"
     ).strip()[:8000]
 
     return {

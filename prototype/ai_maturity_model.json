@@ -42,7 +42,8 @@
             "3": "Está em andamento um esforço para mapear a conexão entre IA e receita, ainda sem consenso formal da liderança.",
             "4": "A liderança conecta IA a OKRs específicos e acompanha indicadores de impacto nas áreas onde já foi implementada.",
             "5": "IA é parte central da estratégia de receita da empresa, com OKRs mensuráveis e revisão contínua pelo C-level."
-          }
+          },
+          "swotCategory": "market_strategy"
         },
         {
           "id": "EV2",
@@ -59,7 +60,8 @@
             "3": "Um roadmap está sendo elaborado e aguarda validação do Board.",
             "4": "O roadmap está aprovado, com fases, responsáveis e investimentos definidos, e em execução.",
             "5": "O roadmap é um documento vivo, revisado periodicamente pelo Board, com ajustes ágeis conforme os resultados obtidos."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV3",
@@ -76,7 +78,8 @@
             "3": "Um framework de priorização (impacto vs. viabilidade) está sendo desenhado.",
             "4": "O framework é aplicado de forma consistente para priorizar projetos de IA.",
             "5": "O framework está institucionalizado, é usado em todas as decisões de investimento e inclui revisão contínua de ROI."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV4",
@@ -93,7 +96,8 @@
             "3": "Aparece ocasionalmente em reuniões de gestão, sem rito ou periodicidade definida.",
             "4": "Existe um rito de acompanhamento, mas é irregular ou nem sempre reúne todos os decisores relevantes.",
             "5": "Há um rito formal e recorrente de acompanhamento de resultados de IA pela alta gestão, com decisores presentes."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV5",
@@ -110,7 +114,8 @@
             "3": "O orçamento cobre apenas a parte visível (ferramenta/licença), sem prever integração ou manutenção.",
             "4": "O orçamento cobre a maior parte do custo total (implementação, integração, manutenção, capacitação), com lacunas pontuais.",
             "5": "O orçamento cobre o custo total de ponta a ponta — implementação, integração, manutenção e capacitação."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV6",
@@ -127,7 +132,8 @@
             "3": "A métrica existe, mas é pouco divulgada e pouco usada na prática.",
             "4": "A métrica é divulgada e usada na maioria dos relatórios e decisões sobre IA.",
             "5": "Existe uma métrica oficial, divulgada e usada de forma consistente em todos os relatórios da empresa."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV7",
@@ -144,7 +150,8 @@
             "3": "Existe uma linha própria, mas ainda parcial ou recém-criada.",
             "4": "A linha própria está consolidada, com pequenos ajustes ao longo do ano.",
             "5": "A linha própria é planejada, previsível e revisada como parte do ciclo orçamentário formal."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV8",
@@ -161,7 +168,8 @@
             "3": "Existe, mas é aplicado de forma inconsistente entre os projetos.",
             "4": "É aplicado à maioria dos projetos de IA, com exceções pontuais.",
             "5": "É aplicado de forma consistente a todos os projetos de IA da empresa."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "EV9",
@@ -178,7 +186,8 @@
             "3": "O plano estratégico menciona IA de forma genérica, sem detalhamento.",
             "4": "O plano estratégico detalha IA, mas ainda sem metas próprias e mensuráveis.",
             "5": "IA é um pilar explícito do plano estratégico, com metas próprias e mensuráveis."
-          }
+          },
+          "swotCategory": "market_strategy"
         },
         {
           "id": "EV10",
@@ -195,7 +204,8 @@
             "3": "A coerência é parcial e depende do projeto específico.",
             "4": "A coerência existe na maioria dos projetos, com exceções raras.",
             "5": "A coerência é clara e consistente, sendo usada inclusive na narrativa de marca da empresa."
-          }
+          },
+          "swotCategory": "market_strategy"
         },
         {
           "id": "EV11",
@@ -212,7 +222,8 @@
             "3": "O programa existe, mas ainda é pouco maduro ou pouco divulgado.",
             "4": "O programa está ativo e é conhecido, mas o engajamento ainda se concentra em poucas áreas.",
             "5": "O programa é maduro, com incentivo formal e histórico consistente de resultados."
-          }
+          },
+          "swotCategory": "internal_capability"
         }
       ]
     },
@@ -235,7 +246,8 @@
             "3": "Há um projeto de centralização e limpeza de dados em planejamento ou fase inicial.",
             "4": "Os dados estão centralizados e utilizáveis na maioria das áreas relevantes da empresa.",
             "5": "Os dados estão totalmente centralizados, limpos, com qualidade monitorada continuamente e prontos para consumo por modelos de IA."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI2",
@@ -252,7 +264,8 @@
             "3": "Um piloto de arquitetura Lakehouse/Mesh está em construção.",
             "4": "A arquitetura moderna já está implementada e suporta parte dos casos de uso de IA.",
             "5": "A arquitetura é madura e escalável, suportando RAG e IA em tempo real em produção."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI3",
@@ -269,7 +282,8 @@
             "3": "Um processo de governança está em definição, com mapeamento de gaps de LGPD em andamento.",
             "4": "A governança está implementada na maioria dos projetos, com checkpoints de conformidade LGPD.",
             "5": "A governança de dados é madura, auditável, e a conformidade com a LGPD é embutida por padrão em todos os projetos."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "DI4",
@@ -286,7 +300,8 @@
             "3": "A maior parte dos dados é confiável, mas existem exceções conhecidas que exigem checagem.",
             "4": "Os dados são confiáveis na quase totalidade dos casos; exceções são raras e já mapeadas.",
             "5": "Os dados são confiáveis por padrão, com controle de qualidade automatizado e monitorado."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI5",
@@ -303,7 +318,8 @@
             "3": "Aguenta o crescimento previsto, mas depende de intervenção manual da equipe de TI.",
             "4": "Escala com pouca intervenção manual, geralmente planejada com antecedência.",
             "5": "Escala automaticamente conforme a demanda, sem necessidade de intervenção manual."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI6",
@@ -320,7 +336,8 @@
             "3": "Autoatendimento cobre dados básicos; para o restante, a área ainda depende de TI.",
             "4": "O autoatendimento cobre a maioria das necessidades do dia a dia das áreas de negócio.",
             "5": "O autoatendimento é amplo e consolidado, com poucas exceções que ainda exigem TI."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI7",
@@ -337,7 +354,8 @@
             "3": "A modernização está em andamento, de forma parcial ou lenta.",
             "4": "A maior parte do núcleo já foi modernizada; restam módulos pontuais em legado.",
             "5": "O núcleo está modernizado ou possui plano ativo e financiado de modernização."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI8",
@@ -354,7 +372,8 @@
             "3": "Há integração parcial entre os principais sistemas.",
             "4": "A integração cobre a maioria dos sistemas, com exceções pontuais.",
             "5": "Existe uma visão unificada disponível por padrão, sem qualquer trabalho manual de integração."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI9",
@@ -371,7 +390,8 @@
             "3": "Os principais sistemas se conectam, mas cada nova integração exige esforço dedicado de TI.",
             "4": "A integração entre ferramentas é prática comum, com poucos pontos ainda manuais.",
             "5": "Novas ferramentas se conectam a uma arquitetura padronizada, sem exigir um projeto dedicado."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI10",
@@ -388,7 +408,8 @@
             "3": "Alguns painéis operam quase em tempo real, mas os processos críticos ainda não.",
             "4": "A maioria dos processos críticos já usa dados quase em tempo real.",
             "5": "As decisões operacionais críticas usam dados em tempo real como padrão."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI11",
@@ -405,7 +426,8 @@
             "3": "Há acesso a um especialista externo de confiança, mas ainda sem capacidade interna própria.",
             "4": "O time interno resolve boa parte das dúvidas, recorrendo a terceiros apenas em temas avançados.",
             "5": "O time interno resolve a maioria das questões técnicas de IA sem depender de terceiros."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI12",
@@ -422,7 +444,8 @@
             "3": "A avaliação foi feita, com upgrades pontuais realizados.",
             "4": "A avaliação é recorrente, com upgrades planejados com antecedência.",
             "5": "A rede é dimensionada e monitorada continuamente para suportar a carga de IA."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI13",
@@ -439,7 +462,8 @@
             "3": "O padrão existe, mas ainda exige normalização manual em cruzamentos de dados.",
             "4": "O padrão é seguido na maioria dos casos, com poucas exceções que exigem ajuste manual.",
             "5": "Existe um padrão único, validado automaticamente já na entrada do dado."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI14",
@@ -456,7 +480,8 @@
             "3": "A rotulagem existe para alguns processos-chave específicos.",
             "4": "A rotulagem cobre a maioria dos processos relevantes, com revisão periódica.",
             "5": "A rotulagem é sistemática e validada, cobrindo os principais processos da empresa."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "DI15",
@@ -473,7 +498,8 @@
             "3": "A política existe, mas com cobertura parcial ou pouco conhecida na empresa.",
             "4": "A política é documentada e conhecida pela maioria, com aplicação quase integral.",
             "5": "A política é formal, conhecida, aplicada de fato e possui um dono claramente definido."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "DI16",
@@ -490,7 +516,8 @@
             "3": "É rápido para casos já conhecidos, mas lento para casos novos.",
             "4": "O pipeline cobre a maioria dos casos novos, com pouco retrabalho necessário.",
             "5": "Existe um pipeline padronizado que prepara dados novos em poucos dias."
-          }
+          },
+          "swotCategory": "internal_capability"
         }
       ]
     },
@@ -513,7 +540,8 @@
             "3": "Iniciativas de incentivo (comunicados, políticas de uso) estão em planejamento.",
             "4": "Existe uma cultura de experimentação ativa em várias equipes, com incentivo claro da gestão.",
             "5": "A experimentação com IA é parte da cultura da empresa, celebrada e disseminada por toda a organização."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC2",
@@ -530,7 +558,8 @@
             "3": "Um programa de capacitação está sendo desenhado ou está em fase piloto.",
             "4": "O programa está ativo, com trilhas específicas para gestores e colaboradores.",
             "5": "O programa é consolidado e contínuo, com métricas de adoção e de impacto sobre a produtividade."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC3",
@@ -547,7 +576,8 @@
             "3": "Uma estratégia de comunicação sobre o tema está em elaboração.",
             "4": "A comunicação é estruturada e reforça o aumento humano na maioria das iniciativas de IA.",
             "5": "A narrativa de aumento humano é consistente, institucionalizada e reforçada continuamente pela liderança."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC4",
@@ -564,7 +594,8 @@
             "3": "Alguns times conseguem quantificar o ganho, a maioria ainda não.",
             "4": "A maioria dos times mede o ganho, com metodologia parecida entre eles.",
             "5": "Medir e reportar o ganho de IA é uma prática comum e consistente em toda a empresa."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC5",
@@ -581,7 +612,8 @@
             "3": "Algumas pessoas conseguem checar e interpretar o resultado; a maioria não.",
             "4": "A maioria das equipes já checa e interpreta criticamente o resultado; poucas ainda não.",
             "5": "Checar e interpretar criticamente o resultado da IA é uma prática comum e disseminada."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC6",
@@ -598,7 +630,8 @@
             "3": "O feedback chega ocasionalmente, e o ajuste acontece às vezes.",
             "4": "O feedback chega na maioria das vezes e o ajuste é comum.",
             "5": "Existe um canal formal e consistente de feedback, que gera ajuste regular no processo."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC7",
@@ -615,7 +648,8 @@
             "3": "O erro é tolerado, mas sem incentivo explícito à experimentação.",
             "4": "A experimentação é incentivada na maioria das áreas; algumas ainda são mais conservadoras.",
             "5": "Quem experimenta e erra é reconhecido e incentivado abertamente pela organização."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC8",
@@ -632,7 +666,8 @@
             "3": "É conhecida por parte do time e seguida apenas parcialmente.",
             "4": "É conhecida pela maioria e seguida na maior parte do tempo.",
             "5": "É conhecida e seguida de forma consistente por quem usa IA no dia a dia."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC9",
@@ -649,7 +684,8 @@
             "3": "São seguidos na maioria dos projetos.",
             "4": "São seguidos com poucas exceções; já é um hábito consolidado.",
             "5": "São seguidos de forma consistente, com poucas exceções."
-          }
+          },
+          "swotCategory": "internal_capability"
         },
         {
           "id": "PC10",
@@ -666,7 +702,8 @@
             "3": "O remanejamento acontece ocasionalmente.",
             "4": "É raro, acontecendo só em emergências claras.",
             "5": "O time se mantém dedicado até a entrega, sendo raramente remanejado."
-          }
+          },
+          "swotCategory": "internal_capability"
         }
       ]
     },
@@ -689,7 +726,8 @@
             "3": "Uma política está em elaboração ou em revisão jurídica.",
             "4": "A política formal está implementada e comunicada para a maior parte da empresa.",
             "5": "A política é robusta, revisada periodicamente, com treinamento obrigatório e mecanismos de enforcement."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR2",
@@ -706,7 +744,8 @@
             "3": "Uma solução de monitoramento está em avaliação ou implantação piloto.",
             "4": "O monitoramento está ativo na maioria das áreas, com alertas configurados.",
             "5": "Há monitoramento contínuo e auditoria formal, com processo estruturado de resposta a incidentes."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR3",
@@ -723,7 +762,8 @@
             "3": "Uma revisão periódica está sendo planejada ou estruturada.",
             "4": "O Board revisa riscos e ROI de IA em cadência definida (ex: trimestral).",
             "5": "A revisão de riscos éticos e ROI de IA é parte fixa da pauta do Board, com decisões documentadas."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR4",
@@ -740,7 +780,8 @@
             "3": "O registro existe para alguns casos específicos, sem sistematização.",
             "4": "O registro é sistemático na maioria dos casos, com algumas lacunas pontuais.",
             "5": "O registro é sistemático e recuperável para qualquer decisão automatizada, a qualquer momento."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR5",
@@ -757,7 +798,8 @@
             "3": "A explicação é possível parcialmente, apenas para os modelos mais simples.",
             "4": "A explicação está disponível para a maioria dos modelos, em linguagem acessível ao negócio.",
             "5": "A explicação está disponível e é compreendida pelo negócio para os principais modelos em uso."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR6",
@@ -774,7 +816,8 @@
             "3": "A estrutura existe, mas as responsabilidades ainda são pouco claras ou muito recentes.",
             "4": "A estrutura é formal, com responsabilidades claras, ainda ganhando maturidade na prática.",
             "5": "A estrutura formal é madura, com responsabilidades claras e reconhecidas em toda a empresa."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR7",
@@ -791,7 +834,8 @@
             "3": "Já foi avaliado uma vez, mas sem processo recorrente.",
             "4": "Há avaliação recorrente, mas ela não cobre todos os modelos críticos.",
             "5": "Há avaliação recorrente e documentada, incorporada como parte do processo de deploy dos modelos."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR8",
@@ -808,7 +852,8 @@
             "3": "A política existe, mas nasceu de forma reativa, após algum incidente.",
             "4": "A política existe e é revisada às vezes, mas sem calendário formal de revisão.",
             "5": "A política existe, é proativa por natureza e revisada periodicamente, de forma planejada."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR9",
@@ -825,7 +870,8 @@
             "3": "Foi discutido informalmente, sem nenhum documento formal.",
             "4": "Está documentado, mas ainda não foi revisado com todos os stakeholders relevantes.",
             "5": "Está formalizado e revisado periodicamente com todos os stakeholders relevantes."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR10",
@@ -842,7 +888,8 @@
             "3": "O rito existe, mas acontece de forma irregular.",
             "4": "O rito ocorre na maioria dos ciclos previstos.",
             "5": "O rito periódico é consistente e independe da ocorrência de crises."
-          }
+          },
+          "swotCategory": "risk_compliance"
         },
         {
           "id": "GR11",
@@ -859,7 +906,8 @@
             "3": "O mapeamento é parcial ou está desatualizado.",
             "4": "O mapeamento está atualizado, mas ainda não integrado ao planejamento formal de expansão.",
             "5": "O mapeamento está atualizado e integrado ao planejamento formal de expansão da empresa."
-          }
+          },
+          "swotCategory": "risk_compliance"
         }
       ]
     }
@@ -1005,5 +1053,125 @@
       ],
       "distinction": "GR1 avalia a existência e maturidade do conteúdo da política; GR8 avalia a origem proativa e a periodicidade de revisão dessa política."
     }
-  ]
+  ],
+  "swotFramework": {
+    "description": "Cada pergunta pertence a uma categoria-ponte que determina para qual(is) quadrante(s) do SWOT sua nota é direcionada. Notas 1-2 e 4-5 sempre geram uma leitura interna (Força/Fraqueza); a categoria da pergunta determina se, adicionalmente, ela também sinaliza uma Oportunidade ou uma Ameaça.",
+    "categories": {
+      "internal_capability": {
+        "label": "Capacidade Interna",
+        "rationale": "Perguntas sobre execução e capacidade organizacional pura (dados, infraestrutura, pessoas, processos internos). Alimentam apenas os quadrantes internos do SWOT.",
+        "score_rules": {
+          "1": {
+            "quadrants": [
+              "weakness"
+            ]
+          },
+          "2": {
+            "quadrants": [
+              "weakness"
+            ]
+          },
+          "3": {
+            "quadrants": [
+              "watchlist"
+            ]
+          },
+          "4": {
+            "quadrants": [
+              "strength"
+            ]
+          },
+          "5": {
+            "quadrants": [
+              "strength"
+            ]
+          }
+        }
+      },
+      "market_strategy": {
+        "label": "Estratégia de Mercado",
+        "rationale": "Perguntas sobre posicionamento estratégico, visão de receita e coerência de marca. Uma nota alta indica que a empresa está pronta para capturar uma Oportunidade de mercado via IA; uma nota baixa indica que essa Oportunidade está em risco de ser capturada por concorrentes — o que é registrado como Ameaça competitiva.",
+        "score_rules": {
+          "1": {
+            "quadrants": [
+              "weakness",
+              "threat"
+            ],
+            "threat_label": "Oportunidade de mercado em risco de ser capturada por concorrentes"
+          },
+          "2": {
+            "quadrants": [
+              "weakness",
+              "threat"
+            ],
+            "threat_label": "Oportunidade de mercado em risco de ser capturada por concorrentes"
+          },
+          "3": {
+            "quadrants": [
+              "watchlist"
+            ]
+          },
+          "4": {
+            "quadrants": [
+              "strength",
+              "opportunity"
+            ],
+            "opportunity_label": "Posicionada para capturar valor de mercado via IA"
+          },
+          "5": {
+            "quadrants": [
+              "strength",
+              "opportunity"
+            ],
+            "opportunity_label": "Posicionada para capturar valor de mercado via IA"
+          }
+        }
+      },
+      "risk_compliance": {
+        "label": "Risco e Conformidade",
+        "rationale": "Perguntas sobre governança, ética, LGPD e segurança. Uma nota baixa expõe a empresa a uma Ameaça externa real (regulatória, reputacional ou de segurança); uma nota alta indica que essa mesma Ameaça está mitigada.",
+        "score_rules": {
+          "1": {
+            "quadrants": [
+              "weakness",
+              "threat"
+            ],
+            "threat_label": "Exposição a risco regulatório, reputacional ou de segurança"
+          },
+          "2": {
+            "quadrants": [
+              "weakness",
+              "threat"
+            ],
+            "threat_label": "Exposição a risco regulatório, reputacional ou de segurança"
+          },
+          "3": {
+            "quadrants": [
+              "watchlist"
+            ]
+          },
+          "4": {
+            "quadrants": [
+              "strength"
+            ],
+            "threat_mitigated": true
+          },
+          "5": {
+            "quadrants": [
+              "strength"
+            ],
+            "threat_mitigated": true
+          }
+        }
+      }
+    },
+    "aggregation_logic": [
+      "1. Para cada pergunta respondida, identificar sua swot_category.",
+      "2. Aplicar score_rules[nota] da categoria correspondente para obter os quadrantes.",
+      "3. Notas 3 vão para uma lista à parte ('watchlist' / Pontos de Atenção) e não entram no SWOT final — são áreas em maturação que podem virar Força ou Fraqueza no próximo ciclo.",
+      "4. Compilar: Forças = todas as perguntas com quadrant 'strength'; Fraquezas = todas com 'weakness'; Oportunidades = perguntas market_strategy com nota 4-5; Ameaças = perguntas market_strategy ou risk_compliance com nota 1-2.",
+      "5. Ordenar cada quadrante por dimensão (pilar) para facilitar a leitura do relatório final.",
+      "6. Perguntas risk_compliance com nota 4-5 aparecem em Forças com a flag threat_mitigated=true, indicando que mitigam (mas não geram) uma Ameaça."
+    ]
+  }
 }
