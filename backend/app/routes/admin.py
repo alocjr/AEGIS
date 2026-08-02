@@ -196,7 +196,27 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
     for u in users:
         uid = u["_id"]
         org_id = u.get("organization_id")
-        primary_slug = (u.get("course_slugs") or [u.get("course_slug")])[0] if (u.get("course_slugs") or u.get("course_slug")) else u.get("course_slug") or ""
+
+        group = orgs.setdefault(
+            org_id,
+            {
+                "id": str(org_id) if org_id else None,
+                "name": org_names.get(org_id, "") if org_id else "—",
+                "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
+                "maturity_total": 1,
+                "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
+                "canvas_count": canvas_count_by_org.get(org_id, 0),
+                "members": [],
+                "_next_ts": None,
+            },
+        )
+
+        slugs = u.get("course_slugs") or ([u.get("course_slug")] if u.get("course_slug") else [])
+        if not slugs:
+            # Sem trilha atribuída: não é "aluno" para este dashboard, mesmo que tenha
+            # progresso/quiz órfãos de uma trilha antiga — nunca contam para as métricas.
+            continue
+        primary_slug = slugs[0]
         progress = progress_by_user_slug.get((uid, primary_slug)) or {}
         course_slug = progress.get("course_slug") or primary_slug
         concluidos = progress.get("concluidos") or []
@@ -242,19 +262,6 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
             "next_meeting_iso": next_iso,
         }
 
-        group = orgs.setdefault(
-            org_id,
-            {
-                "id": str(org_id) if org_id else None,
-                "name": org_names.get(org_id, "") if org_id else "—",
-                "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
-                "maturity_total": 1,
-                "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
-                "canvas_count": canvas_count_by_org.get(org_id, 0),
-                "members": [],
-                "_next_ts": None,
-            },
-        )
         group["members"].append(member)
         if next_ts is not None and (group["_next_ts"] is None or next_ts < group["_next_ts"]):
             group["_next_ts"] = next_ts
@@ -587,12 +594,14 @@ def get_user_course_and_progress(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     slugs = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
+    if not slugs:
+        # Sem nenhuma trilha atribuída: ignora qualquer progresso/quiz órfão de uma trilha
+        # antiga, mesmo se pedido explicitamente via ?course_slug=.
+        raise NoTrilhaAssignedError()
     if course_slug:
         if course_slug not in slugs and not db.progress.find_one({"user_id": uid, "course_slug": course_slug}):
             raise HTTPException(status_code=404, detail="Trilha nao encontrada para este usuario")
     else:
-        if not slugs:
-            raise NoTrilhaAssignedError()
         course_slug = slugs[0]
     course = db.courses.find_one({"slug": course_slug})
     if not course:

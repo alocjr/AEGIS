@@ -101,9 +101,9 @@ def logout(response: Response):
 
 @router.get("/me")
 def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
-    from_progress = db.progress.distinct("course_slug", {"user_id": user["_id"]})
-    from_user = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
-    course_slugs = list(dict.fromkeys(from_progress + from_user))
+    # Fonte única de verdade: user.course_slugs (idem course.py/progress.py/admin.py). Não
+    # inferir trilhas de `progress` sobrando de um `course_slug` já removido do usuário.
+    course_slugs = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
     return {
         **_user_payload(user, db),
         "course_slugs": course_slugs,

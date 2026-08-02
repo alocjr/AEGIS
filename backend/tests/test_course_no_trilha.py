@@ -9,6 +9,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 
 from app.routes import admin as admin_routes
+from app.routes import auth as auth_routes
 from app.routes import course as course_routes
 from app.routes import progress as progress_routes
 from app.schemas import AdminCreateUserRequest, AdminUpdateUserRequest, LiberarEncontroRequest
@@ -16,10 +17,19 @@ from app.schemas import AdminCreateUserRequest, AdminUpdateUserRequest, LiberarE
 
 def _matches(doc: dict, flt: dict | None) -> bool:
     for key, expected in (flt or {}).items():
-        if isinstance(expected, dict) and "$ne" in expected:
-            if doc.get(key) == expected["$ne"]:
+        if key == "$or":
+            if not any(_matches(doc, sub) for sub in expected):
                 return False
             continue
+        if isinstance(expected, dict):
+            if "$ne" in expected:
+                if doc.get(key) == expected["$ne"]:
+                    return False
+                continue
+            if "$exists" in expected:
+                if (key in doc) != expected["$exists"]:
+                    return False
+                continue
         if doc.get(key) != expected:
             return False
     return True
@@ -62,6 +72,30 @@ class _Collection:
 
     def count_documents(self, flt: dict | None = None) -> int:
         return len([d for d in self.docs if _matches(d, flt)])
+
+    def aggregate(self, pipeline: list[dict]):
+        docs = list(self.docs)
+        for stage in pipeline:
+            group = stage.get("$group")
+            if not group:
+                continue
+            id_expr = group["_id"]
+            buckets: dict = {}
+            for d in docs:
+                key = d.get(id_expr[1:]) if isinstance(id_expr, str) and id_expr.startswith("$") else id_expr
+                buckets.setdefault(key, []).append(d)
+            docs = []
+            for key, group_docs in buckets.items():
+                row = {"_id": key}
+                for field, expr in group.items():
+                    if field == "_id":
+                        continue
+                    sum_expr = expr.get("$sum")
+                    row[field] = len(group_docs) if sum_expr == 1 else sum(
+                        d.get(str(sum_expr).lstrip("$"), 0) for d in group_docs
+                    )
+                docs.append(row)
+        return docs
 
 
 class _FakeDb:
@@ -275,6 +309,82 @@ class AdminUpdateUserClearTrilhaTests(unittest.TestCase):
         stored = db.users.find_one({"_id": member["_id"]})
         self.assertEqual(stored["course_slugs"], [])
         self.assertIsNone(stored["course_slug"])
+
+
+class AuthMeCourseSlugsTests(unittest.TestCase):
+    """`/api/auth/me` deve refletir só `user.course_slugs` — nunca ressuscitar uma trilha a
+    partir de um documento de `progress` órfão (ex.: deixado por uma trilha já removida)."""
+
+    def test_courseless_user_with_orphan_progress_reports_no_trilha(self) -> None:
+        db = _FakeDb()
+        user = _user()
+        db.users.insert_one(user)
+        db.progress.insert_one({"_id": ObjectId(), "user_id": user["_id"], "course_slug": "trilha-antiga"})
+
+        result = auth_routes.me(user=user, db=db)
+
+        self.assertEqual(result["course_slugs"], [])
+
+    def test_user_with_trilha_reports_only_assigned_slugs(self) -> None:
+        db = _FakeDb()
+        user = _user(course_slugs=["trilha-a"])
+        db.users.insert_one(user)
+        db.progress.insert_one({"_id": ObjectId(), "user_id": user["_id"], "course_slug": "trilha-a"})
+        db.progress.insert_one({"_id": ObjectId(), "user_id": user["_id"], "course_slug": "trilha-orfa"})
+
+        result = auth_routes.me(user=user, db=db)
+
+        self.assertEqual(result["course_slugs"], ["trilha-a"])
+
+
+class AdminDashboardIgnoresCourselessUsersTests(unittest.TestCase):
+    """Membro sem trilha nunca aparece como "aluno" no dashboard, mesmo com progresso ou
+    respostas de quiz órfãos de uma trilha que ele já teve (ou nunca deveria ter tido)."""
+
+    def test_courseless_member_excluded_but_org_stats_kept(self) -> None:
+        db = _FakeDb()
+        org_id = ObjectId()
+        db.organizations.insert_one({"_id": org_id, "name": "Empresa X"})
+        member = _user(organization_id=org_id)
+        db.users.insert_one(member)
+        db.progress.insert_one({"user_id": member["_id"], "course_slug": "trilha-antiga", "concluidos": [1, 2]})
+        db.quiz_responses.insert_one({"user_id": member["_id"], "encontro": 1})
+        db.swot_analyses.insert_one({"organization_id": org_id, "forcas": [{"descricao": "x"}]})
+
+        result = admin_routes.get_dashboard(admin=_user(is_admin=True), db=db)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["members"], [])
+        self.assertTrue(result[0]["swot_filled"])
+
+    def test_member_with_trilha_still_appears(self) -> None:
+        db = _FakeDb()
+        org_id = ObjectId()
+        member = _user(organization_id=org_id, course_slugs=["trilha-a"])
+        db.users.insert_one(member)
+        db.courses.insert_one(_course("trilha-a"))
+        db.progress.insert_one({"user_id": member["_id"], "course_slug": "trilha-a", "concluidos": [1]})
+
+        result = admin_routes.get_dashboard(admin=_user(is_admin=True), db=db)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result[0]["members"]), 1)
+        self.assertEqual(result[0]["members"][0]["encontros_done"], 1)
+
+
+class AdminCourseAndProgressIgnoresOrphanHistoryTests(unittest.TestCase):
+    def test_courseless_user_raises_even_with_explicit_orphan_slug(self) -> None:
+        db = _FakeDb()
+        admin = _user(is_admin=True)
+        target = _user()
+        db.users.insert_one(target)
+        db.progress.insert_one({"user_id": target["_id"], "course_slug": "trilha-antiga", "concluidos": [1, 2, 3]})
+
+        with self.assertRaises(course_routes.NoTrilhaAssignedError) as ctx:
+            admin_routes.get_user_course_and_progress(
+                str(target["_id"]), admin=admin, db=db, course_slug="trilha-antiga"
+            )
+        self.assertEqual(ctx.exception.detail["code"], "NO_TRILHA_ASSIGNED")
 
 
 if __name__ == "__main__":
