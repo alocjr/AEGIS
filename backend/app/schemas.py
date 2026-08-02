@@ -141,6 +141,18 @@ class SwotInitiative(BaseModel):
     itens_externos: list[str] = Field(default_factory=list, max_length=10)
 
 
+class SwotWatchlistItem(BaseModel):
+    """Ponto de Atenção (nota 3) — fora do SWOT/TOWS, gerado pelo Modelo de Maturidade."""
+
+    id: str = Field(default="", max_length=64)
+    texto: str = Field(default="", max_length=500)
+    pilar: str = Field(default="", max_length=40)
+    dimensao: str = Field(default="", max_length=120)
+    nota: int | None = Field(None, ge=1, le=5)
+    evidencia: str = Field(default="", max_length=1000)
+    swotCategory: str | None = Field(None, max_length=40)
+
+
 class SwotAnalysisUpdateRequest(BaseModel):
     optica: str | None = Field(None, max_length=2000)
     pilares: SwotPilaresPorQuadrante | None = None
@@ -148,6 +160,7 @@ class SwotAnalysisUpdateRequest(BaseModel):
     fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
     oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)
     ameacas: list[SwotItem | str] | None = Field(None, max_length=40)
+    watchlist: list[SwotWatchlistItem] | None = Field(None, max_length=48)
     tows_fo: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fa: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fxo: list[SwotInitiative] | None = Field(None, max_length=20)
@@ -170,6 +183,7 @@ class SwotImportRequest(BaseModel):
     fraquezas: list[SwotItem | str] | None = Field(None, max_length=40)
     oportunidades: list[SwotItem | str] | None = Field(None, max_length=40)
     ameacas: list[SwotItem | str] | None = Field(None, max_length=40)
+    watchlist: list[SwotWatchlistItem] | None = Field(None, max_length=48)
     tows_fo: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fa: list[SwotInitiative] | None = Field(None, max_length=20)
     tows_fxo: list[SwotInitiative] | None = Field(None, max_length=20)

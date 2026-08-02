@@ -25,6 +25,23 @@ export interface MaturitySwotFramework {
   description?: string
   categories?: Record<string, MaturitySwotCategoryConfig>
   aggregation_logic?: string[]
+  labels_note?: string
+}
+
+export interface MaturityTowsQuadrantConfig {
+  label?: string
+  type?: string
+  rationale?: string
+  trigger?: string
+}
+
+export interface MaturityTowsFramework {
+  description?: string
+  quadrants?: Record<string, MaturityTowsQuadrantConfig>
+  generation_logic?: string[]
+  pairing_note?: string
+  opportunity_sources?: string[]
+  threat_sources?: string[]
 }
 
 export interface MaturityQuestion {
@@ -38,6 +55,10 @@ export interface MaturityQuestion {
   ref?: string | null
   /** Categoria-ponte do swotFramework (modelo v3+). */
   swotCategory?: MaturitySwotCategory | null
+  /** Texto pronto por quadrante SWOT (strength, weakness, opportunity, threat, watchlist). */
+  swotLabels?: Partial<Record<string, string>> | null
+  /** Estratégias TOWS ancoradas na pergunta (SO, ST, WO, WT). */
+  towsLabels?: Partial<Record<'SO' | 'ST' | 'WO' | 'WT' | string, string>> | null
   levels: Record<string, string>
 }
 
@@ -77,6 +98,8 @@ export interface MaturityModel {
   overlaps?: MaturityOverlap[]
   /** Regras de agregação pergunta → quadrantes SWOT. */
   swotFramework?: MaturitySwotFramework
+  /** Regras de geração da matriz TOWS a partir do SWOT. */
+  towsFramework?: MaturityTowsFramework
 }
 
 export interface MaturityResult {

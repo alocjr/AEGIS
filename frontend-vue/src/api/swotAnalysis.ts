@@ -46,6 +46,17 @@ export interface SwotInitiative {
   itens_externos?: string[]
 }
 
+/** Pontos de Atenção (nota 3) — fora do SWOT/TOWS. */
+export interface SwotWatchlistItem {
+  id: string
+  texto: string
+  pilar: string
+  dimensao: string
+  nota: number | null
+  evidencia: string
+  swotCategory?: string | null
+}
+
 export interface SwotAnalysis {
   id: string
   maturity_response_id?: string | null
@@ -55,6 +66,7 @@ export interface SwotAnalysis {
   fraquezas: SwotItem[]
   oportunidades: SwotItem[]
   ameacas: SwotItem[]
+  watchlist?: SwotWatchlistItem[]
   tows_fo: SwotInitiative[]
   tows_fa: SwotInitiative[]
   tows_fxo: SwotInitiative[]
@@ -73,6 +85,7 @@ export type SwotAnalysisPayload = Partial<{
   fraquezas: SwotItem[]
   oportunidades: SwotItem[]
   ameacas: SwotItem[]
+  watchlist: SwotWatchlistItem[]
   tows_fo: SwotInitiative[]
   tows_fa: SwotInitiative[]
   tows_fxo: SwotInitiative[]

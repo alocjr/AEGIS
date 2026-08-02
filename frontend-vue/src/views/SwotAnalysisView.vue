@@ -21,6 +21,7 @@ import {
   type SwotPilarSlot,
   type SwotPilaresPorQuadrante,
   type SwotImportDocument,
+  type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
 
 const route = useRoute()
@@ -39,6 +40,8 @@ const customPillarDraft = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const currentSwotId = ref<string | null>(null)
 const maturityResponseId = ref<string | null>(null)
+/** Pontos de Atenção (nota 3) — só leitura; fora do form de autosave. */
+const watchlist = ref<SwotWatchlistItem[]>([])
 let saving = false
 let pendingSave = false
 
@@ -378,6 +381,17 @@ function setDraft(field: SwotListField, pilar: string, value: string) {
 function applyDoc(doc: SwotAnalysis) {
   currentSwotId.value = doc.id
   maturityResponseId.value = doc.maturity_response_id || null
+  watchlist.value = Array.isArray(doc.watchlist)
+    ? doc.watchlist.map((w) => ({
+        id: w.id || '',
+        texto: w.texto || '',
+        pilar: w.pilar || '',
+        dimensao: w.dimensao || '',
+        nota: w.nota ?? null,
+        evidencia: w.evidencia || '',
+        swotCategory: w.swotCategory ?? null,
+      }))
+    : []
   form.value = {
     optica: doc.optica || '',
     pilares: normalizePilares(doc.pilares),
@@ -398,6 +412,32 @@ function applyDoc(doc: SwotAnalysis) {
     void router.replace({ name: 'SwotAnalysis', params: { id: doc.id } })
   }
 }
+
+function pillarLabel(pilarId: string): string {
+  const id = (pilarId || '').trim().toLowerCase()
+  if (!id) return ''
+  return PILLAR_BY_ID[id as Exclude<SwotPilarId, ''>]?.name || pilarId
+}
+
+const watchlistGroups = computed(() => {
+  const groups: { dimensao: string; items: SwotWatchlistItem[] }[] = []
+  const index = new Map<string, number>()
+  for (const item of watchlist.value) {
+    const dim = (item.dimensao || '').trim() || 'Outros'
+    let i = index.get(dim)
+    if (i === undefined) {
+      i = groups.length
+      index.set(dim, i)
+      groups.push({ dimensao: dim, items: [] })
+    }
+    groups[i].items.push(item)
+  }
+  return groups
+})
+
+const hasWatchlist = computed(() => watchlist.value.length > 0)
+const towsStep = computed(() => (hasWatchlist.value ? 4 : 3))
+const verdictStep = computed(() => (hasWatchlist.value ? 5 : 4))
 
 async function loadSwot() {
   loading.value = true
@@ -768,6 +808,10 @@ onUnmounted(() => {
               <strong>Baseado em evidência.</strong> Cada item ancorado em fato, métrica ou nível observado no
               diagnóstico (escala 1–5) — priorize por impacto (ideal: 2–3 por quadrante).
             </li>
+            <li>
+              <strong>Nota 3 fica à parte.</strong> Respostas intermediárias do diagnóstico vão para
+              <em>Pontos de Atenção</em> (watchlist) — não entram no SWOT nem no TOWS; acompanhe no próximo ciclo.
+            </li>
           </ul>
           <ol class="steps">
             <li>
@@ -783,7 +827,9 @@ onUnmounted(() => {
               <strong>Priorize.</strong> Fique com os 2–3 itens mais fortes de cada quadrante (impacto ×
               viabilidade ou probabilidade, na mesma escala 1–5).
             </li>
-            <li><strong>Cruze e conclua.</strong> TOWS → iniciativas → veredito.</li>
+            <li>
+              <strong>Revise os Pontos de Atenção</strong> (nota 3) e cruze o TOWS → iniciativas → veredito.
+            </li>
           </ol>
           <button type="button" class="catalog-toggle" @click="showCatalog = !showCatalog">
             {{ showCatalog ? 'Ocultar banco de itens' : 'Ver banco de itens (partida)' }}
@@ -969,9 +1015,36 @@ onUnmounted(() => {
         </div>
       </section>
 
+      <section v-if="hasWatchlist" class="watchlist-block">
+        <div class="section-head">
+          <div class="eyebrow">3 · Pontos de Atenção</div>
+          <h2>Watchlist · nota 3</h2>
+          <p class="hint">
+            Áreas em maturação vindas do Modelo de Maturidade. Ficam fora do SWOT e do TOWS — monitore no próximo
+            ciclo; podem virar Força ou Fraqueza.
+          </p>
+        </div>
+        <div class="watchlist">
+          <div v-for="group in watchlistGroups" :key="group.dimensao" class="watchlist-group">
+            <div class="watchlist-dim">{{ group.dimensao }}</div>
+            <ul class="watchlist-list">
+              <li v-for="item in group.items" :key="item.id || item.texto" class="watchlist-item">
+                <div class="watchlist-meta">
+                  <span v-if="item.id" class="watchlist-code">{{ item.id }}</span>
+                  <span v-if="item.pilar" class="watchlist-pillar">{{ pillarLabel(item.pilar) }}</span>
+                  <span v-if="item.nota != null" class="watchlist-nota">N{{ item.nota }}</span>
+                </div>
+                <p class="watchlist-text">{{ item.texto }}</p>
+                <p v-if="item.evidencia" class="watchlist-evidence">{{ item.evidencia }}</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section class="tows-block">
         <div class="section-head">
-          <div class="eyebrow">3 · Cruzamento TOWS</div>
+          <div class="eyebrow">{{ towsStep }} · Cruzamento TOWS</div>
           <h2>Do diagnóstico à decisão</h2>
           <p class="hint">
             Cada cruzamento vira uma iniciativa (ação, dono, horizonte). Comece pelo f × A — é onde a estratégia pode
@@ -1015,7 +1088,7 @@ onUnmounted(() => {
       </section>
 
       <section class="verdict">
-        <div class="eyebrow gold">4 · Veredito</div>
+        <div class="eyebrow gold">{{ verdictStep }} · Veredito</div>
         <p class="verdict-lead">
           À luz das forças/fraquezas internas (e do nível de maturidade observado), a estratégia se sustenta,
           precisa de uma fase de fundação, ou deve ser repensada?
@@ -1863,6 +1936,81 @@ onUnmounted(() => {
   width: 100%;
   padding: 7px 10px;
   font-size: 12px;
+}
+.watchlist-block {
+  margin-bottom: 28px;
+}
+.watchlist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.watchlist-group {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px 16px 12px;
+}
+.watchlist-dim {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.watchlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.watchlist-item {
+  border-top: 1px solid rgba(14, 27, 51, 0.08);
+  padding-top: 10px;
+}
+.watchlist-item:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.watchlist-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.watchlist-code {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+}
+.watchlist-pillar,
+.watchlist-nota {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.watchlist-nota {
+  color: var(--oxblood);
+}
+.watchlist-text {
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.watchlist-evidence {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  font-style: italic;
 }
 .tows {
   display: grid;

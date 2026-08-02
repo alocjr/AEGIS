@@ -18,6 +18,7 @@ from app.schemas import (
     SwotInitiative,
     SwotItem,
     SwotPilaresPorQuadrante,
+    SwotWatchlistItem,
 )
 from app.swot_from_maturity import build_swot_fields_from_maturity
 
@@ -50,6 +51,7 @@ _EMPTY_FIELDS = {
     "fraquezas": [],
     "oportunidades": [],
     "ameacas": [],
+    "watchlist": [],
     "tows_fo": [],
     "tows_fa": [],
     "tows_fxo": [],
@@ -271,6 +273,50 @@ def _as_pilares(doc: dict) -> dict:
     return _clean_pilares(raw)
 
 
+def _clean_watchlist(value) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    out: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        if isinstance(raw, SwotWatchlistItem):
+            data = raw.model_dump()
+        elif isinstance(raw, dict):
+            data = raw
+        else:
+            continue
+        item_id = str(data.get("id") or "").strip()[:64]
+        texto = str(data.get("texto") or "").strip()[:500]
+        if not texto:
+            continue
+        if item_id and item_id in seen:
+            continue
+        if item_id:
+            seen.add(item_id)
+        nota = data.get("nota")
+        try:
+            nota_n = int(nota) if nota is not None and nota != "" else None
+        except (TypeError, ValueError):
+            nota_n = None
+        if nota_n is not None and (nota_n < 1 or nota_n > 5):
+            nota_n = None
+        cat = str(data.get("swotCategory") or data.get("swot_category") or "").strip()[:40]
+        out.append(
+            {
+                "id": item_id,
+                "texto": texto,
+                "pilar": str(data.get("pilar") or "").strip().lower()[:40],
+                "dimensao": str(data.get("dimensao") or "").strip()[:120],
+                "nota": nota_n,
+                "evidencia": str(data.get("evidencia") or "").strip()[:1000],
+                "swotCategory": cat or None,
+            }
+        )
+        if len(out) >= 48:
+            break
+    return out
+
+
 def _to_item(doc: dict) -> dict:
     created_at = doc.get("created_at")
     updated_at = doc.get("updated_at")
@@ -284,6 +330,7 @@ def _to_item(doc: dict) -> dict:
         "fraquezas": _as_item_list(doc.get("fraquezas"), "fraquezas"),
         "oportunidades": _as_item_list(doc.get("oportunidades"), "oportunidades"),
         "ameacas": _as_item_list(doc.get("ameacas"), "ameacas"),
+        "watchlist": _clean_watchlist(doc.get("watchlist")),
         "tows_fo": _as_initiatives(doc.get("tows_fo")),
         "tows_fa": _as_initiatives(doc.get("tows_fa")),
         "tows_fxo": _as_initiatives(doc.get("tows_fxo")),
@@ -345,6 +392,9 @@ def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> 
 
     if "pilares" in updates:
         updates["pilares"] = _clean_pilares(getattr(body, "pilares", None))
+
+    if "watchlist" in updates:
+        updates["watchlist"] = _clean_watchlist(getattr(body, "watchlist", None))
 
     if "optica" in updates:
         updates["optica"] = (updates.get("optica") or "").strip()[:2000]
@@ -460,9 +510,21 @@ def create_swot_from_maturity(
     if not maturity:
         raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
 
-    from app.routes.maturity import _load_model, _normalize_tier, _questions_for_tier
+    from app.routes.maturity import (
+        _load_model,
+        _normalize_tier,
+        _questions_for_tier,
+        _serialize_model,
+    )
 
-    model = _load_model(db)
+    # Preferir o modelo com o qual a resposta foi gravada (labels swotLabels/towsLabels)
+    model_doc = None
+    model_id = maturity.get("model_id")
+    if model_id:
+        model_doc = db.ai_maturity_model.find_one({"_id": model_id})
+    model = _serialize_model(model_doc) if model_doc else _load_model(db)
+    if not model.get("dimensions"):
+        model = _load_model(db)
     tier = _normalize_tier(maturity.get("tier") or "basico")
     answers_raw = maturity.get("answers") or {}
     answers: dict[str, int] = {}
@@ -557,6 +619,7 @@ def import_swot(
         fraquezas=payload.fraquezas if payload.fraquezas is not None else [],
         oportunidades=payload.oportunidades if payload.oportunidades is not None else [],
         ameacas=payload.ameacas if payload.ameacas is not None else [],
+        watchlist=payload.watchlist if payload.watchlist is not None else [],
         tows_fo=payload.tows_fo if payload.tows_fo is not None else [],
         tows_fa=payload.tows_fa if payload.tows_fa is not None else [],
         tows_fxo=payload.tows_fxo if payload.tows_fxo is not None else [],

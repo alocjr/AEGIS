@@ -43,7 +43,20 @@
             "4": "A liderança conecta IA a OKRs específicos e acompanha indicadores de impacto nas áreas onde já foi implementada.",
             "5": "IA é parte central da estratégia de receita da empresa, com OKRs mensuráveis e revisão contínua pelo C-level."
           },
-          "swotCategory": "market_strategy"
+          "swotCategory": "market_strategy",
+          "swotLabels": {
+            "strength": "Liderança com visão clara do impacto da IA em receita e OKRs",
+            "weakness": "Liderança sem conexão entre IA e resultados de negócio",
+            "opportunity": "Visão de receita via IA permite capturar valor de mercado antes dos concorrentes",
+            "threat": "Concorrentes com visão de receita via IA podem abrir vantagem competitiva",
+            "watchlist": "Conexão entre IA e receita ainda em construção pela liderança"
+          },
+          "towsLabels": {
+            "SO": "Usar a visão de receita da liderança para priorizar os casos de uso de IA com maior retorno de mercado",
+            "ST": "Apoiar-se na visão da liderança para responder rapidamente a movimentos de concorrentes em IA",
+            "WO": "Construir a visão de receita via IA na liderança antes que a janela de mercado se feche",
+            "WT": "Alinhar a liderança sobre o impacto da IA no negócio para evitar perda de posição competitiva"
+          }
         },
         {
           "id": "EV2",
@@ -61,7 +74,18 @@
             "4": "O roadmap está aprovado, com fases, responsáveis e investimentos definidos, e em execução.",
             "5": "O roadmap é um documento vivo, revisado periodicamente pelo Board, com ajustes ágeis conforme os resultados obtidos."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Roadmap de IA aprovado pelo Board e em execução",
+            "weakness": "Ausência de roadmap de IA; ações reativas e sem planejamento",
+            "watchlist": "Roadmap de IA em elaboração, aguardando validação do Board"
+          },
+          "towsLabels": {
+            "SO": "Usar o roadmap aprovado para sequenciar a captura das oportunidades de IA já identificadas",
+            "ST": "Antecipar no cronograma do roadmap as frentes de mitigação de risco",
+            "WO": "Formalizar um roadmap de IA para transformar oportunidades identificadas em execução",
+            "WT": "Criar roadmap com marcos de conformidade para não deixar riscos sem prazo de tratamento"
+          }
         },
         {
           "id": "EV3",
@@ -79,7 +103,18 @@
             "4": "O framework é aplicado de forma consistente para priorizar projetos de IA.",
             "5": "O framework está institucionalizado, é usado em todas as decisões de investimento e inclui revisão contínua de ROI."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Investimentos em IA priorizados por framework de impacto vs. viabilidade",
+            "weakness": "Investimentos em IA decididos de forma ad hoc, sem critério formal",
+            "watchlist": "Framework de priorização de investimentos em IA em desenho"
+          },
+          "towsLabels": {
+            "SO": "Aplicar o framework de priorização para direcionar capital às oportunidades de maior impacto",
+            "ST": "Usar o framework para justificar investimento em mitigação de risco com critério objetivo",
+            "WO": "Definir critérios de priorização para não dispersar investimento e perder as melhores oportunidades",
+            "WT": "Adotar framework de priorização para garantir orçamento às frentes críticas de risco"
+          }
         },
         {
           "id": "EV4",
@@ -97,7 +132,18 @@
             "4": "Existe um rito de acompanhamento, mas é irregular ou nem sempre reúne todos os decisores relevantes.",
             "5": "Há um rito formal e recorrente de acompanhamento de resultados de IA pela alta gestão, com decisores presentes."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Alta gestão com rito formal e recorrente de cobrança de resultados de IA",
+            "weakness": "Ausência de cobrança formal de resultados de IA pela alta gestão",
+            "watchlist": "Acompanhamento de resultados de IA sem rito ou periodicidade definida"
+          },
+          "towsLabels": {
+            "SO": "Usar o rito de acompanhamento para acelerar decisões sobre novas oportunidades de IA",
+            "ST": "Levar os riscos de IA ao rito existente para tratamento com os decisores presentes",
+            "WO": "Criar rito de cobrança para que oportunidades de IA não percam tração por falta de dono",
+            "WT": "Instituir rito de acompanhamento para dar visibilidade executiva aos riscos de IA"
+          }
         },
         {
           "id": "EV5",
@@ -115,7 +161,18 @@
             "4": "O orçamento cobre a maior parte do custo total (implementação, integração, manutenção, capacitação), com lacunas pontuais.",
             "5": "O orçamento cobre o custo total de ponta a ponta — implementação, integração, manutenção e capacitação."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Orçamento de IA cobre o custo total das iniciativas, de ponta a ponta",
+            "weakness": "Orçamento de IA inexistente ou restrito à ferramenta, sem visão de custo total",
+            "watchlist": "Orçamento de IA cobre parcialmente o custo total das iniciativas"
+          },
+          "towsLabels": {
+            "SO": "Usar o orçamento completo para escalar rapidamente as iniciativas que provarem retorno",
+            "ST": "Garantir no orçamento a verba de manutenção que sustenta os controles de risco ao longo do tempo",
+            "WO": "Dimensionar orçamento de custo total para evitar que projetos promissores parem na integração",
+            "WT": "Prever custos de conformidade e manutenção no orçamento para não acumular risco técnico"
+          }
         },
         {
           "id": "EV6",
@@ -133,7 +190,18 @@
             "4": "A métrica é divulgada e usada na maioria dos relatórios e decisões sobre IA.",
             "5": "Existe uma métrica oficial, divulgada e usada de forma consistente em todos os relatórios da empresa."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Métrica oficial de sucesso de IA adotada de forma consistente na empresa",
+            "weakness": "Ausência de métrica oficial para medir o sucesso das iniciativas de IA",
+            "watchlist": "Métrica oficial de IA existe, mas com divulgação e uso limitados"
+          },
+          "towsLabels": {
+            "SO": "Usar a métrica oficial para comprovar retorno e destravar investimento nas próximas oportunidades",
+            "ST": "Usar a métrica oficial para expor precocemente iniciativas de IA que estejam gerando risco",
+            "WO": "Definir métrica oficial de sucesso para sustentar o caso de investimento em novas oportunidades",
+            "WT": "Estabelecer métrica oficial para detectar falhas de IA antes que se tornem incidentes"
+          }
         },
         {
           "id": "EV7",
@@ -151,7 +219,18 @@
             "4": "A linha própria está consolidada, com pequenos ajustes ao longo do ano.",
             "5": "A linha própria é planejada, previsível e revisada como parte do ciclo orçamentário formal."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "IA com linha orçamentária própria, previsível e revisada no ciclo formal",
+            "weakness": "IA sem orçamento próprio, dependente de verba genérica de TI ou inovação",
+            "watchlist": "Linha orçamentária própria de IA recém-criada ou ainda parcial"
+          },
+          "towsLabels": {
+            "SO": "Usar a previsibilidade orçamentária para assumir oportunidades de IA de ciclo mais longo",
+            "ST": "Assegurar verba dedicada e recorrente para as frentes de mitigação de risco",
+            "WO": "Criar linha orçamentária própria para dar previsibilidade à captura de oportunidades",
+            "WT": "Separar o orçamento de IA para que frentes de risco não concorram com demandas gerais de TI"
+          }
         },
         {
           "id": "EV8",
@@ -169,7 +248,18 @@
             "4": "É aplicado à maioria dos projetos de IA, com exceções pontuais.",
             "5": "É aplicado de forma consistente a todos os projetos de IA da empresa."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Projetos de IA acompanhados por metodologia ou comitê formal padronizado",
+            "weakness": "Projetos de IA sem metodologia ou comitê formal de acompanhamento",
+            "watchlist": "Metodologia de gestão de projetos de IA aplicada de forma inconsistente"
+          },
+          "towsLabels": {
+            "SO": "Usar o comitê de projetos para encurtar o time-to-market das iniciativas de IA",
+            "ST": "Incluir checkpoints de risco no comitê de projetos já existente",
+            "WO": "Formalizar a gestão de projetos para que oportunidades não se percam na execução",
+            "WT": "Instituir comitê de projetos com gates de conformidade antes de cada entrega"
+          }
         },
         {
           "id": "EV9",
@@ -187,7 +277,20 @@
             "4": "O plano estratégico detalha IA, mas ainda sem metas próprias e mensuráveis.",
             "5": "IA é um pilar explícito do plano estratégico, com metas próprias e mensuráveis."
           },
-          "swotCategory": "market_strategy"
+          "swotCategory": "market_strategy",
+          "swotLabels": {
+            "strength": "IA formalizada como pilar do plano estratégico, com metas mensuráveis",
+            "weakness": "IA ausente do plano estratégico oficial da empresa",
+            "opportunity": "IA no plano estratégico habilita novos modelos de receita e expansão",
+            "threat": "Ausência de IA na estratégia formal cede espaço a concorrentes mais estruturados",
+            "watchlist": "IA mencionada no plano estratégico, ainda sem metas próprias"
+          },
+          "towsLabels": {
+            "SO": "Usar a posição da IA no plano estratégico para abrir novas frentes de receita",
+            "ST": "Usar as metas estratégicas de IA para sustentar investimento defensivo frente a concorrentes",
+            "WO": "Incorporar IA ao plano estratégico para viabilizar a captura das oportunidades de mercado",
+            "WT": "Formalizar IA na estratégia para não ceder posição a concorrentes mais estruturados"
+          }
         },
         {
           "id": "EV10",
@@ -205,7 +308,20 @@
             "4": "A coerência existe na maioria dos projetos, com exceções raras.",
             "5": "A coerência é clara e consistente, sendo usada inclusive na narrativa de marca da empresa."
           },
-          "swotCategory": "market_strategy"
+          "swotCategory": "market_strategy",
+          "swotLabels": {
+            "strength": "Projetos de IA coerentes com os valores e o discurso público da marca",
+            "weakness": "Iniciativas de IA destoam do discurso institucional divulgado publicamente",
+            "opportunity": "Coerência entre IA e marca pode se tornar diferencial reputacional no mercado",
+            "threat": "Descolamento entre IA e discurso público expõe a marca a desgaste reputacional",
+            "watchlist": "Coerência entre projetos de IA e discurso institucional ainda parcial"
+          },
+          "towsLabels": {
+            "SO": "Transformar a coerência entre IA e marca em diferencial de posicionamento no mercado",
+            "ST": "Usar a coerência de discurso como proteção reputacional em episódios críticos de IA",
+            "WO": "Alinhar os projetos de IA ao discurso da marca para poder comunicá-los publicamente",
+            "WT": "Corrigir o descolamento entre IA e discurso público para reduzir risco reputacional"
+          }
         },
         {
           "id": "EV11",
@@ -223,7 +339,18 @@
             "4": "O programa está ativo e é conhecido, mas o engajamento ainda se concentra em poucas áreas.",
             "5": "O programa é maduro, com incentivo formal e histórico consistente de resultados."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Programa formal de inovação em IA maduro, com resultados consistentes",
+            "weakness": "Inovação em IA dependente exclusivamente de iniciativa individual",
+            "watchlist": "Programa de inovação em IA existente, mas pouco maduro ou divulgado"
+          },
+          "towsLabels": {
+            "SO": "Usar o programa de inovação para gerar continuamente novos casos de uso de IA",
+            "ST": "Direcionar o programa de inovação para soluções que reduzam os riscos identificados",
+            "WO": "Institucionalizar a inovação para não depender de iniciativas isoladas na captura de oportunidades",
+            "WT": "Criar canal formal de inovação para substituir a experimentação informal e não controlada"
+          }
         }
       ]
     },
@@ -247,7 +374,18 @@
             "4": "Os dados estão centralizados e utilizáveis na maioria das áreas relevantes da empresa.",
             "5": "Os dados estão totalmente centralizados, limpos, com qualidade monitorada continuamente e prontos para consumo por modelos de IA."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Dados proprietários centralizados, limpos e prontos para consumo por IA",
+            "weakness": "Dados dispersos em silos, sem padronização e de difícil acesso",
+            "watchlist": "Projeto de centralização e limpeza de dados em fase inicial"
+          },
+          "towsLabels": {
+            "SO": "Explorar a base de dados proprietária como ativo diferencial em novos produtos de IA",
+            "ST": "Usar a centralização dos dados para responder rapidamente a exigências de auditoria",
+            "WO": "Centralizar e limpar os dados para viabilizar os casos de uso de IA de maior valor",
+            "WT": "Organizar a base de dados para reduzir risco de decisão errada e de não conformidade"
+          }
         },
         {
           "id": "DI2",
@@ -265,7 +403,18 @@
             "4": "A arquitetura moderna já está implementada e suporta parte dos casos de uso de IA.",
             "5": "A arquitetura é madura e escalável, suportando RAG e IA em tempo real em produção."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Arquitetura de dados moderna suportando RAG e IA em tempo real",
+            "weakness": "Arquitetura de dados legada, incompatível com cargas de IA moderna",
+            "watchlist": "Piloto de arquitetura moderna (Lakehouse/Mesh) em construção"
+          },
+          "towsLabels": {
+            "SO": "Usar a arquitetura moderna para lançar casos de uso de IA em tempo real antes do mercado",
+            "ST": "Apoiar-se na arquitetura moderna para implementar controles e rastreabilidade nativos",
+            "WO": "Modernizar a arquitetura de dados para destravar os casos de uso de IA mais valiosos",
+            "WT": "Substituir a arquitetura legada para reduzir risco de indisponibilidade e retrabalho"
+          }
         },
         {
           "id": "DI3",
@@ -283,7 +432,19 @@
             "4": "A governança está implementada na maioria dos projetos, com checkpoints de conformidade LGPD.",
             "5": "A governança de dados é madura, auditável, e a conformidade com a LGPD é embutida por padrão em todos os projetos."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Governança de dados madura, com conformidade LGPD embutida por padrão",
+            "weakness": "Ausência de processo formal de governança de dados e conformidade LGPD",
+            "threat": "Exposição a sanções da LGPD e a responsabilização por uso indevido de dados",
+            "watchlist": "Processo de governança de dados e mapeamento de gaps de LGPD em definição"
+          },
+          "towsLabels": {
+            "SO": "Usar a maturidade em LGPD como credencial comercial em mercados regulados",
+            "ST": "Manter a conformidade LGPD embutida por padrão para neutralizar risco de sanção regulatória",
+            "WO": "Estruturar governança de dados e LGPD para poder usar dados proprietários em novos produtos",
+            "WT": "Priorizar conformidade LGPD para eliminar exposição a sanções e responsabilização"
+          }
         },
         {
           "id": "DI4",
@@ -301,7 +462,18 @@
             "4": "Os dados são confiáveis na quase totalidade dos casos; exceções são raras e já mapeadas.",
             "5": "Os dados são confiáveis por padrão, com controle de qualidade automatizado e monitorado."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Dados confiáveis por padrão, com controle de qualidade automatizado",
+            "weakness": "Desconfiança nos dados exige reconferência manual antes de cada decisão",
+            "watchlist": "Dados confiáveis na maior parte dos casos, com exceções conhecidas"
+          },
+          "towsLabels": {
+            "SO": "Usar a confiabilidade dos dados para acelerar decisões sobre novas oportunidades",
+            "ST": "Apoiar-se no controle de qualidade automatizado para evitar decisões baseadas em dado errado",
+            "WO": "Elevar a confiabilidade dos dados para sustentar decisões de expansão com segurança",
+            "WT": "Corrigir a qualidade dos dados para reduzir risco de decisão equivocada em escala"
+          }
         },
         {
           "id": "DI5",
@@ -319,7 +491,18 @@
             "4": "Escala com pouca intervenção manual, geralmente planejada com antecedência.",
             "5": "Escala automaticamente conforme a demanda, sem necessidade de intervenção manual."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Infraestrutura escala automaticamente conforme a demanda de IA",
+            "weakness": "Infraestrutura sem folga; crescimento no uso de IA exigiria projeto emergencial",
+            "watchlist": "Infraestrutura escala, mas ainda depende de intervenção manual de TI"
+          },
+          "towsLabels": {
+            "SO": "Usar a elasticidade da infraestrutura para escalar rapidamente os casos de uso bem-sucedidos",
+            "ST": "Manter folga de capacidade para absorver picos sem comprometer a operação",
+            "WO": "Preparar a infraestrutura para escalar antes de assumir novas frentes de IA",
+            "WT": "Endereçar os limites de capacidade para evitar indisponibilidade em momentos críticos"
+          }
         },
         {
           "id": "DI6",
@@ -337,7 +520,18 @@
             "4": "O autoatendimento cobre a maioria das necessidades do dia a dia das áreas de negócio.",
             "5": "O autoatendimento é amplo e consolidado, com poucas exceções que ainda exigem TI."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Áreas de negócio com autoatendimento amplo e consolidado de dados",
+            "weakness": "Acesso a dados totalmente dependente da equipe de TI",
+            "watchlist": "Autoatendimento de dados limitado a informações básicas"
+          },
+          "towsLabels": {
+            "SO": "Usar o autoatendimento de dados para multiplicar experimentos de IA nas áreas de negócio",
+            "ST": "Manter autoatendimento com trilha de acesso para conciliar agilidade e controle",
+            "WO": "Habilitar autoatendimento de dados para tirar as áreas de negócio da fila de TI",
+            "WT": "Estruturar acesso self-service com governança para evitar contorno informal dos controles"
+          }
         },
         {
           "id": "DI7",
@@ -355,7 +549,18 @@
             "4": "A maior parte do núcleo já foi modernizada; restam módulos pontuais em legado.",
             "5": "O núcleo está modernizado ou possui plano ativo e financiado de modernização."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Núcleo operacional modernizado ou com plano de modernização financiado",
+            "weakness": "Núcleo operacional em sistema legado, sem plano de modernização",
+            "watchlist": "Modernização do núcleo operacional em andamento de forma parcial ou lenta"
+          },
+          "towsLabels": {
+            "SO": "Usar o núcleo modernizado como base para novos produtos e serviços com IA",
+            "ST": "Concluir a modernização para reduzir dependência de sistemas sem suporte",
+            "WO": "Acelerar a modernização do núcleo para viabilizar as oportunidades de IA mapeadas",
+            "WT": "Priorizar a saída do legado para reduzir risco operacional e de segurança"
+          }
         },
         {
           "id": "DI8",
@@ -373,7 +578,18 @@
             "4": "A integração cobre a maioria dos sistemas, com exceções pontuais.",
             "5": "Existe uma visão unificada disponível por padrão, sem qualquer trabalho manual de integração."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Visão unificada de dados disponível por padrão, sem trabalho manual",
+            "weakness": "Bases isoladas exigem junção manual de dados a cada nova análise",
+            "watchlist": "Integração parcial entre os principais sistemas da empresa"
+          },
+          "towsLabels": {
+            "SO": "Usar a visão unificada de dados para criar ofertas personalizadas com IA",
+            "ST": "Manter integração automatizada para eliminar erro manual em dados críticos",
+            "WO": "Integrar as bases de dados para viabilizar análises que sustentem novas oportunidades",
+            "WT": "Eliminar junções manuais para reduzir risco de inconsistência e retrabalho"
+          }
         },
         {
           "id": "DI9",
@@ -391,7 +607,18 @@
             "4": "A integração entre ferramentas é prática comum, com poucos pontos ainda manuais.",
             "5": "Novas ferramentas se conectam a uma arquitetura padronizada, sem exigir um projeto dedicado."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Ferramentas de IA conectadas a uma arquitetura padronizada",
+            "weakness": "Ferramentas operam isoladas, com integração manual ou inexistente",
+            "watchlist": "Sistemas principais conectados, mas cada nova integração exige esforço dedicado"
+          },
+          "towsLabels": {
+            "SO": "Usar a arquitetura padronizada para incorporar rapidamente novas ferramentas de IA",
+            "ST": "Reduzir integrações frágeis para diminuir pontos de falha na operação",
+            "WO": "Padronizar a integração entre ferramentas para escalar iniciativas de IA sem retrabalho",
+            "WT": "Substituir integrações manuais para reduzir risco de falha e perda de dados"
+          }
         },
         {
           "id": "DI10",
@@ -409,7 +636,18 @@
             "4": "A maioria dos processos críticos já usa dados quase em tempo real.",
             "5": "As decisões operacionais críticas usam dados em tempo real como padrão."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Decisões operacionais críticas apoiadas em dados em tempo real",
+            "weakness": "Decisões apoiadas apenas em relatórios em lote, sempre defasados",
+            "watchlist": "Dados quase em tempo real em alguns painéis, mas não nos processos críticos"
+          },
+          "towsLabels": {
+            "SO": "Usar dados em tempo real para criar diferenciais de resposta ao cliente",
+            "ST": "Apoiar-se em dados atualizados para detectar anomalias e riscos em tempo hábil",
+            "WO": "Reduzir a defasagem dos dados para viabilizar casos de uso de IA de maior valor",
+            "WT": "Eliminar a dependência de relatórios defasados para não decidir sobre cenário desatualizado"
+          }
         },
         {
           "id": "DI11",
@@ -427,7 +665,18 @@
             "4": "O time interno resolve boa parte das dúvidas, recorrendo a terceiros apenas em temas avançados.",
             "5": "O time interno resolve a maioria das questões técnicas de IA sem depender de terceiros."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Time interno resolve questões técnicas de IA sem depender de terceiros",
+            "weakness": "Questões técnicas de IA totalmente dependentes de fornecedor externo",
+            "watchlist": "Acesso a especialista externo de confiança, sem capacidade interna própria"
+          },
+          "towsLabels": {
+            "SO": "Usar a capacidade técnica interna para explorar oportunidades de IA sem depender de terceiros",
+            "ST": "Manter conhecimento interno para responder a incidentes técnicos sem depender de agenda externa",
+            "WO": "Formar capacidade técnica interna para sustentar a expansão das iniciativas de IA",
+            "WT": "Reduzir a dependência de fornecedor único para diminuir risco de continuidade"
+          }
         },
         {
           "id": "DI12",
@@ -445,7 +694,18 @@
             "4": "A avaliação é recorrente, com upgrades planejados com antecedência.",
             "5": "A rede é dimensionada e monitorada continuamente para suportar a carga de IA."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Rede dimensionada e monitorada continuamente para as cargas de IA",
+            "weakness": "Infraestrutura de rede nunca avaliada para suportar cargas de IA",
+            "watchlist": "Avaliação de rede realizada, com upgrades apenas pontuais"
+          },
+          "towsLabels": {
+            "SO": "Garantir capacidade de rede para suportar a expansão das cargas de IA",
+            "ST": "Monitorar continuamente a rede para evitar degradação em operações críticas",
+            "WO": "Avaliar e dimensionar a rede antes de escalar as cargas de IA",
+            "WT": "Corrigir gargalos de rede para evitar indisponibilidade em processos críticos"
+          }
         },
         {
           "id": "DI13",
@@ -463,7 +723,18 @@
             "4": "O padrão é seguido na maioria dos casos, com poucas exceções que exigem ajuste manual.",
             "5": "Existe um padrão único, validado automaticamente já na entrada do dado."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Padrão único de registro de dados, validado automaticamente na entrada",
+            "weakness": "Cada unidade ou sistema registra o mesmo dado de forma diferente",
+            "watchlist": "Padrão de dados existente, mas ainda exige normalização manual"
+          },
+          "towsLabels": {
+            "SO": "Usar a padronização de dados para cruzar informação entre unidades e gerar novos insights",
+            "ST": "Manter validação automática na entrada para evitar propagação de dado inconsistente",
+            "WO": "Padronizar o registro de dados para viabilizar análises consolidadas entre unidades",
+            "WT": "Eliminar divergência de formatos para reduzir erro em relatórios e modelos"
+          }
         },
         {
           "id": "DI14",
@@ -481,7 +752,18 @@
             "4": "A rotulagem cobre a maioria dos processos relevantes, com revisão periódica.",
             "5": "A rotulagem é sistemática e validada, cobrindo os principais processos da empresa."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Rotulagem de dados sistemática e validada nos principais processos",
+            "weakness": "Ausência de rotulagem e classificação sistemática de dados",
+            "watchlist": "Rotulagem de dados restrita a alguns processos-chave"
+          },
+          "towsLabels": {
+            "SO": "Usar dados rotulados como insumo para modelos preditivos de maior precisão",
+            "ST": "Manter rotulagem validada para sustentar a rastreabilidade das decisões de modelo",
+            "WO": "Estruturar a rotulagem de dados para viabilizar os modelos preditivos planejados",
+            "WT": "Implantar rotulagem sistemática para reduzir imprecisão e viés nos modelos"
+          }
         },
         {
           "id": "DI15",
@@ -499,7 +781,19 @@
             "4": "A política é documentada e conhecida pela maioria, com aplicação quase integral.",
             "5": "A política é formal, conhecida, aplicada de fato e possui um dono claramente definido."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Política de acesso a dados formal, aplicada de fato e com dono definido",
+            "weakness": "Ausência de política formal de acesso a dados; decisões tomadas caso a caso",
+            "threat": "Acesso a dados sem controle formal amplia o risco de vazamento e uso indevido",
+            "watchlist": "Política de acesso a dados existente, mas com cobertura parcial"
+          },
+          "towsLabels": {
+            "SO": "Usar o controle formal de acesso para abrir dados a novos casos de uso com segurança",
+            "ST": "Manter a política de acesso aplicada para conter risco de vazamento e uso indevido",
+            "WO": "Definir política de acesso para poder ampliar o uso de dados sensíveis com segurança",
+            "WT": "Implantar controle formal de acesso para reduzir exposição a vazamento de dados"
+          }
         },
         {
           "id": "DI16",
@@ -517,7 +811,18 @@
             "4": "O pipeline cobre a maioria dos casos novos, com pouco retrabalho necessário.",
             "5": "Existe um pipeline padronizado que prepara dados novos em poucos dias."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Pipeline padronizado prepara dados para novos projetos em poucos dias",
+            "weakness": "Preparar dados para uma nova análise é sempre um projeto longo e custoso",
+            "watchlist": "Preparação de dados rápida apenas para casos já conhecidos"
+          },
+          "towsLabels": {
+            "SO": "Usar o pipeline padronizado para testar novas hipóteses de IA em ciclos curtos",
+            "ST": "Manter pipeline padronizado para responder rapidamente a demandas de auditoria e investigação",
+            "WO": "Criar pipeline padronizado de dados para encurtar o ciclo de novas iniciativas de IA",
+            "WT": "Reduzir o tempo de preparação de dados para não travar respostas a incidentes"
+          }
         }
       ]
     },
@@ -541,7 +846,18 @@
             "4": "Existe uma cultura de experimentação ativa em várias equipes, com incentivo claro da gestão.",
             "5": "A experimentação com IA é parte da cultura da empresa, celebrada e disseminada por toda a organização."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Cultura de experimentação com IA disseminada por toda a organização",
+            "weakness": "Medo ou resistência ao uso de IA; experimentação desencorajada",
+            "watchlist": "Iniciativas de incentivo ao uso de IA ainda em planejamento"
+          },
+          "towsLabels": {
+            "SO": "Usar a cultura de experimentação para descobrir novos casos de uso de IA a partir da ponta",
+            "ST": "Canalizar a experimentação para dentro de ferramentas homologadas e monitoradas",
+            "WO": "Criar segurança para experimentar e destravar a identificação de oportunidades pelas equipes",
+            "WT": "Substituir o uso velado de IA por experimentação incentivada e monitorada"
+          }
         },
         {
           "id": "PC2",
@@ -559,7 +875,18 @@
             "4": "O programa está ativo, com trilhas específicas para gestores e colaboradores.",
             "5": "O programa é consolidado e contínuo, com métricas de adoção e de impacto sobre a produtividade."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Programa de capacitação em IA consolidado, com métricas de impacto",
+            "weakness": "Ausência de programa de capacitação em IA",
+            "watchlist": "Programa de capacitação em IA em desenho ou fase piloto"
+          },
+          "towsLabels": {
+            "SO": "Usar o programa de capacitação para ampliar o número de áreas capazes de aplicar IA",
+            "ST": "Incluir riscos e boas práticas de IA nas trilhas de capacitação existentes",
+            "WO": "Capacitar equipes e gestores para que as oportunidades de IA sejam executáveis internamente",
+            "WT": "Capacitar as equipes em uso seguro de IA para reduzir erro operacional e uso indevido"
+          }
         },
         {
           "id": "PC3",
@@ -577,7 +904,18 @@
             "4": "A comunicação é estruturada e reforça o aumento humano na maioria das iniciativas de IA.",
             "5": "A narrativa de aumento humano é consistente, institucionalizada e reforçada continuamente pela liderança."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Narrativa de aumento humano institucionalizada e reforçada pela liderança",
+            "weakness": "Comunicação sobre IA ausente ou geradora de insegurança nas equipes",
+            "watchlist": "Estratégia de comunicação interna sobre IA em elaboração"
+          },
+          "towsLabels": {
+            "SO": "Usar a narrativa de aumento humano para acelerar a adoção interna de novas soluções de IA",
+            "ST": "Sustentar a narrativa de aumento humano para reduzir resistência e ruído interno",
+            "WO": "Estruturar a comunicação sobre IA para destravar a adoção necessária às oportunidades",
+            "WT": "Comunicar o papel da IA para conter insegurança e resistência que travam a operação"
+          }
         },
         {
           "id": "PC4",
@@ -595,7 +933,18 @@
             "4": "A maioria dos times mede o ganho, com metodologia parecida entre eles.",
             "5": "Medir e reportar o ganho de IA é uma prática comum e consistente em toda a empresa."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Equipes medem e reportam o ganho concreto de IA de forma consistente",
+            "weakness": "Ganho da IA percebido apenas de forma subjetiva, sem qualquer quantificação",
+            "watchlist": "Apenas alguns times conseguem quantificar o ganho da IA"
+          },
+          "towsLabels": {
+            "SO": "Usar os ganhos comprovados pelas equipes para justificar expansão a novas frentes",
+            "ST": "Usar a medição de ganho para descontinuar rapidamente iniciativas que não se sustentam",
+            "WO": "Instituir medição de ganho para comprovar valor e sustentar novos investimentos",
+            "WT": "Medir o ganho real de IA para evitar investimento continuado em iniciativas sem retorno"
+          }
         },
         {
           "id": "PC5",
@@ -613,7 +962,18 @@
             "4": "A maioria das equipes já checa e interpreta criticamente o resultado; poucas ainda não.",
             "5": "Checar e interpretar criticamente o resultado da IA é uma prática comum e disseminada."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Checagem crítica dos resultados de IA é prática comum e disseminada",
+            "weakness": "Resultados de IA aceitos sem qualquer checagem crítica",
+            "watchlist": "Capacidade de interpretar resultados de IA concentrada em poucas pessoas"
+          },
+          "towsLabels": {
+            "SO": "Usar a capacidade crítica das equipes para explorar IA em processos de maior complexidade",
+            "ST": "Manter a checagem humana dos resultados como camada de defesa contra erro de modelo",
+            "WO": "Desenvolver capacidade crítica nas equipes para permitir uso de IA em processos sensíveis",
+            "WT": "Instituir checagem crítica para evitar decisões baseadas em resultado incorreto de IA"
+          }
         },
         {
           "id": "PC6",
@@ -631,7 +991,18 @@
             "4": "O feedback chega na maioria das vezes e o ajuste é comum.",
             "5": "Existe um canal formal e consistente de feedback, que gera ajuste regular no processo."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Canal formal de feedback sobre IA gera ajustes regulares no processo",
+            "weakness": "Problemas no uso de IA ficam em reclamação informal, sem gerar ajustes",
+            "watchlist": "Feedback sobre IA chega ocasionalmente, com ajustes esporádicos"
+          },
+          "towsLabels": {
+            "SO": "Usar o canal de feedback para descobrir e priorizar melhorias de alto impacto",
+            "ST": "Usar o canal de feedback para detectar precocemente falhas no uso de IA",
+            "WO": "Criar canal de feedback para transformar aprendizado da ponta em melhoria de processo",
+            "WT": "Estruturar canal de feedback para que problemas no uso de IA não escalem silenciosamente"
+          }
         },
         {
           "id": "PC7",
@@ -649,7 +1020,18 @@
             "4": "A experimentação é incentivada na maioria das áreas; algumas ainda são mais conservadoras.",
             "5": "Quem experimenta e erra é reconhecido e incentivado abertamente pela organização."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Experimentação com IA reconhecida e incentivada abertamente, inclusive no erro",
+            "weakness": "Erro na experimentação com IA é punido ou explicitamente desencorajado",
+            "watchlist": "Erro tolerado, mas sem incentivo explícito à experimentação"
+          },
+          "towsLabels": {
+            "SO": "Usar o incentivo à experimentação para ampliar o repertório de casos de uso testados",
+            "ST": "Direcionar a experimentação incentivada para ambientes controlados e seguros",
+            "WO": "Reduzir a punição ao erro para destravar a experimentação necessária à inovação",
+            "WT": "Substituir experimentação clandestina por testes reconhecidos e supervisionados"
+          }
         },
         {
           "id": "PC8",
@@ -667,7 +1049,18 @@
             "4": "É conhecida pela maioria e seguida na maior parte do tempo.",
             "5": "É conhecida e seguida de forma consistente por quem usa IA no dia a dia."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Política de uso de IA conhecida e seguida de forma consistente na prática",
+            "weakness": "Política de uso de IA desconhecida na prática pelas equipes",
+            "watchlist": "Política de uso de IA conhecida e seguida apenas parcialmente"
+          },
+          "towsLabels": {
+            "SO": "Usar a aderência à política para ampliar com segurança o escopo de uso de IA",
+            "ST": "Manter aderência prática à política para reduzir risco de uso indevido de IA",
+            "WO": "Tornar a política de uso conhecida e praticada para viabilizar a ampliação do uso de IA",
+            "WT": "Fechar a lacuna entre política formal e prática para reduzir exposição a incidentes"
+          }
         },
         {
           "id": "PC9",
@@ -685,7 +1078,18 @@
             "4": "São seguidos com poucas exceções; já é um hábito consolidado.",
             "5": "São seguidos de forma consistente, com poucas exceções."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Projetos de IA com dono e prazo efetivamente seguidos na prática",
+            "weakness": "Dono e prazo dos projetos de IA existem apenas formalmente",
+            "watchlist": "Dono e prazo seguidos na maioria dos projetos, ainda sem consistência plena"
+          },
+          "towsLabels": {
+            "SO": "Usar a disciplina de execução para encurtar o ciclo de entrega das oportunidades priorizadas",
+            "ST": "Manter dono e prazo definidos para que ações de mitigação de risco não fiquem paradas",
+            "WO": "Fazer valer dono e prazo para que as oportunidades priorizadas cheguem à entrega",
+            "WT": "Atribuir responsabilidade e prazo real às frentes de risco para evitar postergação indefinida"
+          }
         },
         {
           "id": "PC10",
@@ -703,7 +1107,18 @@
             "4": "É raro, acontecendo só em emergências claras.",
             "5": "O time se mantém dedicado até a entrega, sendo raramente remanejado."
           },
-          "swotCategory": "internal_capability"
+          "swotCategory": "internal_capability",
+          "swotLabels": {
+            "strength": "Times de projetos de IA se mantêm dedicados até a entrega",
+            "weakness": "Remanejamento frequente faz projetos de IA perderem prioridade",
+            "watchlist": "Remanejamento ocasional de time nos projetos de IA"
+          },
+          "towsLabels": {
+            "SO": "Manter times dedicados para acelerar a entrega das iniciativas de maior retorno",
+            "ST": "Proteger a alocação dos times para que frentes críticas não sejam interrompidas",
+            "WO": "Proteger a alocação dos times para que projetos de IA cheguem ao fim e gerem retorno",
+            "WT": "Evitar remanejamento constante para que projetos críticos de risco não fiquem inacabados"
+          }
         }
       ]
     },
@@ -727,7 +1142,19 @@
             "4": "A política formal está implementada e comunicada para a maior parte da empresa.",
             "5": "A política é robusta, revisada periodicamente, com treinamento obrigatório e mecanismos de enforcement."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Política de uso ético de IA robusta, com treinamento obrigatório e enforcement",
+            "weakness": "Ausência de política formal de uso ético de IA Generativa",
+            "threat": "Uso de IA sem política ética expõe a empresa a dano reputacional e legal",
+            "watchlist": "Política de uso ético de IA em elaboração ou revisão jurídica"
+          },
+          "towsLabels": {
+            "SO": "Usar a política de uso ético como credencial de confiança junto a clientes e parceiros",
+            "ST": "Manter política ética com enforcement para neutralizar risco reputacional e legal",
+            "WO": "Estabelecer política de uso ético para poder ampliar o uso de IA Generativa com segurança",
+            "WT": "Formalizar política de uso ético para reduzir exposição a dano reputacional e legal"
+          }
         },
         {
           "id": "GR2",
@@ -745,7 +1172,19 @@
             "4": "O monitoramento está ativo na maioria das áreas, com alertas configurados.",
             "5": "Há monitoramento contínuo e auditoria formal, com processo estruturado de resposta a incidentes."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Monitoramento contínuo de Shadow AI com resposta estruturada a incidentes",
+            "weakness": "Uso de ferramentas de IA não rastreado; sem monitoramento de Shadow AI",
+            "threat": "Shadow AI não monitorada amplia o risco de vazamento de dados proprietários",
+            "watchlist": "Solução de monitoramento de Shadow AI em avaliação ou piloto"
+          },
+          "towsLabels": {
+            "SO": "Usar o monitoramento para liberar com segurança novas ferramentas de IA às equipes",
+            "ST": "Manter monitoramento contínuo para conter vazamento de dados proprietários",
+            "WO": "Implantar monitoramento de uso para poder ampliar oficialmente o acesso a ferramentas de IA",
+            "WT": "Implantar monitoramento de Shadow AI para reduzir risco de vazamento de dados"
+          }
         },
         {
           "id": "GR3",
@@ -763,7 +1202,19 @@
             "4": "O Board revisa riscos e ROI de IA em cadência definida (ex: trimestral).",
             "5": "A revisão de riscos éticos e ROI de IA é parte fixa da pauta do Board, com decisões documentadas."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Board revisa riscos éticos e ROI de IA como pauta fixa e documentada",
+            "weakness": "Tema de IA ausente das pautas do Conselho",
+            "threat": "Sem supervisão do Board, riscos éticos e de ROI de IA seguem sem controle",
+            "watchlist": "Revisão periódica de IA pelo Board em planejamento ou estruturação"
+          },
+          "towsLabels": {
+            "SO": "Levar as oportunidades de IA ao Board para obter respaldo e recursos de expansão",
+            "ST": "Manter os riscos de IA na pauta do Board para decisão tempestiva sobre exposição",
+            "WO": "Levar IA à pauta do Board para obter patrocínio às oportunidades identificadas",
+            "WT": "Incluir riscos de IA na pauta do Board para que a exposição tenha supervisão formal"
+          }
         },
         {
           "id": "GR4",
@@ -781,7 +1232,19 @@
             "4": "O registro é sistemático na maioria dos casos, com algumas lacunas pontuais.",
             "5": "O registro é sistemático e recuperável para qualquer decisão automatizada, a qualquer momento."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Decisões automatizadas registradas de forma sistemática e recuperável",
+            "weakness": "Ausência de registro documentado das decisões tomadas por modelos de IA",
+            "threat": "Impossibilidade de responder a auditoria regulatória sobre decisões automatizadas",
+            "watchlist": "Registro de decisões automatizadas existente, mas sem sistematização"
+          },
+          "towsLabels": {
+            "SO": "Usar a rastreabilidade das decisões como diferencial em contratos e mercados regulados",
+            "ST": "Manter registro recuperável para responder a auditoria regulatória sem exposição",
+            "WO": "Implantar registro de decisões automatizadas para viabilizar IA em processos regulados",
+            "WT": "Estruturar registro auditável para não ficar sem resposta perante o regulador"
+          }
         },
         {
           "id": "GR5",
@@ -799,7 +1262,19 @@
             "4": "A explicação está disponível para a maioria dos modelos, em linguagem acessível ao negócio.",
             "5": "A explicação está disponível e é compreendida pelo negócio para os principais modelos em uso."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Negócio compreende e explica as recomendações dos principais modelos",
+            "weakness": "Modelos operam como caixa-preta, sem explicabilidade para o negócio",
+            "threat": "Falta de explicabilidade compromete a defesa da empresa perante clientes e reguladores",
+            "watchlist": "Explicabilidade disponível apenas para os modelos mais simples"
+          },
+          "towsLabels": {
+            "SO": "Usar a explicabilidade para levar IA a decisões de maior impacto junto ao cliente",
+            "ST": "Manter explicabilidade para sustentar a defesa da empresa perante clientes e reguladores",
+            "WO": "Desenvolver explicabilidade dos modelos para permitir seu uso em decisões sensíveis",
+            "WT": "Eliminar a caixa-preta nos modelos críticos para reduzir risco de questionamento legal"
+          }
         },
         {
           "id": "GR6",
@@ -817,7 +1292,19 @@
             "4": "A estrutura é formal, com responsabilidades claras, ainda ganhando maturidade na prática.",
             "5": "A estrutura formal é madura, com responsabilidades claras e reconhecidas em toda a empresa."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Estrutura formal de governança de risco e ética de IA madura e reconhecida",
+            "weakness": "Ausência de estrutura formal nomeada para governança de risco e ética de IA",
+            "threat": "Sem responsável formal, riscos éticos e regulatórios de IA ficam sem dono",
+            "watchlist": "Estrutura de governança de IA existente, com responsabilidades pouco claras"
+          },
+          "towsLabels": {
+            "SO": "Usar a estrutura de governança para aprovar com agilidade novos casos de uso de IA",
+            "ST": "Manter dono formal da governança para tratamento tempestivo dos riscos de IA",
+            "WO": "Nomear estrutura de governança para destravar aprovações de novos casos de uso",
+            "WT": "Nomear responsável formal para que riscos éticos e regulatórios de IA tenham dono"
+          }
         },
         {
           "id": "GR7",
@@ -835,7 +1322,19 @@
             "4": "Há avaliação recorrente, mas ela não cobre todos os modelos críticos.",
             "5": "Há avaliação recorrente e documentada, incorporada como parte do processo de deploy dos modelos."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Avaliação de viés recorrente e documentada no processo de deploy dos modelos",
+            "weakness": "Possível viés nos modelos nunca foi avaliado",
+            "threat": "Viés não avaliado expõe a empresa a questionamento legal e discriminação de clientes",
+            "watchlist": "Avaliação de viés realizada pontualmente, sem processo recorrente"
+          },
+          "towsLabels": {
+            "SO": "Usar a avaliação de viés como diferencial de confiança em produtos voltados ao cliente",
+            "ST": "Manter avaliação de viés no deploy para conter risco de discriminação e questionamento legal",
+            "WO": "Instituir avaliação de viés para permitir uso de IA em decisões que afetam clientes",
+            "WT": "Implantar avaliação recorrente de viés para reduzir risco legal e de discriminação"
+          }
         },
         {
           "id": "GR8",
@@ -853,7 +1352,19 @@
             "4": "A política existe e é revisada às vezes, mas sem calendário formal de revisão.",
             "5": "A política existe, é proativa por natureza e revisada periodicamente, de forma planejada."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Política interna de IA proativa e revisada periodicamente de forma planejada",
+            "weakness": "Ausência de política interna de uso de IA",
+            "threat": "Política reativa ou inexistente deixa a empresa vulnerável a incidentes não previstos",
+            "watchlist": "Política interna de IA existente, mas de origem reativa a incidentes"
+          },
+          "towsLabels": {
+            "SO": "Usar a revisão periódica da política para acompanhar e liberar novas tecnologias de IA",
+            "ST": "Manter política revisada periodicamente para antecipar riscos antes do incidente",
+            "WO": "Criar política proativa de uso de IA para acompanhar a expansão planejada",
+            "WT": "Sair do modelo reativo de política para não depender de incidentes para agir"
+          }
         },
         {
           "id": "GR9",
@@ -871,7 +1382,19 @@
             "4": "Está documentado, mas ainda não foi revisado com todos os stakeholders relevantes.",
             "5": "Está formalizado e revisado periodicamente com todos os stakeholders relevantes."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Responsabilidade por decisões automatizadas formalizada e revisada com stakeholders",
+            "weakness": "Responsabilidade por decisões automatizadas de IA nunca foi discutida",
+            "threat": "Ausência de responsável definido por decisões automatizadas amplia a exposição jurídica",
+            "watchlist": "Responsabilidade por decisões automatizadas discutida apenas informalmente"
+          },
+          "towsLabels": {
+            "SO": "Usar a definição clara de responsabilidade para ampliar automações com respaldo",
+            "ST": "Manter responsabilidade formalizada para reduzir exposição jurídica em decisões automatizadas",
+            "WO": "Definir responsáveis por decisões automatizadas para viabilizar a ampliação da automação",
+            "WT": "Formalizar responsabilidade por decisões automatizadas para reduzir exposição jurídica"
+          }
         },
         {
           "id": "GR10",
@@ -889,7 +1412,19 @@
             "4": "O rito ocorre na maioria dos ciclos previstos.",
             "5": "O rito periódico é consistente e independe da ocorrência de crises."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Rito periódico de revisão da prática de IA consistente e independente de crises",
+            "weakness": "Ajustes na prática de IA acontecem apenas de forma reativa, após crises",
+            "threat": "Sem revisão periódica, falhas na prática de IA só aparecem depois do dano causado",
+            "watchlist": "Rito de revisão da prática de IA existente, mas irregular"
+          },
+          "towsLabels": {
+            "SO": "Usar o rito de revisão para incorporar continuamente novas práticas e tecnologias de IA",
+            "ST": "Manter revisão periódica para corrigir falhas antes que gerem dano",
+            "WO": "Instituir rito de revisão para que aprendizados virem melhoria contínua da prática de IA",
+            "WT": "Criar revisão periódica para não depender de crises para identificar falhas"
+          }
         },
         {
           "id": "GR11",
@@ -907,7 +1442,19 @@
             "4": "O mapeamento está atualizado, mas ainda não integrado ao planejamento formal de expansão.",
             "5": "O mapeamento está atualizado e integrado ao planejamento formal de expansão da empresa."
           },
-          "swotCategory": "risk_compliance"
+          "swotCategory": "risk_compliance",
+          "swotLabels": {
+            "strength": "Exigências legais de IA por região mapeadas e integradas ao plano de expansão",
+            "weakness": "Exigências legais de IA em outras regiões nunca foram mapeadas",
+            "threat": "Expansão sem mapa regulatório de IA gera risco de não conformidade em novas regiões",
+            "watchlist": "Mapeamento de exigências legais de IA parcial ou desatualizado"
+          },
+          "towsLabels": {
+            "SO": "Usar o mapa regulatório para acelerar a entrada em novos mercados com IA",
+            "ST": "Manter mapeamento regulatório atualizado para antecipar exigências em novas regiões",
+            "WO": "Mapear exigências legais por região para viabilizar a expansão planejada",
+            "WT": "Mapear o regulatório de IA por região para evitar não conformidade na expansão"
+          }
         }
       ]
     }
@@ -1172,6 +1719,69 @@
       "4. Compilar: Forças = todas as perguntas com quadrant 'strength'; Fraquezas = todas com 'weakness'; Oportunidades = perguntas market_strategy com nota 4-5; Ameaças = perguntas market_strategy ou risk_compliance com nota 1-2.",
       "5. Ordenar cada quadrante por dimensão (pilar) para facilitar a leitura do relatório final.",
       "6. Perguntas risk_compliance com nota 4-5 aparecem em Forças com a flag threat_mitigated=true, indicando que mitigam (mas não geram) uma Ameaça."
+    ],
+    "labels_note": "Cada pergunta possui o campo 'swotLabels' com o texto pronto para exibição em cada quadrante em que ela pode aparecer. A categoria da pergunta define quais chaves existem: internal_capability -> strength, weakness, watchlist; market_strategy -> strength, weakness, opportunity, threat, watchlist; risk_compliance -> strength, weakness, threat, watchlist. Para exibir: aplicar score_rules[nota] para obter o(s) quadrante(s) e usar swotLabels[quadrante] como texto do item."
+  },
+  "towsFramework": {
+    "description": "Matriz TOWS: cruza os quadrantes do SWOT para gerar estratégias acionáveis. Cada pergunta possui em 'towsLabels' a estratégia que ela gera em cada um dos 4 cruzamentos, conforme o lado do SWOT em que caiu.",
+    "quadrants": {
+      "SO": {
+        "label": "Estratégias Ofensivas (Forças × Oportunidades)",
+        "type": "maxi-maxi",
+        "rationale": "Usar as forças existentes para capturar oportunidades de mercado.",
+        "trigger": "Pergunta com nota 4-5 E existir pelo menos 1 Oportunidade no SWOT."
+      },
+      "ST": {
+        "label": "Estratégias de Defesa (Forças × Ameaças)",
+        "type": "maxi-mini",
+        "rationale": "Usar as forças existentes para neutralizar ameaças externas.",
+        "trigger": "Pergunta com nota 4-5 E existir pelo menos 1 Ameaça no SWOT."
+      },
+      "WO": {
+        "label": "Estratégias de Reforço (Fraquezas × Oportunidades)",
+        "type": "mini-maxi",
+        "rationale": "Corrigir fraquezas que impedem a captura das oportunidades.",
+        "trigger": "Pergunta com nota 1-2 E existir pelo menos 1 Oportunidade no SWOT."
+      },
+      "WT": {
+        "label": "Estratégias de Sobrevivência (Fraquezas × Ameaças)",
+        "type": "mini-mini",
+        "rationale": "Corrigir fraquezas que ampliam a exposição às ameaças. Maior urgência da matriz.",
+        "trigger": "Pergunta com nota 1-2 E existir pelo menos 1 Ameaça no SWOT."
+      }
+    },
+    "generation_logic": [
+      "1. Montar o SWOT normalmente (swotFramework.score_rules + swotLabels).",
+      "2. Verificar quais quadrantes externos estão populados: há Oportunidades? há Ameaças?",
+      "3. Para cada pergunta com nota 4-5 (Força): gerar towsLabels.SO se houver Oportunidade; gerar towsLabels.ST se houver Ameaça.",
+      "4. Para cada pergunta com nota 1-2 (Fraqueza): gerar towsLabels.WO se houver Oportunidade; gerar towsLabels.WT se houver Ameaça.",
+      "5. Perguntas com nota 3 (Ponto de Atenção) não entram na TOWS — não são nem força nem fraqueza consolidada.",
+      "6. Priorização sugerida de leitura: WT (urgente) > WO > ST > SO.",
+      "7. Se não houver nenhuma Oportunidade no SWOT, as colunas SO e WO ficam vazias — isso é um diagnóstico em si (a empresa não tem posicionamento de mercado suficiente para gerar estratégia ofensiva) e deve ser sinalizado no relatório."
+    ],
+    "pairing_note": "As Oportunidades vêm de 3 perguntas (market_strategy) e as Ameaças de 16 (market_strategy + risk_compliance). Como esses quadrantes são concentrados, as estratégias em towsLabels são ancoradas na força/fraqueza (lado interno) e escritas de modo a se conectar ao lado externo correspondente. Para um cruzamento explícito par a par no relatório, combinar cada item com as Oportunidades/Ameaças efetivamente presentes, listadas em opportunity_sources e threat_sources.",
+    "opportunity_sources": [
+      "EV1",
+      "EV9",
+      "EV10"
+    ],
+    "threat_sources": [
+      "EV1",
+      "EV9",
+      "EV10",
+      "DI3",
+      "DI15",
+      "GR1",
+      "GR2",
+      "GR3",
+      "GR4",
+      "GR5",
+      "GR6",
+      "GR7",
+      "GR8",
+      "GR9",
+      "GR10",
+      "GR11"
     ]
   }
 }
