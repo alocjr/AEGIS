@@ -7,35 +7,37 @@
     "title": "SWOT de IA — Rede Aurora",
     "organization": "Rede Aurora",
     "source": "example",
-    "notes": "Caso ilustrativo. Pilares por quadrante = banco de itens + um pilar extra em Forças (cultura)."
+    "notes": "Caso ilustrativo. Defaults alinhados às 4 dimensões de maturidade; infraestrutura e cultura como pilares extras em Forças."
   },
   "payload": {
     "optica": "Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala, operação assistida por IA (compras, estoque, atendimento) e decisão apoiada por dados — para defender margem diante dos marketplaces.",
 
     "pilares": {
       "forcas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "infraestrutura", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" },
-        { "id": "cultura", "nome": "Cultura & Liderança" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" },
+        { "id": "infraestrutura", "nome": "Infraestrutura" },
+        { "id": "cultura", "nome": "Cultura e Liderança" }
       ],
       "oportunidades": [
-        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
-        { "id": "portfolio", "nome": "Mercado & clientes" },
-        { "id": "talento", "nome": "Talento & incentivos" }
+        { "id": "ecossistema", "nome": "Tecnologia e ecossistema" },
+        { "id": "portfolio", "nome": "Mercado e clientes" },
+        { "id": "governanca", "nome": "Ambiente regulatório" },
+        { "id": "talento", "nome": "Talento e incentivos" }
       ],
       "fraquezas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "governanca", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" }
       ],
       "ameacas": [
         { "id": "portfolio", "nome": "Concorrência" },
-        { "id": "governanca", "nome": "Regulação" },
-        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
-        { "id": "talento", "nome": "Talento & ritmo" }
+        { "id": "governanca", "nome": "Regulação e risco" },
+        { "id": "ecossistema", "nome": "Fornecedores e modelos" },
+        { "id": "talento", "nome": "Talento e ritmo" }
       ]
     },
 

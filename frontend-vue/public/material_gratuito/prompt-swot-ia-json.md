@@ -7,6 +7,7 @@ Trabalhe para gerar uma **primeira versão completa** que o usuário só precise
 ## 1. O que é uma SWOT de IA (método a seguir)
 
 - **O objeto é a organização inteira**, lida sob a **ótica da sua estratégia organizacional de IA** (a ambição declarada de para onde a empresa quer ir com IA). Não é um SWOT de um projeto isolado, nem um SWOT genérico da empresa. Trate a IA como **vetor de transformação do modelo de negócio**, não como “projeto de TI”.
+- **Alinhamento com o Modelo de Maturidade:** as Forças/Fraquezas internas usam as **quatro dimensões** do Diagnóstico de Maturidade em IA (Estratégia e Visão · Dados e Infraestrutura · Pessoas e Cultura · Governança e Risco). Os sete pilares canônicos aprofundam essas dimensões. Se o usuário tiver respostas de maturidade (níveis 1–5), use-as como evidência.
 - **Critério de inclusão (relacional):** um item só entra na matriz se **afeta materialmente a capacidade da organização de executar essa estratégia**. Um fato verdadeiro que não toca a estratégia é ruído — deixe de fora.
 - **Locus disciplinado:** Forças e Fraquezas são **internas** (o que a organização muda sozinha). Oportunidades e Ameaças são **externas** (o ambiente, que ela não controla).
 - **Baseado em evidência:** cada item traz uma `evidencia` curta (o fato/base que o sustenta). **Nunca invente fatos.** Se um item for inferência a partir de dados esparsos, deixe isso claro na `evidencia` (ex.: “inferido de…”, “a confirmar”).
@@ -19,14 +20,14 @@ Cada quadrante parte de um **subconjunto** do banco de itens — não dos sete p
 
 | Quadrante | Pilares de partida (`id` · nome) |
 |-----------|----------------------------------|
-| **Forças** | `dados` · Dados · `talento` · Talento & cultura · `infraestrutura` · Infra & governança · `portfolio` · Portfólio & recursos |
-| **Oportunidades** | `ecossistema` · Tecnologia & ecossistema · `portfolio` · Mercado & clientes · `talento` · Talento & incentivos |
-| **Fraquezas** | `dados` · Dados · `talento` · Talento & cultura · `governanca` · Infra & governança · `portfolio` · Portfólio & recursos |
-| **Ameaças** | `portfolio` · Concorrência · `governanca` · Regulação · `ecossistema` · Fornecedores & modelo · `talento` · Talento & ritmo |
+| **Forças** | `portfolio` · Estratégia e Visão · `dados` · Dados e Infraestrutura · `talento` · Pessoas e Cultura · `governanca` · Governança e Risco |
+| **Oportunidades** | `ecossistema` · Tecnologia e ecossistema · `portfolio` · Mercado e clientes · `governanca` · Ambiente regulatório · `talento` · Talento e incentivos |
+| **Fraquezas** | `portfolio` · Estratégia e Visão · `dados` · Dados e Infraestrutura · `talento` · Pessoas e Cultura · `governanca` · Governança e Risco |
+| **Ameaças** | `portfolio` · Concorrência · `governanca` · Regulação e risco · `ecossistema` · Fornecedores e modelos · `talento` · Talento e ritmo |
 
-**Pilares extras:** se a análise precisar de um eixo que não está no default do quadrante, **inclua** em `payload.pilares[<quadrante>]` — seja um canônico ausente (ex.: `cultura` em Forças) ou um id novo (ex.: `mercado`, padrão `^[a-z][a-z0-9_-]{0,39}$`) com `nome` legível. Todo `pilar` de item deve existir na lista daquele quadrante.
+**Pilares extras:** se a análise precisar de um eixo que não está no default do quadrante, **inclua** em `payload.pilares[<quadrante>]` — seja um canônico ausente (ex.: `infraestrutura` ou `cultura` em Forças) ou um id novo (ex.: `mercado`, padrão `^[a-z][a-z0-9_-]{0,39}$`) com `nome` legível. Todo `pilar` de item deve existir na lista daquele quadrante.
 
-Os sete canônicos (referência): `dados` · `talento` · `infraestrutura` · `governanca` · `cultura` · `portfolio` · `ecossistema`.
+Os sete canônicos (referência): `portfolio` · `dados` · `infraestrutura` · `talento` · `cultura` · `governanca` · `ecossistema`.
 
 ### As perguntas-teste de cada quadrante
 - **Forças** *(interno · positivo)* — o que temos hoje que **sustenta** a execução da estratégia?
@@ -87,27 +88,28 @@ Conclua honestamente com `veredito_tipo` ∈ **`sustenta`** (executável como es
     "optica": "<a estratégia organizacional de IA, em 1–2 frases — a lente da análise>",
     "pilares": {
       "forcas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "infraestrutura", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" }
       ],
       "oportunidades": [
-        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
-        { "id": "portfolio", "nome": "Mercado & clientes" },
-        { "id": "talento", "nome": "Talento & incentivos" }
+        { "id": "ecossistema", "nome": "Tecnologia e ecossistema" },
+        { "id": "portfolio", "nome": "Mercado e clientes" },
+        { "id": "governanca", "nome": "Ambiente regulatório" },
+        { "id": "talento", "nome": "Talento e incentivos" }
       ],
       "fraquezas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "governanca", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" }
       ],
       "ameacas": [
         { "id": "portfolio", "nome": "Concorrência" },
-        { "id": "governanca", "nome": "Regulação" },
-        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
-        { "id": "talento", "nome": "Talento & ritmo" }
+        { "id": "governanca", "nome": "Regulação e risco" },
+        { "id": "ecossistema", "nome": "Fornecedores e modelos" },
+        { "id": "talento", "nome": "Talento e ritmo" }
       ]
     },
     "forcas":        [{ "id": "f1",  "texto": "<...>", "pilar": "<id do slot em pilares.forcas>", "impacto": 1, "viabilidade": 1, "evidencia": "<...>", "prioridade": 1 }],
@@ -139,34 +141,36 @@ Campos: `pilares.<quadrante>[]` lista os slots (`id` + `nome`). `pilar` do item 
     "title": "SWOT de IA — Rede Aurora",
     "organization": "Rede Aurora",
     "source": "example",
-    "notes": "Exemplo ilustrativo. Pilares = banco de itens; cultura incluída como pilar extra em Forças."
+    "notes": "Exemplo ilustrativo. Defaults = 4 dimensões de maturidade; infraestrutura e cultura como pilares extras em Forças."
   },
   "payload": {
     "optica": "Tornar-se uma varejista orientada a dados e IA até 2027 — personalização em escala e operação assistida por IA — para defender margem diante dos marketplaces.",
     "pilares": {
       "forcas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "infraestrutura", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" },
-        { "id": "cultura", "nome": "Cultura & Liderança" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" },
+        { "id": "infraestrutura", "nome": "Infraestrutura" },
+        { "id": "cultura", "nome": "Cultura e Liderança" }
       ],
       "oportunidades": [
-        { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
-        { "id": "portfolio", "nome": "Mercado & clientes" },
-        { "id": "talento", "nome": "Talento & incentivos" }
+        { "id": "ecossistema", "nome": "Tecnologia e ecossistema" },
+        { "id": "portfolio", "nome": "Mercado e clientes" },
+        { "id": "governanca", "nome": "Ambiente regulatório" },
+        { "id": "talento", "nome": "Talento e incentivos" }
       ],
       "fraquezas": [
-        { "id": "dados", "nome": "Dados" },
-        { "id": "talento", "nome": "Talento & cultura" },
-        { "id": "governanca", "nome": "Infra & governança" },
-        { "id": "portfolio", "nome": "Portfólio & recursos" }
+        { "id": "portfolio", "nome": "Estratégia e Visão" },
+        { "id": "dados", "nome": "Dados e Infraestrutura" },
+        { "id": "talento", "nome": "Pessoas e Cultura" },
+        { "id": "governanca", "nome": "Governança e Risco" }
       ],
       "ameacas": [
         { "id": "portfolio", "nome": "Concorrência" },
-        { "id": "governanca", "nome": "Regulação" },
-        { "id": "ecossistema", "nome": "Fornecedores & modelo" },
-        { "id": "talento", "nome": "Talento & ritmo" }
+        { "id": "governanca", "nome": "Regulação e risco" },
+        { "id": "ecossistema", "nome": "Fornecedores e modelos" },
+        { "id": "talento", "nome": "Talento e ritmo" }
       ]
     },
     "forcas": [

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   getSwotAnalysis,
   updateSwotAnalysis,
   importSwotAnalysis,
   SWOT_PILLARS,
   SWOT_QUADRANT_DEFAULT_PILLARS,
+  MATURITY_DIMENSIONS,
   emptyPilares,
   type SwotAnalysis,
   type SwotAnalysisPayload,
@@ -51,7 +53,7 @@ type QuadrantHint = {
 
 type QuadrantPillar = { id: string; name: string; q: string }
 
-/** Repertório de partida por quadrante — estímulo, não checklist. */
+/** Repertório de partida por quadrante — estímulo, não checklist. Rótulos alinhados ao Modelo de Maturidade. */
 const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
   forcas: {
     letter: 'F',
@@ -59,21 +61,25 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     locus: 'interno · positivo',
     neg: false,
     groups: [
-      { label: 'Dados', pilar: 'dados', text: 'base proprietária ampla, integrada e de qualidade, com histórico longo.' },
       {
-        label: 'Talento & cultura',
-        pilar: 'talento',
-        text: 'time de dados/IA constituído; lideranças com letramento; cultura de experimentação.',
-      },
-      {
-        label: 'Infra & governança',
-        pilar: 'infraestrutura',
-        text: 'dados centralizados e isolados, nuvem madura; política de IA, auditoria de viés e validação humana.',
-      },
-      {
-        label: 'Portfólio & recursos',
+        label: 'Estratégia e Visão',
         pilar: 'portfolio',
-        text: 'casos em produção com ROI comprovado; caixa e patrocínio do topo.',
+        text: 'visão clara de IA ligada a OKRs/receita; roadmap aprovado; framework de impacto × viabilidade; casos com ROI.',
+      },
+      {
+        label: 'Dados e Infraestrutura',
+        pilar: 'dados',
+        text: 'base proprietária integrada e de qualidade; nuvem/APIs maduras para consumir IA com segurança.',
+      },
+      {
+        label: 'Pessoas e Cultura',
+        pilar: 'talento',
+        text: 'time de dados/IA constituído; lideranças com letramento; cultura de experimentação e patrocínio do topo.',
+      },
+      {
+        label: 'Governança e Risco',
+        pilar: 'governanca',
+        text: 'política de IA, conformidade, auditoria de viés/alucinação e validação humana no crítico.',
       },
     ],
   },
@@ -84,24 +90,24 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     neg: false,
     groups: [
       {
-        label: 'Tecnologia & ecossistema',
+        label: 'Tecnologia e ecossistema',
         pilar: 'ecossistema',
         text: 'barateamento e maturação dos modelos; IA generativa, RAG e agêntica; ferramentas abertas e parceiros.',
       },
       {
-        label: 'Mercado & clientes',
+        label: 'Mercado e clientes',
         pilar: 'portfolio',
-        text: 'demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos.',
+        text: 'demanda por experiências personalizadas; novos modelos de receita; segmentos mal atendidos; concorrentes lentos.',
       },
       {
-        label: 'Concorrência',
-        pilar: 'portfolio',
-        text: 'concorrentes lentos ou pouco maduros; janela para liderar.',
+        label: 'Ambiente regulatório',
+        pilar: 'governanca',
+        text: 'clareza regulatória ou janelas setoriais que favorecem quem já tem conformidade e isolamento de dados.',
       },
       {
-        label: 'Talento & incentivos',
+        label: 'Talento e incentivos',
         pilar: 'talento',
-        text: 'oferta crescente de talento e ecossistemas locais; editais e incentivos.',
+        text: 'oferta crescente de talento e ecossistemas locais; editais e incentivos para acelerar a transformação.',
       },
     ],
   },
@@ -111,21 +117,25 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
     locus: 'interno · negativo',
     neg: true,
     groups: [
-      { label: 'Dados', pilar: 'dados', text: 'silos, baixa qualidade, sem propriedade clara nem rotulagem.' },
       {
-        label: 'Talento & cultura',
+        label: 'Estratégia e Visão',
+        pilar: 'portfolio',
+        text: 'só pilotos sem escala; sem dono, critério de priorização, roadmap ou business case.',
+      },
+      {
+        label: 'Dados e Infraestrutura',
+        pilar: 'dados',
+        text: 'silos, baixa qualidade, legado e dívida técnica; sem propriedade clara nem rotulagem.',
+      },
+      {
+        label: 'Pessoas e Cultura',
         pilar: 'talento',
         text: 'falta de especialistas; letramento desigual; resistência ou aversão a risco.',
       },
       {
-        label: 'Infra & governança',
+        label: 'Governança e Risco',
         pilar: 'governanca',
-        text: 'legado e dívida técnica; sem governança de IA, auditoria de alucinações/viés ou isolamento de dados.',
-      },
-      {
-        label: 'Portfólio & recursos',
-        pilar: 'portfolio',
-        text: 'só pilotos sem escala; sem dono, critério de priorização ou business case.',
+        text: 'sem governança de IA, auditoria de alucinações/viés ou isolamento de dados sensíveis.',
       },
     ],
   },
@@ -141,23 +151,30 @@ const QUADRANT_HINTS: Record<SwotListField, QuadrantHint> = {
         text: 'players maduros e marketplaces com IA avançada; risco de disrupção do core.',
       },
       {
-        label: 'Regulação',
+        label: 'Regulação e risco',
         pilar: 'governanca',
-        text: 'LGPD, marco de IA e regras setoriais elevando o custo de conformidade.',
+        text: 'LGPD, marco de IA e regras setoriais elevando o custo de conformidade e o risco reputacional.',
       },
       {
-        label: 'Fornecedores & modelo',
+        label: 'Fornecedores e modelos',
         pilar: 'ecossistema',
-        text: 'lock-in, mudança de preço ou descontinuação; alucinação, viés e risco reputacional.',
+        text: 'lock-in, mudança de preço ou descontinuação; alucinação, viés e dependência de um único provedor.',
       },
       {
-        label: 'Talento & ritmo',
+        label: 'Talento e ritmo',
         pilar: 'talento',
         text: 'guerra por talento; velocidade da mudança e obsolescência precoce das ferramentas.',
       },
     ],
   },
 }
+
+const pillarsByMaturityDimension = computed(() =>
+  MATURITY_DIMENSIONS.map((dim) => ({
+    ...dim,
+    pillars: PILLARS.filter((p) => p.maturityDimension === dim.id),
+  }))
+)
 
 const CATALOG = (['forcas', 'oportunidades', 'fraquezas', 'ameacas'] as SwotListField[]).map(
   (field) => QUADRANT_HINTS[field]
@@ -633,7 +650,9 @@ onUnmounted(() => {
         <p class="eyebrow">Instrumento estratégico · Valorian</p>
         <h1 class="page-title">SWOT de <em>IA</em></h1>
         <p class="page-desc">
-          Diagnosticar a organização sob a ótica da estratégia de IA — da matriz ao veredito.
+          Traduz a prontidão do
+          <RouterLink class="inline-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
+          em FOFA estratégica — sob a ótica da estratégia de IA, da matriz ao veredito.
         </p>
       </div>
       <div class="header-actions">
@@ -644,6 +663,7 @@ onUnmounted(() => {
           class="sr-only"
           @change="onImportFile"
         />
+        <RouterLink class="maturity-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
         <button type="button" class="import-btn" :disabled="importState === 'importing'" @click="openImportPicker">
           {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
         </button>
@@ -670,31 +690,64 @@ onUnmounted(() => {
         </button>
         <div v-if="showMethod" class="method-body">
           <p>
-            O objeto é a <strong>organização</strong>. A ótica é a <strong>estratégia organizacional de IA</strong>.
-            Um item só entra se afeta materialmente a capacidade de executar essa estratégia.
+            Dois instrumentos, uma jornada. O
+            <RouterLink class="inline-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
+            diagnostica a <strong>prontidão</strong> em quatro dimensões (escala 1–5; abrangência Básico /
+            Completo / Complementar). A SWOT traduz esse diagnóstico em
+            <strong>FOFA estratégica</strong> sob a ótica da estratégia organizacional de IA.
           </p>
-          <h3>Sete pilares</h3>
-          <div class="pillarq">
-            <div v-for="p in PILLARS" :key="p.id">
-              <b>{{ p.name }}.</b> <i>{{ p.q }}</i>
+          <p>
+            O objeto é a <strong>organização</strong>. A ótica é a
+            <strong>estratégia organizacional de IA</strong>. Um item só entra se afeta materialmente a
+            capacidade de executar essa estratégia — use as respostas e médias do diagnóstico como evidência
+            quando existirem.
+          </p>
+
+          <h3>Quatro dimensões · sete pilares</h3>
+          <p class="method-note">
+            Os pilares da SWOT aprofundam as mesmas dimensões do Modelo de Maturidade. Cada quadrante parte de
+            um subconjunto (banco de itens); você pode acrescentar pilares canônicos ou custom.
+          </p>
+          <div class="dim-groups">
+            <div v-for="dim in pillarsByMaturityDimension" :key="dim.id" class="dim-group">
+              <div class="dim-group-head">
+                <strong>{{ dim.name }}</strong>
+                <span>{{ dim.brief }}</span>
+              </div>
+              <div class="pillarq">
+                <div v-for="p in dim.pillars" :key="p.id">
+                  <b>{{ p.name }}.</b> <i>{{ p.q }}</i>
+                </div>
+              </div>
             </div>
           </div>
+
           <h3>Duas regras</h3>
           <ul class="bullets">
             <li>
-              <strong>Locus disciplinado.</strong> Forças e Fraquezas são internas. Oportunidades e Ameaças são do
-              ambiente.
+              <strong>Locus disciplinado.</strong> Forças e Fraquezas são internas (capacidade sob controle da
+              organização — tipicamente o grosso do diagnóstico de maturidade). Oportunidades e Ameaças são do
+              ambiente (regulação, mercado, fornecedores, ritmo externo).
             </li>
             <li>
-              <strong>Baseado em evidência.</strong> Cada item ancorado em fato ou métrica — priorize por impacto
-              (ideal: 2–3 por quadrante).
+              <strong>Baseado em evidência.</strong> Cada item ancorado em fato, métrica ou nível observado no
+              diagnóstico (escala 1–5) — priorize por impacto (ideal: 2–3 por quadrante).
             </li>
           </ul>
           <ol class="steps">
-            <li><strong>Declare a ótica.</strong> Estratégia de IA em uma frase.</li>
-            <li><strong>Varra os quadrantes</strong> pelos sete pilares.</li>
+            <li>
+              <strong>Declare a ótica.</strong> Estratégia de IA em uma frase — o mesmo norte que o diagnóstico
+              de maturidade avalia.
+            </li>
+            <li>
+              <strong>Varra os quadrantes</strong> pelas quatro dimensões (pilares do banco de itens de cada
+              quadrante).
+            </li>
             <li><strong>Aplique o crivo.</strong> Descarte o que não afeta a estratégia.</li>
-            <li><strong>Priorize.</strong> Fique com os 2–3 itens mais fortes de cada quadrante.</li>
+            <li>
+              <strong>Priorize.</strong> Fique com os 2–3 itens mais fortes de cada quadrante (impacto ×
+              viabilidade ou probabilidade, na mesma escala 1–5).
+            </li>
             <li><strong>Cruze e conclua.</strong> TOWS → iniciativas → veredito.</li>
           </ol>
           <button type="button" class="catalog-toggle" @click="showCatalog = !showCatalog">
@@ -734,8 +787,9 @@ onUnmounted(() => {
           <div class="eyebrow">2 · Matriz</div>
           <h2>Interno × Externo</h2>
           <p class="hint">
-            Em cada quadrante, os itens ficam sob os pilares do repertório de partida daquele quadrante. Inclua
-            outro pilar se precisar. Priorize 2–3 itens por quadrante. Toque no ? para o repertório.
+            No interno (Forças / Fraquezas), o repertório de partida usa as quatro dimensões do Modelo de
+            Maturidade. No externo, o foco é ambiente. Inclua outro pilar se precisar. Priorize 2–3 itens por
+            quadrante. Toque no ? para o repertório.
           </p>
         </div>
         <div class="axis-top"><span>Interno</span><span>Externo</span></div>
@@ -765,7 +819,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <p class="q-help-note">
-                Repertório de partida, organizado pelos pilares — estímulo, não checklist a preencher inteiro.
+                Repertório de partida alinhado às dimensões do Modelo de Maturidade — estímulo, não checklist.
               </p>
               <ul class="q-help-list">
                 <li v-for="g in QUADRANT_HINTS[q.field].groups" :key="g.label">
@@ -928,7 +982,8 @@ onUnmounted(() => {
       <section class="verdict">
         <div class="eyebrow gold">4 · Veredito</div>
         <p class="verdict-lead">
-          A estratégia se sustenta, precisa de uma fase de fundação, ou deve ser repensada?
+          À luz das forças/fraquezas internas (e do nível de maturidade observado), a estratégia se sustenta,
+          precisa de uma fase de fundação, ou deve ser repensada?
         </p>
         <div class="verdict-types">
           <button
@@ -1059,7 +1114,33 @@ onUnmounted(() => {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
-  max-width: 48ch;
+  max-width: 52ch;
+}
+.inline-link {
+  color: var(--navy);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.inline-link:hover {
+  color: var(--gold);
+}
+.maturity-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--navy);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.maturity-link:hover {
+  opacity: 0.9;
 }
 .save-pill {
   flex-shrink: 0;
@@ -1130,6 +1211,42 @@ onUnmounted(() => {
   font-size: 0.95rem;
   color: var(--navy);
   margin: 1.1em 0 0.35em;
+}
+.method-note {
+  margin: 0 0 0.75em;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dim-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0.5em 0 1em;
+}
+.dim-group {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+.dim-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.dim-group-head strong {
+  color: var(--navy);
+  font-size: 0.92rem;
+}
+.dim-group-head span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.dim-group .pillarq {
+  margin: 0.2em 0 0;
 }
 .pillarq {
   border-top: 1px solid var(--line);

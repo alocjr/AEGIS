@@ -76,6 +76,52 @@ def seed_maturity_model_from_file() -> ObjectId | None:
     return ins.inserted_id
 
 
+# Rótulos do banco de itens anterior ao alinhamento com o Modelo de Maturidade.
+_LEGACY_SWOT_PILLAR_NAMES = frozenset(
+    {
+        "Talento & cultura",
+        "Infra & governança",
+        "Portfólio & recursos",
+        "Tecnologia & ecossistema",
+        "Mercado & clientes",
+        "Talento & incentivos",
+        "Fornecedores & modelo",
+        "Cultura & Liderança",
+        "Governança & Regulação",
+        "Portfólio de casos",
+        "Ecossistema & Fornecedores",
+    }
+)
+
+
+def purge_legacy_swot_analyses() -> int:
+    """Remove SWOTs cujo banco de itens ainda usa rótulos pré-maturidade.
+
+    Documentos vazios (sem pilares persistidos) são mantidos — a UI aplica os
+    novos defaults. Retorna a quantidade apagada.
+    """
+    legacy_ids: list = []
+    for doc in db.swot_analyses.find({}, {"pilares": 1}):
+        pilares = doc.get("pilares") or {}
+        if not isinstance(pilares, dict):
+            legacy_ids.append(doc["_id"])
+            continue
+        names: list[str] = []
+        for field in ("forcas", "fraquezas", "oportunidades", "ameacas"):
+            slots = pilares.get(field) or []
+            if not isinstance(slots, list):
+                continue
+            for slot in slots:
+                if isinstance(slot, dict) and slot.get("nome"):
+                    names.append(str(slot["nome"]).strip())
+        if names and any(n in _LEGACY_SWOT_PILLAR_NAMES for n in names):
+            legacy_ids.append(doc["_id"])
+    if not legacy_ids:
+        return 0
+    result = db.swot_analyses.delete_many({"_id": {"$in": legacy_ids}})
+    return int(result.deleted_count)
+
+
 def init_indexes() -> None:
     db.users.create_index("email", unique=True)
     db.password_resets.create_index("token_hash", unique=True)
@@ -106,5 +152,6 @@ def init_indexes() -> None:
     _seed_landing_prompts_if_empty()
     db.canvas_projects.create_index([("user_id", 1), ("updated_at", -1)])
     db.swot_analyses.create_index("user_id", unique=True)
+    purge_legacy_swot_analyses()
     db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)
     db.auth_rate_limits.create_index([("email", 1), ("scope", 1), ("at", -1)])

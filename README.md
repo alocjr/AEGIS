@@ -42,6 +42,7 @@ Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 | `docs/mcp.md` | Configuração do servidor MCP Claude |
 | `mcp-client/` | Exemplos de config Claude Desktop / Code |
 | `util/create_user.py` | Script para criar ou atualizar usuário admin |
+| `util/purge_swot_analyses.py` | Limpa SWOTs legados (ou todos) em `swot_analyses` |
 | `util/aegis_mcp_token.py` | Obtém JWT para o cliente MCP |
 | `Dockerfile` | Build de produção: frontend + backend no mesmo container |
 | `docker-compose.yml` | Deploy do app (MongoDB externo, ex.: Atlas) |
@@ -56,6 +57,7 @@ Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 | `quiz` / `quiz_responses` | Questionários e respostas |
 | `ai_maturity_model` | Questionário de maturidade em IA (documento ativo) |
 | `maturity_responses` | Autoavaliações (`model_id` → `ai_maturity_model`) |
+| `swot_analyses` | SWOT de IA por mentorado (1 doc / user) |
 | `password_resets` | Tokens de reset de senha |
 | `leads` | Leads da landing |
 

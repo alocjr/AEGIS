@@ -16,6 +16,9 @@ export type SwotPilarId =
   | 'ecossistema'
   | ''
 
+/** Dimensões do Diagnóstico de Maturidade em IA (modelo v3). */
+export type MaturityDimensionId = 'strategy' | 'data_infra' | 'people_culture' | 'gov_risk'
+
 export interface SwotPilarSlot {
   id: string
   nome: string
@@ -88,68 +91,115 @@ export type SwotImportDocument = {
   payload?: SwotAnalysisPayload
 } & SwotAnalysisPayload
 
-export const SWOT_PILLARS: { id: Exclude<SwotPilarId, ''>; name: string; q: string }[] = [
+export type SwotPillar = {
+  id: Exclude<SwotPilarId, ''>
+  name: string
+  q: string
+  /** Dimensão do Modelo de Maturidade que este pilar aprofunda. */
+  maturityDimension: MaturityDimensionId
+}
+
+export const MATURITY_DIMENSIONS: {
+  id: MaturityDimensionId
+  name: string
+  brief: string
+}[] = [
+  {
+    id: 'strategy',
+    name: 'Estratégia e Visão',
+    brief: 'Ambição, roadmap, priorização e patrocínio que ligam IA a resultado.',
+  },
+  {
+    id: 'data_infra',
+    name: 'Dados e Infraestrutura',
+    brief: 'Base de dados, arquitetura e capacidade de consumir IA com segurança.',
+  },
+  {
+    id: 'people_culture',
+    name: 'Pessoas e Cultura',
+    brief: 'Talento, letramento, liderança e abertura à mudança.',
+  },
+  {
+    id: 'gov_risk',
+    name: 'Governança e Risco',
+    brief: 'Conformidade, risco, fornecedores e controle do que é crítico.',
+  },
+]
+
+/**
+ * Sete pilares canônicos da SWOT — aprofundam as quatro dimensões do
+ * Diagnóstico de Maturidade em IA (mesmo vocabulário do modelo v3).
+ */
+export const SWOT_PILLARS: SwotPillar[] = [
+  {
+    id: 'portfolio',
+    name: 'Estratégia e Portfólio',
+    maturityDimension: 'strategy',
+    q: 'Há visão, roadmap e critérios de priorização (impacto × viabilidade) que conectam IA a OKRs e receita?',
+  },
   {
     id: 'dados',
     name: 'Dados',
+    maturityDimension: 'data_infra',
     q: 'Temos dados proprietários, limpos e integrados para alimentar e contextualizar modelos?',
-  },
-  {
-    id: 'talento',
-    name: 'Talento',
-    q: 'Há competência técnica e lideranças com letramento para conduzir?',
   },
   {
     id: 'infraestrutura',
     name: 'Infraestrutura',
+    maturityDimension: 'data_infra',
     q: 'A arquitetura (nuvem, APIs) consome IA com segurança, sem travar no legado?',
   },
   {
-    id: 'governanca',
-    name: 'Governança & Regulação',
-    q: 'Temos conformidade (LGPD), auditoria de viés e alucinação, isolamento de dados sensíveis e validação humana no que é crítico?',
+    id: 'talento',
+    name: 'Talento',
+    maturityDimension: 'people_culture',
+    q: 'Há competência técnica e lideranças com letramento para conduzir a transformação?',
   },
   {
     id: 'cultura',
-    name: 'Cultura & Liderança',
+    name: 'Cultura e Liderança',
+    maturityDimension: 'people_culture',
     q: 'Há patrocínio do topo e abertura à mudança — ou medo e resistência?',
   },
   {
-    id: 'portfolio',
-    name: 'Portfólio de casos',
-    q: 'Sabemos priorizar casos por valor e prontidão, com dono definido?',
+    id: 'governanca',
+    name: 'Governança e Risco',
+    maturityDimension: 'gov_risk',
+    q: 'Há conformidade (LGPD), gestão de risco, auditoria de viés/alucinação e validação humana no crítico?',
   },
   {
     id: 'ecossistema',
-    name: 'Ecossistema & Fornecedores',
+    name: 'Ecossistema e Fornecedores',
+    maturityDimension: 'gov_risk',
     q: 'Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?',
   },
 ]
 
-/** Defaults do banco de itens por quadrante (rótulos de partida). */
+/** Defaults do banco de itens por quadrante — rótulos alinhados às dimensões de maturidade. */
 export const SWOT_QUADRANT_DEFAULT_PILLARS: SwotPilaresPorQuadrante = {
   forcas: [
-    { id: 'dados', nome: 'Dados' },
-    { id: 'talento', nome: 'Talento & cultura' },
-    { id: 'infraestrutura', nome: 'Infra & governança' },
-    { id: 'portfolio', nome: 'Portfólio & recursos' },
+    { id: 'portfolio', nome: 'Estratégia e Visão' },
+    { id: 'dados', nome: 'Dados e Infraestrutura' },
+    { id: 'talento', nome: 'Pessoas e Cultura' },
+    { id: 'governanca', nome: 'Governança e Risco' },
   ],
   oportunidades: [
-    { id: 'ecossistema', nome: 'Tecnologia & ecossistema' },
-    { id: 'portfolio', nome: 'Mercado & clientes' },
-    { id: 'talento', nome: 'Talento & incentivos' },
+    { id: 'ecossistema', nome: 'Tecnologia e ecossistema' },
+    { id: 'portfolio', nome: 'Mercado e clientes' },
+    { id: 'governanca', nome: 'Ambiente regulatório' },
+    { id: 'talento', nome: 'Talento e incentivos' },
   ],
   fraquezas: [
-    { id: 'dados', nome: 'Dados' },
-    { id: 'talento', nome: 'Talento & cultura' },
-    { id: 'governanca', nome: 'Infra & governança' },
-    { id: 'portfolio', nome: 'Portfólio & recursos' },
+    { id: 'portfolio', nome: 'Estratégia e Visão' },
+    { id: 'dados', nome: 'Dados e Infraestrutura' },
+    { id: 'talento', nome: 'Pessoas e Cultura' },
+    { id: 'governanca', nome: 'Governança e Risco' },
   ],
   ameacas: [
     { id: 'portfolio', nome: 'Concorrência' },
-    { id: 'governanca', nome: 'Regulação' },
-    { id: 'ecossistema', nome: 'Fornecedores & modelo' },
-    { id: 'talento', nome: 'Talento & ritmo' },
+    { id: 'governanca', nome: 'Regulação e risco' },
+    { id: 'ecossistema', nome: 'Fornecedores e modelos' },
+    { id: 'talento', nome: 'Talento e ritmo' },
   ],
 }
 

@@ -21,7 +21,9 @@ Projeto **Valorian 4 Future (AEGIS)**: plataforma de mentoria executiva.
 - Baseline brownfield: `specs/001-aegis-baseline/spec.md`
 
 ## Coleções MongoDB
-`users`, `courses`, `progress`, `quiz`, `quiz_responses`, `ai_maturity_model`, `maturity_responses`, `password_resets`, `leads`
+`users`, `courses`, `progress`, `quiz`, `quiz_responses`, `ai_maturity_model`, `maturity_responses`, `swot_analyses`, `password_resets`, `leads`
+
+SWOTs com rótulos de pilares pré-maturidade são purgados no `init_indexes` (`purge_legacy_swot_analyses`). Limpeza manual: `python util/purge_swot_analyses.py` (`--all` apaga todos).
 
 ## Maturidade IA
 Questionário na coleção `ai_maturity_model` (seed opcional via `backend/data/ai_maturity_model.json`). Respostas em `maturity_responses` com `model_id`.

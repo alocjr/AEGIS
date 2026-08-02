@@ -1,66 +1,96 @@
 {
   "version": 3,
-  "description": "Catálogo de pilares da SWOT de IA (Valorian). Os sete pilares canônicos atravessam o método; cada quadrante parte do subconjunto do banco de itens e pode receber pilares extras (canônicos ou custom).",
+  "description": "Catálogo de pilares da SWOT de IA (Valorian). Os sete pilares canônicos aprofundam as quatro dimensões do Diagnóstico de Maturidade em IA; cada quadrante parte do subconjunto do banco de itens e pode receber pilares extras (canônicos ou custom).",
+  "maturity_dimensions": [
+    {
+      "id": "strategy",
+      "name": "Estratégia e Visão",
+      "brief": "Ambição, roadmap, priorização e patrocínio que ligam IA a resultado."
+    },
+    {
+      "id": "data_infra",
+      "name": "Dados e Infraestrutura",
+      "brief": "Base de dados, arquitetura e capacidade de consumir IA com segurança."
+    },
+    {
+      "id": "people_culture",
+      "name": "Pessoas e Cultura",
+      "brief": "Talento, letramento, liderança e abertura à mudança."
+    },
+    {
+      "id": "gov_risk",
+      "name": "Governança e Risco",
+      "brief": "Conformidade, risco, fornecedores e controle do que é crítico."
+    }
+  ],
   "pillars": [
+    {
+      "id": "portfolio",
+      "name": "Estratégia e Portfólio",
+      "maturity_dimension": "strategy",
+      "question": "Há visão, roadmap e critérios de priorização (impacto × viabilidade) que conectam IA a OKRs e receita?"
+    },
     {
       "id": "dados",
       "name": "Dados",
+      "maturity_dimension": "data_infra",
       "question": "Temos dados proprietários, limpos e integrados para alimentar e contextualizar modelos?"
-    },
-    {
-      "id": "talento",
-      "name": "Talento",
-      "question": "Há competência técnica e lideranças com letramento para conduzir?"
     },
     {
       "id": "infraestrutura",
       "name": "Infraestrutura",
+      "maturity_dimension": "data_infra",
       "question": "A arquitetura (nuvem, APIs) consome IA com segurança, sem travar no legado?"
     },
     {
-      "id": "governanca",
-      "name": "Governança & Regulação",
-      "question": "Temos conformidade (LGPD), auditoria de viés e alucinação, isolamento de dados sensíveis e validação humana no que é crítico?"
+      "id": "talento",
+      "name": "Talento",
+      "maturity_dimension": "people_culture",
+      "question": "Há competência técnica e lideranças com letramento para conduzir a transformação?"
     },
     {
       "id": "cultura",
-      "name": "Cultura & Liderança",
+      "name": "Cultura e Liderança",
+      "maturity_dimension": "people_culture",
       "question": "Há patrocínio do topo e abertura à mudança — ou medo e resistência?"
     },
     {
-      "id": "portfolio",
-      "name": "Portfólio de casos",
-      "question": "Sabemos priorizar casos por valor e prontidão, com dono definido?"
+      "id": "governanca",
+      "name": "Governança e Risco",
+      "maturity_dimension": "gov_risk",
+      "question": "Há conformidade (LGPD), gestão de risco, auditoria de viés/alucinação e validação humana no crítico?"
     },
     {
       "id": "ecossistema",
-      "name": "Ecossistema & Fornecedores",
+      "name": "Ecossistema e Fornecedores",
+      "maturity_dimension": "gov_risk",
       "question": "Temos flexibilidade contra o lock-in de um único fornecedor ou modelo?"
     }
   ],
   "quadrant_defaults": {
     "forcas": [
-      { "id": "dados", "nome": "Dados" },
-      { "id": "talento", "nome": "Talento & cultura" },
-      { "id": "infraestrutura", "nome": "Infra & governança" },
-      { "id": "portfolio", "nome": "Portfólio & recursos" }
+      { "id": "portfolio", "nome": "Estratégia e Visão" },
+      { "id": "dados", "nome": "Dados e Infraestrutura" },
+      { "id": "talento", "nome": "Pessoas e Cultura" },
+      { "id": "governanca", "nome": "Governança e Risco" }
     ],
     "oportunidades": [
-      { "id": "ecossistema", "nome": "Tecnologia & ecossistema" },
-      { "id": "portfolio", "nome": "Mercado & clientes" },
-      { "id": "talento", "nome": "Talento & incentivos" }
+      { "id": "ecossistema", "nome": "Tecnologia e ecossistema" },
+      { "id": "portfolio", "nome": "Mercado e clientes" },
+      { "id": "governanca", "nome": "Ambiente regulatório" },
+      { "id": "talento", "nome": "Talento e incentivos" }
     ],
     "fraquezas": [
-      { "id": "dados", "nome": "Dados" },
-      { "id": "talento", "nome": "Talento & cultura" },
-      { "id": "governanca", "nome": "Infra & governança" },
-      { "id": "portfolio", "nome": "Portfólio & recursos" }
+      { "id": "portfolio", "nome": "Estratégia e Visão" },
+      { "id": "dados", "nome": "Dados e Infraestrutura" },
+      { "id": "talento", "nome": "Pessoas e Cultura" },
+      { "id": "governanca", "nome": "Governança e Risco" }
     ],
     "ameacas": [
       { "id": "portfolio", "nome": "Concorrência" },
-      { "id": "governanca", "nome": "Regulação" },
-      { "id": "ecossistema", "nome": "Fornecedores & modelo" },
-      { "id": "talento", "nome": "Talento & ritmo" }
+      { "id": "governanca", "nome": "Regulação e risco" },
+      { "id": "ecossistema", "nome": "Fornecedores e modelos" },
+      { "id": "talento", "nome": "Talento e ritmo" }
     ]
   },
   "custom_pillars": {
@@ -72,7 +102,7 @@
       "quadrants": ["forcas", "fraquezas"],
       "axes": ["impacto", "viabilidade"],
       "formula": "prioridade_sugerida = impacto * viabilidade",
-      "note": "Forças: viabilidade de explorar. Fraquezas: viabilidade de corrigir."
+      "note": "Forças: viabilidade de explorar. Fraquezas: viabilidade de corrigir. Escala 1–5 (mesma linguagem do Modelo de Maturidade)."
     },
     "externo": {
       "quadrants": ["oportunidades", "ameacas"],
