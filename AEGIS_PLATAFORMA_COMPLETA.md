@@ -135,7 +135,7 @@
   - [Modelo de diagnóstico](#m5-modelo)
     - [MOD-MAT-001](#mod-mat-001) — Modelo ser carregado da coleção `ai_maturity_model`
     - [MOD-MAT-002](#mod-mat-002) — Modelo conter `dimensions` com questions
-    - [MOD-MAT-003](#mod-mat-003) — Modelo definir `scoring_logic` com faixas min/max → nível
+    - [MOD-MAT-003](#mod-mat-003) — Modelo definir `scoring` por abrangência com faixas min/max → nível
     - [MOD-MAT-004](#mod-mat-004) — Escala de resposta ser 1–5 por questão
   - [Autoavaliação](#m5-autoavaliacao)
     - [MOD-MAT-010](#mod-mat-010) — Aluno responder **todas** as questões do modelo
@@ -362,7 +362,7 @@ Os FRs de alto nível do baseline (`FR-001` a `FR-009`) estão **detalhados por 
 | **Course** | slug, programa_formacao_executiva (jornada, encontros) |
 | **Progress** | user_id, course_slug, concluidos, materiais, agendas, encontros_liberados |
 | **Quiz / QuizResponse** | questionário por encontro; respostas do aluno |
-| **AiMaturityModel** | version, dimensions, answer_scale, scoring_logic |
+| **AiMaturityModel** | version, levels (abrangência), dimensions, scoring por tier |
 | **MaturityResponse** | respostas e resultado calculado |
 | **Lead** | contato da landing |
 | **PasswordReset** | token_hash, expires_at, used_at |
@@ -621,9 +621,9 @@ Documentação derivada do código em `backend/app/routes/`, `backend/app/deps.p
 
 | ID | Requisito | Regras de negócio | Referência |
 |----|-----------|-------------------|------------|
-| <span id="mod-mat-001">MOD-MAT-001</span> | Modelo MUST ser carregado da coleção `ai_maturity_model` | `find_one(sort=[("_id", -1)])` — documento **mais recente** por ObjectId. Remove `_id` do payload retornado. Index em `version`. | `_load_model()` |
-| <span id="mod-mat-002">MOD-MAT-002</span> | Modelo MUST conter `dimensions` com questions | Se coleção vazia → **503** `"Modelo de maturidade nao configurado"`. Se `dimensions` ausente/vazio → **503** `"Modelo de maturidade invalido"`. | `GET /api/maturity/model` |
-| <span id="mod-mat-003">MOD-MAT-003</span> | Modelo MUST definir `scoring_logic` com faixas min/max → nível | Itera entradas de `scoring_logic`; primeira faixa onde `min <= total_score <= max` define `level` retornado (objeto cfg completo). Pode ser null se nenhuma faixa casar. | `_score_submission()` L58–62 |
+| <span id="mod-mat-001">MOD-MAT-001</span> | Modelo MUST ser carregado da coleção `ai_maturity_model` | `find_one(sort=[("_id", -1)])` — documento mais recente. Seed inicial opcional via JSON em `backend/data/`. | `_load_model()` |
+| <span id="mod-mat-002">MOD-MAT-002</span> | Modelo MUST conter `dimensions` com questions | Coleção vazia → **503** `"Modelo de maturidade nao configurado"`. Se `dimensions` ausente/vazio → **503** `"Modelo de maturidade invalido"`. | `GET /api/maturity/model` |
+| <span id="mod-mat-003">MOD-MAT-003</span> | Modelo MUST definir `scoring` por abrangência com faixas min/max → nível | Usa `scoring[tier]`; primeira faixa onde `min <= total_score <= max` define `level`. | `_score_submission()` |
 | <span id="mod-mat-004">MOD-MAT-004</span> | Escala de resposta MUST ser 1–5 por questão | Valores `<1` ou `>5` tratados como 0 no cálculo; no submit **todas** questões obrigatórias com valor 1–5 senão **400** `"Resposta invalida para {qid}"`. | `save_my_response`, `_score_submission` |
 
 <a id="m5-autoavaliacao"></a>
@@ -1177,8 +1177,8 @@ Cada **encontro** contém: `id`, `titulo`, `objetivos`, `material_suporte[]`, et
 | `progress` | `(user_id, course_slug)` unique | Progresso por aluno/trilha |
 | `quiz` | `encontro` unique | Questionários |
 | `quiz_responses` | `(user_id, encontro)` unique | Respostas |
-| `ai_maturity_model` | `version` | Modelo de diagnóstico |
-| `maturity_responses` | `(user_id, submitted_at)` | Autoavaliações |
+| `ai_maturity_model` | `version` | Questionário de diagnóstico |
+| `maturity_responses` | `(user_id, model_id, submitted_at)` | Autoavaliações com referência ao modelo |
 | `password_resets` | `token_hash` unique; TTL `expires_at` | Tokens reset |
 | `email_verifications` | `token_hash` unique; TTL `expires_at` | Tokens verify |
 | `auth_rate_limits` | TTL `at`; `(email, scope, at)` | Rate limiting |

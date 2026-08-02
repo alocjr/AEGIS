@@ -59,9 +59,7 @@ function getLevelByScore(score: number): { label?: string; description?: string 
   const m = model.value
   const tier = displayedResult.value?.tier
   const bands =
-    (tier && m?.scoring?.[tier as MaturityTier]) ||
-    m?.scoring?.basico ||
-    m?.scoring_logic
+    (tier && m?.scoring?.[tier as MaturityTier]) || m?.scoring?.basico
   if (!bands) return null
   for (const k of Object.keys(bands)) {
     const it = bands[k]

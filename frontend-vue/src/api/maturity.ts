@@ -40,15 +40,13 @@ export interface MaturityOverlap {
 }
 
 export interface MaturityModel {
+  id?: string
   assessment_title?: string
   title?: string
   version?: string
   levels?: Record<MaturityTier, MaturityTierConfig>
   dimensions?: MaturityDimension[]
   scoring?: Record<MaturityTier, Record<string, MaturityScoreBand>>
-  /** legado v2 */
-  answer_scale?: { value: number; label: string; context?: string }[]
-  scoring_logic?: Record<string, MaturityScoreBand>
   overlaps?: MaturityOverlap[]
 }
 
@@ -63,6 +61,7 @@ export interface MaturityResult {
 
 export interface MaturityMyResponse {
   answers: Record<string, number>
+  model_id?: string | null
   tier?: MaturityTier | string
   submitted_at: string | null
   result: MaturityResult | null
@@ -71,6 +70,7 @@ export interface MaturityMyResponse {
 /** Item resumido na lista de autoavaliações */
 export interface MaturityResponseListItem {
   id: string
+  model_id?: string
   submitted_at: string | null
   tier?: MaturityTier | string
   result: {
@@ -105,6 +105,7 @@ export function saveMaturityResponse(
   responseId?: string | null
 ): Promise<{
   id: string
+  model_id?: string
   submitted_at: string
   result: MaturityResult
   tier?: string
@@ -112,6 +113,7 @@ export function saveMaturityResponse(
 }> {
   return post<{
     id: string
+    model_id?: string
     submitted_at: string
     result: MaturityResult
     tier?: string

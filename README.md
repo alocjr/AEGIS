@@ -54,12 +54,12 @@ Plataforma de mentoria executiva com backend FastAPI + MongoDB e frontend Vue 3.
 | `courses` | Trilhas e conteúdo (`programa_formacao_executiva`) |
 | `progress` | Progresso por usuário e trilha |
 | `quiz` / `quiz_responses` | Questionários e respostas |
-| `ai_maturity_model` | Modelo de diagnóstico de maturidade em IA |
-| `maturity_responses` | Autoavaliações dos alunos |
+| `ai_maturity_model` | Questionário de maturidade em IA (documento ativo) |
+| `maturity_responses` | Autoavaliações (`model_id` → `ai_maturity_model`) |
 | `password_resets` | Tokens de reset de senha |
 | `leads` | Leads da landing |
 
-O modelo de maturidade é carregado da coleção `ai_maturity_model` (documento mais recente). Garanta que exista pelo menos um documento com `dimensions`, `answer_scale` e `scoring_logic`.
+O questionário é lido da coleção `ai_maturity_model` (documento mais recente). Em ambiente vazio, o bootstrap usa `backend/data/ai_maturity_model.json` só para seed inicial. Cada resposta em `maturity_responses` guarda `model_id` do questionário usado.
 
 ## Desenvolvimento
 
@@ -142,8 +142,8 @@ Para deploy manual sem Docker: configure as variáveis de ambiente, rode `npm ci
 - Listagem, detalhe por encontro ou ID, envio e consulta de respostas
 
 ### Maturidade IA (`/api/maturity`)
-- `GET /model` — modelo da coleção `ai_maturity_model`
-- `GET /my-responses`, `GET /my-responses/{id}`, `POST /my-response`
+- `GET /model` — modelo ativo em `ai_maturity_model`
+- `GET /my-responses`, `GET /my-responses/{id}`, `POST /my-response` (autosave / upsert com `model_id`)
 
 ### Público (`/api/public`)
 - `GET /courses`, `GET /courses/{slug}`, `POST /leads`

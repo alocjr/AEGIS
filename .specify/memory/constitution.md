@@ -15,7 +15,7 @@ Autenticação via JWT; senhas sempre com hash; tokens de reset armazenados apen
 Endpoints REST sob `/api/*`. Schemas Pydantic em `backend/app/schemas.py`. Clientes HTTP em `frontend-vue/src/api/*`. Mudanças de contrato exigem atualização sincronizada de backend e frontend.
 
 ### V. MongoDB como Fonte de Verdade
-Trilhas (`courses`), progresso (`progress`), quiz, modelo de maturidade (`ai_maturity_model`) e respostas vivem no MongoDB. Evitar hardcode de conteúdo de negócio em arquivos estáticos quando a coleção correspondente existir.
+Trilhas (`courses`), progresso (`progress`), quiz, questionário de maturidade (`ai_maturity_model`) e respostas (`maturity_responses`) vivem no MongoDB. Arquivos em `backend/data/` servem de seed/bootstrap, não de fonte de verdade em runtime.
 
 ### VI. Deploy Unificado
 Manter compatibilidade com o Dockerfile atual: build do Vue em `frontend-vue/dist` servido pelo uvicorn junto com a API. Health check em `GET /api/health`.

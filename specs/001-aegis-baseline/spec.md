@@ -100,7 +100,7 @@ Como visitante, quero ver trilhas disponíveis na vitrine pública e registrar i
 - **Course (Trilha)**: slug, `programa_formacao_executiva` com jornada e encontros.
 - **Progress**: user_id, course_slug, concluídos, materiais, agendas.
 - **Quiz / QuizResponse**: questionário por encontro e respostas do aluno.
-- **AiMaturityModel**: versão, dimensões, escala, scoring_logic.
+- **AiMaturityModel**: id Mongo, versão, níveis de abrangência, dimensões, perguntas com alternativas 1–5, scoring por tier; respostas referenciam `model_id`.
 - **MaturityResponse**: respostas e resultado calculado por avaliação.
 - **Lead**: contato capturado na área pública.
 

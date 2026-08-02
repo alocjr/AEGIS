@@ -23,6 +23,9 @@ Projeto **Valorian 4 Future (AEGIS)**: plataforma de mentoria executiva.
 ## Coleções MongoDB
 `users`, `courses`, `progress`, `quiz`, `quiz_responses`, `ai_maturity_model`, `maturity_responses`, `password_resets`, `leads`
 
+## Maturidade IA
+Questionário na coleção `ai_maturity_model` (seed opcional via `backend/data/ai_maturity_model.json`). Respostas em `maturity_responses` com `model_id`.
+
 ## Comandos úteis
 ```bash
 # Backend dev

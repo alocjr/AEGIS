@@ -591,6 +591,26 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
             na escala de maturidade de 1 a 5 que melhor descreve a realidade da empresa.
           </p>
         </div>
+
+        <div class="header-tier">
+          <p class="tier-label">Abrangência do diagnóstico</p>
+          <div class="tier-select" role="tablist" aria-label="Abrangência do diagnóstico">
+            <button
+              v-for="key in TIER_KEYS"
+              :key="key"
+              type="button"
+              class="tier-btn"
+              :class="{ active: selectedTier === key }"
+              :title="model.levels?.[key]?.description || ''"
+              @click="setTier(key)"
+            >
+              <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
+              <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
+            </button>
+          </div>
+          <p v-if="selectedTierDescription" class="tier-hint">{{ selectedTierDescription }}</p>
+        </div>
+
         <div class="header-chart" aria-label="Média por dimensão">
           <p class="chart-title">Média por dimensão</p>
           <div class="chart-bars">
@@ -628,41 +648,25 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
           </div>
         </div>
 
-        <div class="tier-block">
-          <p class="tier-label">Abrangência do diagnóstico</p>
-          <div class="tier-select" role="tablist" aria-label="Abrangência do diagnóstico">
-            <button
-              v-for="key in TIER_KEYS"
-              :key="key"
-              type="button"
-              class="tier-btn"
-              :class="{ active: selectedTier === key }"
-              :title="model.levels?.[key]?.description || ''"
-              @click="setTier(key)"
-            >
-              <span class="tier-name">{{ model.levels?.[key]?.label ?? TIER_LABEL_SHORT[key] }}</span>
-              <span class="tier-count">{{ model.levels?.[key]?.question_count ?? 0 }} perguntas</span>
-            </button>
-            <span
-              class="save-pill"
-              :data-state="saveState"
-              :title="saveError || undefined"
-            >
-              <template v-if="saveState === 'saving'">Salvando…</template>
-              <template v-else-if="saveState === 'saved'">Salvo</template>
-              <template v-else-if="saveState === 'error'">Falha ao salvar</template>
-              <template v-else>Respostas salvas ao clicar</template>
-            </span>
-            <button
-              v-if="isComplete"
-              type="button"
-              class="btn-swot"
-              @click="openSwot"
-            >
-              {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
-            </button>
-          </div>
-          <p v-if="selectedTierDescription" class="tier-hint">{{ selectedTierDescription }}</p>
+        <div class="toolbar-actions">
+          <span
+            class="save-pill"
+            :data-state="saveState"
+            :title="saveError || undefined"
+          >
+            <template v-if="saveState === 'saving'">Salvando…</template>
+            <template v-else-if="saveState === 'saved'">Salvo</template>
+            <template v-else-if="saveState === 'error'">Falha ao salvar</template>
+            <template v-else>Respostas salvas ao clicar</template>
+          </span>
+          <button
+            v-if="isComplete"
+            type="button"
+            class="btn-swot"
+            @click="openSwot"
+          >
+            {{ swotCreated ? 'Abrir SWOT' : 'Criar SWOT' }}
+          </button>
         </div>
 
         <div class="scale-legend" title="Escala de resposta por pergunta">
@@ -841,8 +845,11 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .page-header {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   margin-bottom: 18px;
+}
+.header-main {
+  min-width: 0;
 }
 .eyebrow {
   font-size: 0.7rem;
@@ -871,11 +878,18 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   line-height: 1.55;
   max-width: 52ch;
 }
+.header-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
 .header-chart {
   background: var(--ivory-2);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 14px 16px;
+  flex: 0 0 auto;
 }
 .chart-title {
   font-size: 0.7rem;
@@ -979,13 +993,6 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   line-height: 1.35;
 }
 
-.tier-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
 .tier-label {
   margin: 0;
   font-size: 0.7rem;
@@ -997,39 +1004,37 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .tier-select {
   display: flex;
   align-items: stretch;
-  gap: 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .tier-btn {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--navy);
   background: #fff;
-  color: var(--muted);
+  color: var(--navy);
   cursor: pointer;
   flex: 0 0 auto;
   white-space: nowrap;
   font-family: inherit;
-  transition: 0.15s;
+  transition: opacity 0.2s, background 0.15s, color 0.15s;
 }
 .tier-btn:hover {
-  border-color: var(--gold);
-  color: var(--navy);
+  opacity: 0.9;
 }
 .tier-btn .tier-name {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 .tier-btn .tier-count {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   opacity: 0.75;
 }
 .tier-btn.active {
@@ -1037,11 +1042,21 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   border-color: var(--navy);
   color: #fff;
 }
+.tier-btn.active:hover {
+  opacity: 0.9;
+}
 .tier-hint {
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
+  max-width: 36ch;
+}
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .scale-legend {
@@ -1417,15 +1432,6 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   .wrap {
     padding: 28px 20px 72px;
   }
-  .page-header {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 28px;
-  }
-  .header-chart {
-    flex: 0 0 auto;
-  }
   .chart-bars {
     height: 100px;
     gap: 16px;
@@ -1433,15 +1439,27 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 }
 
 @media (min-width: 860px) {
+  .page-header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .header-main {
+    flex: 1 1 280px;
+  }
+  .header-tier {
+    flex: 0 1 320px;
+  }
+  .header-chart {
+    flex: 0 0 auto;
+  }
   .toolbar {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 16px 20px;
     padding: 14px 18px;
-  }
-  .tier-block {
-    flex: 1 1 280px;
   }
   .pillar-nav {
     flex: 1 1 100%;

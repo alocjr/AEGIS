@@ -1,8 +1,6 @@
 from datetime import datetime, timezone
-from functools import lru_cache
-from pathlib import Path
-import json
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
@@ -13,38 +11,31 @@ from app.schemas import MaturityAnswersRequest
 
 router = APIRouter(prefix="/api/maturity", tags=["maturity"])
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-MODEL_FILE = DATA_DIR / "ai_maturity_model.json"
-
 TIER_ORDER = {"basico": 0, "completo": 1, "complementar": 2}
 TIER_KEYS = ("basico", "completo", "complementar")
 
 
-@lru_cache(maxsize=1)
-def _load_model_from_file() -> dict:
-    if not MODEL_FILE.is_file():
+def _serialize_model(doc: dict) -> dict:
+    model = {k: v for k, v in doc.items() if k != "_id"}
+    model["id"] = str(doc["_id"])
+    return model
+
+
+def _load_model(db: Database) -> dict:
+    """Carrega o modelo ativo da coleção MongoDB `ai_maturity_model`."""
+    doc = db.ai_maturity_model.find_one(sort=[("_id", -1)])
+    if not doc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Modelo de maturidade nao configurado",
         )
-    try:
-        model = json.loads(MODEL_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Modelo de maturidade invalido",
-        ) from exc
+    model = _serialize_model(doc)
     if not model.get("dimensions"):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Modelo de maturidade invalido",
         )
     return model
-
-
-def _load_model(_db: Database | None = None) -> dict:
-    """Carrega o modelo de maturidade do JSON estático (fonte de verdade)."""
-    return dict(_load_model_from_file())
 
 
 def _normalize_tier(tier: str | None) -> str:
@@ -103,7 +94,7 @@ def _score_submission(model: dict, answers: dict[str, int], tier: str) -> dict:
         }
         total_score += dim_score
 
-    scoring = ((model.get("scoring") or {}).get(tier)) or model.get("scoring_logic") or {}
+    scoring = ((model.get("scoring") or {}).get(tier)) or {}
     level = None
     for key in ("level_1", "level_2", "level_3", "level_4", "level_5"):
         cfg = scoring.get(key)
@@ -113,7 +104,6 @@ def _score_submission(model: dict, answers: dict[str, int], tier: str) -> dict:
             level = cfg
             break
     if level is None and scoring:
-        # fallback: fora da faixa → extremos
         first = scoring.get("level_1")
         last = scoring.get("level_5")
         if first and total_score < first.get("min", 0):
@@ -138,11 +128,11 @@ def get_model(user=Depends(get_verified_user), db: Database = Depends(get_db)):
 
 @router.get("/my-responses")
 def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Lista todas as autoavaliações do aluno (mais recentes primeiro)."""
+    """Lista autoavaliações do aluno para o modelo ativo (mais recentes primeiro)."""
     model = _load_model(db)
-    version = model.get("version", "1.0")
+    model_oid = ObjectId(model["id"])
     cursor = db.maturity_responses.find(
-        {"user_id": user["_id"], "model_version": version}
+        {"user_id": user["_id"], "model_id": model_oid}
     ).sort("submitted_at", -1)
     items = []
     for doc in cursor:
@@ -151,6 +141,7 @@ def list_my_responses(user=Depends(get_verified_user), db: Database = Depends(ge
         dim_scores = result.get("dimension_scores") or {}
         items.append({
             "id": str(doc["_id"]),
+            "model_id": str(doc["model_id"]) if doc.get("model_id") else model["id"],
             "submitted_at": submitted_at.isoformat() if submitted_at else None,
             "tier": doc.get("tier") or result.get("tier"),
             "result": {
@@ -170,7 +161,6 @@ def get_my_response_by_id(
     response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
 ):
     """Retorna uma resposta específica (para visualizar detalhes)."""
-    from bson import ObjectId
     if not ObjectId.is_valid(response_id):
         raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     oid = ObjectId(response_id)
@@ -180,6 +170,7 @@ def get_my_response_by_id(
     submitted_at = doc.get("submitted_at")
     return {
         "id": str(doc["_id"]),
+        "model_id": str(doc["model_id"]) if doc.get("model_id") else None,
         "answers": doc.get("answers", {}),
         "tier": doc.get("tier"),
         "submitted_at": submitted_at.isoformat() if submitted_at else None,
@@ -189,10 +180,9 @@ def get_my_response_by_id(
 
 @router.post("/my-response")
 def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_user), db: Database = Depends(get_db)):
-    """Cria ou atualiza uma autoavaliação (aceita respostas parciais; autosave)."""
-    from bson import ObjectId
-
+    """Cria ou atualiza uma autoavaliação vinculada ao modelo ativo no banco."""
     model = _load_model(db)
+    model_oid = ObjectId(model["id"])
     tier = _normalize_tier(payload.tier)
     known = {q["id"] for d in model.get("dimensions", []) for q in d.get("questions", [])}
     if not known:
@@ -213,6 +203,17 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
     result["complete"] = complete
     now = datetime.now(timezone.utc)
 
+    common_fields = {
+        "model_id": model_oid,
+        "model_version": model.get("version", "1.0"),
+        "assessment_title": model.get("assessment_title") or model.get("title"),
+        "tier": tier,
+        "answers": answers,
+        "result": result,
+        "complete": complete,
+        "updated_at": now,
+    }
+
     response_id = (payload.response_id or "").strip() or None
     if response_id:
         if not ObjectId.is_valid(response_id):
@@ -225,14 +226,8 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
             {"_id": oid},
             {
                 "$set": {
-                    "tier": tier,
-                    "answers": answers,
-                    "result": result,
-                    "complete": complete,
-                    "updated_at": now,
+                    **common_fields,
                     "submitted_at": now if complete else existing.get("submitted_at") or now,
-                    "assessment_title": model.get("assessment_title") or model.get("title"),
-                    "model_version": model.get("version", "1.0"),
                 }
             },
         )
@@ -241,14 +236,8 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
     else:
         doc = {
             "user_id": user["_id"],
-            "model_version": model.get("version", "1.0"),
-            "assessment_title": model.get("assessment_title") or model.get("title"),
-            "tier": tier,
-            "answers": answers,
-            "result": result,
-            "complete": complete,
+            **common_fields,
             "submitted_at": now,
-            "updated_at": now,
         }
         ins = db.maturity_responses.insert_one(doc)
         doc_id = str(ins.inserted_id)
@@ -256,6 +245,7 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
 
     return {
         "id": doc_id,
+        "model_id": model["id"],
         "answers": answers,
         "tier": tier,
         "complete": complete,
