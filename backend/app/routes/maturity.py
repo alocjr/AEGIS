@@ -215,13 +215,27 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
     }
 
     response_id = (payload.response_id or "").strip() or None
+    existing = None
     if response_id:
         if not ObjectId.is_valid(response_id):
             raise HTTPException(status_code=404, detail="Resposta nao encontrada")
-        oid = ObjectId(response_id)
-        existing = db.maturity_responses.find_one({"_id": oid, "user_id": user["_id"]})
+        existing = db.maturity_responses.find_one({"_id": ObjectId(response_id), "user_id": user["_id"]})
         if not existing:
             raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    else:
+        # Autosave sem id: reutiliza o rascunho incompleto mais recente do mesmo modelo
+        # (evita duplicar registros quando o cliente ainda não recebeu o response_id).
+        existing = db.maturity_responses.find_one(
+            {
+                "user_id": user["_id"],
+                "model_id": model_oid,
+                "complete": {"$ne": True},
+            },
+            sort=[("updated_at", -1), ("submitted_at", -1)],
+        )
+
+    if existing:
+        oid = existing["_id"]
         db.maturity_responses.update_one(
             {"_id": oid},
             {
@@ -231,7 +245,7 @@ def save_my_response(payload: MaturityAnswersRequest, user=Depends(get_verified_
                 }
             },
         )
-        doc_id = response_id
+        doc_id = str(oid)
         submitted_at = now if complete else (existing.get("submitted_at") or now)
     else:
         doc = {

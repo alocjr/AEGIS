@@ -19,7 +19,8 @@ const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 const saveError = ref<string | null>(null)
 const swotCreated = ref(false)
 let persistTimer: ReturnType<typeof setTimeout> | null = null
-let persistSeq = 0
+let persisting = false
+let pendingPersist = false
 
 const TIER_KEYS: MaturityTier[] = ['basico', 'completo', 'complementar']
 const TIER_ORDER: Record<MaturityTier, number> = { basico: 0, completo: 1, complementar: 2 }
@@ -167,20 +168,29 @@ async function persistAnswers() {
     saveState.value = 'idle'
     return
   }
+  // Evita corrida: um save por vez; o mais recente roda em seguida
+  if (persisting) {
+    pendingPersist = true
+    return
+  }
 
-  const seq = ++persistSeq
+  persisting = true
   saveState.value = 'saving'
   saveError.value = null
   try {
     const payload: Record<string, number> = { ...answers.value }
     const result = await saveMaturityResponse(payload, selectedTier.value, responseId.value)
-    if (seq !== persistSeq) return
     responseId.value = result.id
     saveState.value = 'saved'
   } catch (e) {
-    if (seq !== persistSeq) return
     saveState.value = 'error'
     saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
+  } finally {
+    persisting = false
+    if (pendingPersist) {
+      pendingPersist = false
+      void persistAnswers()
+    }
   }
 }
 
