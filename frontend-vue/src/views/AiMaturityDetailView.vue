@@ -4,6 +4,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   fetchMaturityModel,
   fetchMaturityResponseById,
+  fetchMaturityResponseExport,
   type MaturityModel,
   type MaturityResult,
   type MaturityTier,
@@ -26,6 +27,8 @@ const swotId = ref<string | null>(null)
 const swotBusy = ref(false)
 const swotError = ref<string | null>(null)
 const isComplete = ref(false)
+const exportBusy = ref(false)
+const exportError = ref<string | null>(null)
 
 const TIER_LABELS: Record<string, string> = {
   basico: 'Básico',
@@ -206,6 +209,30 @@ async function openSwot() {
     swotError.value = e instanceof Error ? e.message : 'Falha ao criar SWOT.'
   } finally {
     swotBusy.value = false
+  }
+}
+
+/** Baixa a autoavaliação como JSON (envelope aegis.maturidade-ia). */
+async function exportJson() {
+  if (!responseId || exportBusy.value) return
+  exportBusy.value = true
+  exportError.value = null
+  try {
+    const doc = await fetchMaturityResponseExport(responseId)
+    const stamp = (doc.payload.respondido_em || doc.exported_at || '').slice(0, 10)
+    const blob = new Blob([JSON.stringify(doc, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `maturidade-ia${stamp ? `-${stamp}` : ''}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    exportError.value = e instanceof Error ? e.message : 'Falha ao exportar JSON.'
+  } finally {
+    exportBusy.value = false
   }
 }
 
@@ -428,9 +455,19 @@ onMounted(async () => {
           :to="`/mapa-estrategico?maturidade=${responseId}`"
           class="btn-ghost"
         >Mapa Estratégico</RouterLink>
+        <button
+          type="button"
+          class="btn-ghost"
+          :disabled="exportBusy"
+          title="Baixar respostas e resultado em JSON"
+          @click="exportJson"
+        >
+          {{ exportBusy ? 'Exportando…' : 'Exportar JSON' }}
+        </button>
         <RouterLink to="/ai-maturity/new" class="btn-ghost">Nova autoavaliação</RouterLink>
         <RouterLink to="/ai-maturity" class="btn-ghost">Ver todas</RouterLink>
         <p v-if="swotError" class="swot-error">{{ swotError }}</p>
+        <p v-if="exportError" class="swot-error">{{ exportError }}</p>
       </div>
     </template>
   </div>

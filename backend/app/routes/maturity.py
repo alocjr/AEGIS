@@ -121,6 +121,56 @@ def _score_submission(model: dict, answers: dict[str, int], tier: str) -> dict:
     }
 
 
+def _owned_response(db: Database, user_id, response_id: str) -> dict:
+    if not ObjectId.is_valid(response_id):
+        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    doc = db.maturity_responses.find_one({"_id": ObjectId(response_id), "user_id": user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    return doc
+
+
+def _model_of_response(db: Database, doc: dict) -> dict:
+    """Modelo usado na autoavaliação — cai no ativo se o original não existir mais."""
+    model_id = doc.get("model_id")
+    if model_id:
+        found = db.ai_maturity_model.find_one({"_id": model_id})
+        if found:
+            return _serialize_model(found)
+    return _load_model(db)
+
+
+def _answers_of(doc: dict) -> dict[str, int]:
+    answers: dict[str, int] = {}
+    for qid, raw in (doc.get("answers") or {}).items():
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= value <= 5:
+            answers[str(qid)] = value
+    return answers
+
+
+def _export_question(question: dict, answers: dict[str, int]) -> dict:
+    qid = str(question.get("id") or "")
+    value = answers.get(qid)
+    levels = question.get("levels") or {}
+    exported = {
+        "id": qid,
+        "tier": question.get("tier") or "basico",
+        "texto": question.get("text") or "",
+        "peso": int(question.get("weight", 1) or 1),
+        "resposta": value,
+        "resposta_descricao": str(levels.get(str(value)) or "") if value else "",
+    }
+    csf_id = str(question.get("csfId") or "")
+    csf_name = str(question.get("csfName") or "")
+    if csf_id or csf_name:
+        exported["referencia"] = {"csf_id": csf_id, "csf_nome": csf_name}
+    return exported
+
+
 @router.get("/model")
 def get_model(user=Depends(get_verified_user), db: Database = Depends(get_db)):
     return _load_model(db)
@@ -161,12 +211,7 @@ def get_my_response_by_id(
     response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
 ):
     """Retorna uma resposta específica (para visualizar detalhes)."""
-    if not ObjectId.is_valid(response_id):
-        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
-    oid = ObjectId(response_id)
-    doc = db.maturity_responses.find_one({"_id": oid, "user_id": user["_id"]})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    doc = _owned_response(db, user["_id"], response_id)
     submitted_at = doc.get("submitted_at")
     return {
         "id": str(doc["_id"]),
@@ -176,6 +221,87 @@ def get_my_response_by_id(
         "complete": bool(doc.get("complete")),
         "submitted_at": submitted_at.isoformat() if submitted_at else None,
         "result": doc.get("result"),
+    }
+
+
+@router.get("/my-responses/{response_id}/export")
+def export_my_response(
+    response_id: str, user=Depends(get_verified_user), db: Database = Depends(get_db)
+):
+    """Autoavaliação em JSON (envelope `aegis.maturidade-ia`): respostas com o texto das perguntas."""
+    doc = _owned_response(db, user["_id"], response_id)
+    model = _model_of_response(db, doc)
+    tier = _normalize_tier(doc.get("tier"))
+    answers = _answers_of(doc)
+    result = doc.get("result") or _score_submission(model, answers, tier)
+    dimension_scores = result.get("dimension_scores") or {}
+    level = result.get("level") or {}
+    tier_cfg = (model.get("levels") or {}).get(tier) or {}
+
+    dimensoes = []
+    total_questions = 0
+    answered_questions = 0
+    for dimension in model.get("dimensions", []):
+        questions = [
+            q
+            for q in dimension.get("questions", [])
+            if _is_visible_tier(q.get("tier", "basico"), tier)
+        ]
+        if not questions:
+            continue
+        total_questions += len(questions)
+        answered_questions += sum(1 for q in questions if answers.get(str(q.get("id"))))
+        dim_id = dimension["id"]
+        scores = dimension_scores.get(dim_id) or {}
+        score = scores.get("score")
+        maximo = scores.get("max")
+        dimensoes.append(
+            {
+                "id": dim_id,
+                "nome": dimension.get("name") or scores.get("name") or "",
+                "pontuacao": score,
+                "pontuacao_maxima": maximo,
+                "media": scores.get("avg"),
+                "percentual": (
+                    round(score / maximo * 100, 2)
+                    if isinstance(score, (int, float)) and maximo
+                    else None
+                ),
+                "perguntas": [_export_question(q, answers) for q in questions],
+            }
+        )
+
+    submitted_at = doc.get("submitted_at")
+    return {
+        "format": "aegis.maturidade-ia",
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "payload": {
+            "titulo": doc.get("assessment_title")
+            or model.get("assessment_title")
+            or model.get("title")
+            or "",
+            "modelo_versao": doc.get("model_version") or model.get("version") or "",
+            "abrangencia": {
+                "tier": tier,
+                "label": tier_cfg.get("label") or tier,
+                "descricao": tier_cfg.get("description") or "",
+                "perguntas_respondidas": answered_questions,
+                "perguntas_total": total_questions,
+            },
+            "completo": bool(doc.get("complete")),
+            "respondido_em": submitted_at.isoformat() if submitted_at else None,
+            "resultado": {
+                "pontuacao": result.get("total_score", 0),
+                "pontuacao_maxima": result.get("max_score", 0),
+                "percentual": result.get("percent_score", 0),
+                "nivel": {
+                    "label": level.get("label") or "",
+                    "descricao": level.get("description") or "",
+                },
+            },
+            "dimensoes": dimensoes,
+        },
     }
 
 

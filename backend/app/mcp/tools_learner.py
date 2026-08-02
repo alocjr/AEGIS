@@ -113,6 +113,17 @@ def register_learner_tools(mcp) -> None:
         return call_route(maturity_routes.list_my_responses, user=user, db=get_db())
 
     @mcp.tool
+    def maturity_export(response_id: str) -> dict:
+        """Autoavaliação de maturidade em JSON: respostas junto do texto de cada pergunta."""
+        user = require_verified_user()
+        return call_route(
+            maturity_routes.export_my_response,
+            response_id=response_id,
+            user=user,
+            db=get_db(),
+        )
+
+    @mcp.tool
     def strategic_map(
         maturity_response_id: str | None = None,
         swot_id: str | None = None,

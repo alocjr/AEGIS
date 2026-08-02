@@ -152,6 +152,55 @@ export function fetchMaturityResponseById(id: string): Promise<MaturityMyRespons
   return get<MaturityMyResponse & { id: string }>(`/api/maturity/my-responses/${encodeURIComponent(id)}`)
 }
 
+/** Envelope de export da autoavaliação (`aegis.maturidade-ia`). */
+export interface MaturityExportDocument {
+  format: string
+  version: number
+  exported_at: string
+  payload: {
+    titulo: string
+    modelo_versao: string
+    abrangencia: {
+      tier: MaturityTier | string
+      label: string
+      descricao: string
+      perguntas_respondidas: number
+      perguntas_total: number
+    }
+    completo: boolean
+    respondido_em: string | null
+    resultado: {
+      pontuacao: number
+      pontuacao_maxima: number
+      percentual: number
+      nivel: { label: string; descricao: string }
+    }
+    dimensoes: {
+      id: string
+      nome: string
+      pontuacao: number | null
+      pontuacao_maxima: number | null
+      media: number | null
+      percentual: number | null
+      perguntas: {
+        id: string
+        tier: MaturityTier | string
+        texto: string
+        peso: number
+        resposta: number | null
+        resposta_descricao: string
+        referencia?: { csf_id: string; csf_nome: string }
+      }[]
+    }[]
+  }
+}
+
+export function fetchMaturityResponseExport(id: string): Promise<MaturityExportDocument> {
+  return get<MaturityExportDocument>(
+    `/api/maturity/my-responses/${encodeURIComponent(id)}/export`
+  )
+}
+
 export function saveMaturityResponse(
   answers: Record<string, number>,
   tier: MaturityTier = 'basico',
