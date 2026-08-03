@@ -5,11 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.schemas import MaturityAnswersRequest
+from app.tools import TOOL_MATURITY
 
 
-router = APIRouter(prefix="/api/maturity", tags=["maturity"])
+router = APIRouter(
+    prefix="/api/maturity",
+    tags=["maturity"],
+    dependencies=[Depends(require_tool(TOOL_MATURITY))],
+)
 
 TIER_ORDER = {"basico": 0, "completo": 1, "complementar": 2}
 TIER_KEYS = ("basico", "completo", "complementar")

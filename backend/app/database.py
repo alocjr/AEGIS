@@ -7,6 +7,7 @@ from pymongo.database import Database
 from bson import ObjectId
 
 from app.config import settings
+from app.tools import default_tools
 
 _DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 _MATURITY_SEED_FILE = _DATA_DIR / "ai_maturity_model.json"
@@ -46,6 +47,19 @@ def migrate_users_to_organizations() -> int:
         )
         migrated += 1
     return migrated
+
+
+def backfill_user_tools() -> int:
+    """Preenche `users.tools` em quem foi criado antes do controle de ferramentas.
+
+    Todos ganham o catálogo completo: o controle nasce sem tirar acesso de ninguém, e o admin
+    passa a desabilitar caso a caso. Idempotente — só toca documentos sem o campo.
+    """
+    result = db.users.update_many(
+        {"tools": {"$exists": False}},
+        {"$set": {"tools": default_tools()}},
+    )
+    return int(result.modified_count)
 
 
 def provision_solo_organization(name_hint: str) -> ObjectId:
@@ -167,6 +181,7 @@ def init_indexes() -> None:
     db.users.create_index("email", unique=True)
     db.users.create_index("organization_id")
     migrate_users_to_organizations()
+    backfill_user_tools()
     db.password_resets.create_index("token_hash", unique=True)
     db.password_resets.create_index("expires_at", expireAfterSeconds=0)
     db.password_resets.create_index([("user_id", 1), ("created_at", -1)])

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.schemas import (
     SwotAnalysisUpdateRequest,
     SwotImportRequest,
@@ -21,8 +21,13 @@ from app.schemas import (
     SwotWatchlistItem,
 )
 from app.swot_from_maturity import build_swot_fields_from_maturity, build_tows_from_swot
+from app.tools import TOOL_SWOT
 
-router = APIRouter(prefix="/api/swot-analysis", tags=["swot-analysis"])
+router = APIRouter(
+    prefix="/api/swot-analysis",
+    tags=["swot-analysis"],
+    dependencies=[Depends(require_tool(TOOL_SWOT))],
+)
 
 _LIST_FIELDS = ("forcas", "fraquezas", "oportunidades", "ameacas")
 _TOWS_FIELDS = ("tows_fo", "tows_fa", "tows_fxo", "tows_fxa")

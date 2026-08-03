@@ -7,6 +7,7 @@ from pymongo.database import Database
 from app.config import settings
 from app.database import get_db
 from app.security import _jwt_key_bytes
+from app.tools import user_has_tool
 from app.utils.auth_cookie import AUTH_COOKIE_NAME
 
 
@@ -72,6 +73,30 @@ def get_current_org_admin(user=Depends(get_verified_user)):
             detail="Acesso restrito a administradores da organização",
         )
     return user
+
+
+def require_tool(tool_id: str):
+    """Dependência de router: bloqueia a ferramenta que o admin não liberou para o usuário.
+
+    Aplicada no `APIRouter` inteiro (não endpoint por endpoint) para uma rota nova nascer
+    protegida. O `tool_id` fica exposto na função para o teste conferir que todo router de
+    ferramenta declara a sua trava.
+    """
+
+    def dependency(user=Depends(get_verified_user)):
+        if not user_has_tool(user, tool_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "TOOL_NOT_ENABLED",
+                    "message": "Esta ferramenta não está habilitada para o seu acesso.",
+                    "tool": tool_id,
+                },
+            )
+        return user
+
+    dependency.tool_id = tool_id
+    return dependency
 
 
 def get_current_organization_id(user=Depends(get_verified_user)) -> ObjectId:

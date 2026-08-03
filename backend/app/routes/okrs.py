@@ -11,10 +11,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.schemas import KeyResult, Objective, OkrCycleCreateRequest, OkrCycleUpdateRequest
+from app.tools import TOOL_OKR
 
-router = APIRouter(prefix="/api/okrs", tags=["okrs"])
+router = APIRouter(
+    prefix="/api/okrs",
+    tags=["okrs"],
+    dependencies=[Depends(require_tool(TOOL_OKR))],
+)
 
 
 def _new_id(prefix: str) -> str:

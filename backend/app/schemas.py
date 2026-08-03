@@ -284,6 +284,7 @@ class AdminCreateUserRequest(BaseModel):
     phone: str | None = Field(None, max_length=30)  # telefone completo para WhatsApp (ex.: 5511987654321)
     encontro_agendas: dict[str, str] | None = None  # encontro_id -> ISO datetime string (aplica à primeira trilha)
     organization_id: str | None = Field(None, max_length=24)  # se omitido, cria organização solo
+    tools: list[str] | None = Field(None, max_length=50)  # ferramentas do AI Hub; None = catálogo completo
 
 
 class AdminUpdateUserRequest(BaseModel):
@@ -296,6 +297,14 @@ class AdminUpdateUserRequest(BaseModel):
     is_org_admin: bool | None = None
     encontro_agendas: dict[str, str] | None = None
     organization_id: str | None = Field(None, max_length=24)  # move o usuário para outra organização
+    tools: list[str] | None = Field(None, max_length=50)  # None = não altera; [] = nenhuma ferramenta
+    apply_tools_to_organization: bool = False  # replica `tools` para todos os membros da organização
+
+
+class OrganizationToolsRequest(BaseModel):
+    """Aplica um conjunto de ferramentas a todos os membros de uma organização."""
+
+    tools: list[str] = Field(default_factory=list, max_length=50)
 
 
 class OrgMemberCreateRequest(BaseModel):

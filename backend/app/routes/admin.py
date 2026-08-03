@@ -33,8 +33,10 @@ from app.schemas import (
     AdminUpdateUserRequest,
     LiberarEncontroRequest,
     OrganizationCreateRequest,
+    OrganizationToolsRequest,
 )
 from app.security import hash_password
+from app.tools import TOOLS, default_tools, sanitize_tools, user_tools
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -310,6 +312,7 @@ def create_user(
         "created_at": now,
         "updated_at": now,
         "email_verified": True,
+        "tools": default_tools() if payload.tools is None else sanitize_tools(payload.tools),
     }
     if payload.phone is not None and payload.phone.strip():
         user_doc["phone"] = payload.phone.strip()
@@ -340,7 +343,17 @@ def create_user(
         "user_id": str(user_id),
         "email": email,
         "course_slugs": course_slugs,
+        "tools": user_doc["tools"],
     }
+
+
+@router.get("/tools")
+def list_tools(admin=Depends(get_current_admin)):
+    """Catálogo de ferramentas do AI Hub que podem ser liberadas por usuário. Apenas admin.
+
+    A tela de usuários monta os checkboxes a partir daqui — ids e rótulos vivem só no backend.
+    """
+    return {"items": [dict(tool) for tool in TOOLS]}
 
 
 @router.get("/organizations")
@@ -358,6 +371,41 @@ def list_organizations(admin=Depends(get_current_admin), db: Database = Depends(
             "member_count": member_counts.get(org["_id"], 0),
         })
     return out
+
+
+def _apply_tools_to_organization(db: Database, org_id: ObjectId, tools: list[str]) -> int:
+    """Grava o mesmo conjunto de ferramentas em todos os membros da organização."""
+    result = db.users.update_many(
+        {"organization_id": org_id},
+        {"$set": {"tools": tools, "updated_at": datetime.now(timezone.utc)}},
+    )
+    return int(result.modified_count)
+
+
+@router.put("/organizations/{org_id}/tools")
+def set_organization_tools(
+    org_id: str,
+    payload: OrganizationToolsRequest,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Libera o mesmo conjunto de ferramentas para todos os membros de uma organização.
+
+    Atalho para o caso comum (o acesso foi negociado com a empresa); a liberação continua
+    gravada por usuário, então depois dá para ajustar uma pessoa sem afetar as outras.
+    """
+    if not ObjectId.is_valid(org_id):
+        raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
+    oid = ObjectId(org_id)
+    if not db.organizations.find_one({"_id": oid}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
+    tools = sanitize_tools(payload.tools)
+    return {
+        "message": "Ferramentas aplicadas à organização",
+        "organization_id": org_id,
+        "tools": tools,
+        "members_updated": _apply_tools_to_organization(db, oid, tools),
+    }
 
 
 @router.post("/organizations")
@@ -401,6 +449,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
                 "created_at": 1,
                 "phone": 1,
                 "organization_id": 1,
+                "tools": 1,
             },
         )
     )
@@ -427,6 +476,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
             "created_at": _serialize_created_at(u),
             "organization_id": str(org_id) if org_id else None,
             "organization_name": org_names.get(org_id, "") if org_id else "",
+            "tools": user_tools(u),
         })
     return out
 
@@ -459,6 +509,7 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         "encontro_agendas": progress.get("encontro_agendas", {}) if progress else {},
         "organization_id": str(org_id) if org_id else None,
         "organization_name": (org or {}).get("name") or "",
+        "tools": user_tools(user),
     }
 
 
@@ -508,9 +559,23 @@ def update_user(
         if not db.organizations.find_one({"_id": new_org_id}, {"_id": 1}):
             raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
         updates["organization_id"] = new_org_id
+    if payload.tools is not None:
+        updates["tools"] = sanitize_tools(payload.tools)
 
     if updates:
         db.users.update_one({"_id": uid}, {"$set": updates})
+
+    # Replica as ferramentas para o time inteiro — evita repetir a marcação membro a membro
+    # quando o combinado de acesso é da organização, não da pessoa.
+    members_updated = 0
+    if payload.apply_tools_to_organization and payload.tools is not None:
+        target_org_id = updates.get("organization_id") or user.get("organization_id")
+        if not target_org_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Usuario sem organizacao: nao ha time para replicar as ferramentas.",
+            )
+        members_updated = _apply_tools_to_organization(db, target_org_id, updates["tools"])
 
     if payload.course_slugs is not None:
         now = datetime.now(timezone.utc)
@@ -547,7 +612,7 @@ def update_user(
                 {"$set": {"encontro_agendas": payload.encontro_agendas, "updated_at": datetime.now(timezone.utc)}},
             )
 
-    return {"message": "Usuario atualizado", "id": user_id}
+    return {"message": "Usuario atualizado", "id": user_id, "members_updated": members_updated}
 
 
 @router.delete("/users/{user_id}")

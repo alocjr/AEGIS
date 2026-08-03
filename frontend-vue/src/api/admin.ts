@@ -16,10 +16,23 @@ export interface AdminUser {
   /** Organização (time) à qual o usuário pertence — SWOT/Canvas/Maturidade são compartilhados nela. */
   organization_id: string | null
   organization_name: string
+  /** Ferramentas do AI Hub liberadas (ids do catálogo). */
+  tools: string[]
 }
 
 export interface AdminUserDetail extends AdminUser {
   encontro_agendas: Record<string, string>
+}
+
+export interface PlatformTool {
+  id: string
+  label: string
+  path: string
+  descricao: string
+}
+
+export function listPlatformTools(): Promise<{ items: PlatformTool[] }> {
+  return get<{ items: PlatformTool[] }>('/api/admin/tools')
 }
 
 export function listUsers(): Promise<AdminUser[]> {
@@ -38,7 +51,8 @@ export function createUser(body: {
   phone?: string
   encontro_agendas?: Record<string, string>
   organization_id?: string
-}): Promise<{ message: string; user_id: string; email: string; course_slugs: string[] }> {
+  tools?: string[]
+}): Promise<{ message: string; user_id: string; email: string; course_slugs: string[]; tools: string[] }> {
   return post('/api/admin/users', body)
 }
 
@@ -54,9 +68,18 @@ export function updateUser(
     is_org_admin?: boolean
     encontro_agendas?: Record<string, string>
     organization_id?: string
+    tools?: string[]
+    apply_tools_to_organization?: boolean
   }
-): Promise<{ message: string; id: string }> {
+): Promise<{ message: string; id: string; members_updated?: number }> {
   return put(`/api/admin/users/${encodeURIComponent(userId)}`, body)
+}
+
+export function setOrganizationTools(
+  orgId: string,
+  tools: string[]
+): Promise<{ message: string; organization_id: string; tools: string[]; members_updated: number }> {
+  return put(`/api/admin/organizations/${encodeURIComponent(orgId)}/tools`, { tools })
 }
 
 export function deleteUser(userId: string): Promise<{ message: string; id: string }> {

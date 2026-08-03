@@ -2,6 +2,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import {
+  TOOL_CANVAS,
+  TOOL_GOVERNANCE,
+  TOOL_MATURITY,
+  TOOL_OKR,
+  TOOL_STRATEGIC_MAP,
+  TOOL_SWOT,
+} from '@/lib/tools'
 
 const auth = useAuthStore()
 const menuOpen = ref(false)
@@ -66,12 +74,37 @@ async function goSwot(ev: Event) {
           <RouterLink to="/agenda" class="tb-pill" @click="menuOpen = false">Agenda</RouterLink>
           <RouterLink to="/quiz-respostas" class="tb-pill" @click="menuOpen = false">Quiz</RouterLink>
         </template>
-        <RouterLink to="/ai-maturity" class="tb-pill" @click="menuOpen = false">Modelo de Maturidade</RouterLink>
-        <a href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
-        <RouterLink to="/okrs" class="tb-pill" @click="menuOpen = false">OKR</RouterLink>
-        <RouterLink to="/projetos" class="tb-pill" @click="menuOpen = false">AI Canvas</RouterLink>
-        <RouterLink to="/mapa-estrategico" class="tb-pill" @click="menuOpen = false">Mapa Estratégico</RouterLink>
-        <RouterLink to="/governanca/inventario" class="tb-pill" @click="menuOpen = false">Governança</RouterLink>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_MATURITY)"
+          to="/ai-maturity"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >Modelo de Maturidade</RouterLink>
+        <a v-if="auth.hasTool(TOOL_SWOT)" href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_OKR)"
+          to="/okrs"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >OKR</RouterLink>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_CANVAS)"
+          to="/projetos"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >AI Canvas</RouterLink>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_STRATEGIC_MAP)"
+          to="/mapa-estrategico"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >Mapa Estratégico</RouterLink>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_GOVERNANCE)"
+          to="/governanca/inventario"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >Governança</RouterLink>
         <RouterLink
           v-if="auth.isOrgAdmin"
           to="/organizacao/usuarios"

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { toolRequiredForPath } from '@/lib/tools'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -67,6 +68,12 @@ const routes: RouteRecordRaw[] = [
       { path: 'quiz-respostas', name: 'QuizRespostas', component: () => import('@/views/QuizRespostasView.vue'), meta: { title: 'Quiz Respostas' } },
       { path: 'quiz/q/:quizId', name: 'QuizById', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
       { path: 'quiz/:encontroId(\\d+)', name: 'Quiz', component: () => import('@/views/QuizView.vue'), meta: { title: 'Quiz' } },
+      {
+        path: 'acesso-negado',
+        name: 'ToolDisabled',
+        component: () => import('@/views/ToolDisabledView.vue'),
+        meta: { title: 'Ferramenta não disponível' },
+      },
     ],
   },
   {
@@ -141,12 +148,22 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
+  const requiredTool = toolRequiredForPath(to.path)
+  if (requiredTool && auth.isLoggedIn && !auth.hasTool(requiredTool)) {
+    next({ name: 'ToolDisabled', query: { tool: requiredTool } })
+    return
+  }
+
   if (to.path === '/') {
     if (auth.isLoggedIn && !auth.isAdmin && auth.user?.email_verified !== false) {
       // Membro de organização sem trilha (ex.: criado por um admin de organização) não tem
-      // "/programa" — cai nas ferramentas do AI Hub, que são por organização, não por trilha.
+      // "/programa" — cai na primeira ferramenta do AI Hub que o admin liberou.
       const hasTrilha = (auth.user?.course_slugs?.length ?? 0) > 0
-      next(hasTrilha ? '/programa' : '/ai-maturity')
+      if (hasTrilha) {
+        next('/programa')
+        return
+      }
+      next(auth.homePathWithoutTrilha() || { name: 'ToolDisabled' })
       return
     }
   }

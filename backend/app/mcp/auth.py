@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import get_db
 from app.deps import is_email_verified
 from app.security import _jwt_key_bytes
+from app.tools import user_has_tool
 
 try:
     from fastmcp.exceptions import ToolError
@@ -92,6 +93,15 @@ def require_admin() -> dict:
     if not user.get("is_admin"):
         raise ToolError("Acesso restrito a administradores.")
     return {**user, "is_admin": True}
+
+
+def require_tool_access(user: dict, tool_id: str) -> None:
+    """Mesma regra de `deps.require_tool` — o MCP chama handlers direto e pula o Depends."""
+    if not user_has_tool(user, tool_id):
+        raise ToolError(
+            f"Ferramenta '{tool_id}' nao habilitada para o seu acesso. "
+            "Peca ao administrador da plataforma para liberar."
+        )
 
 
 def raise_http_as_tool(exc: HTTPException) -> None:

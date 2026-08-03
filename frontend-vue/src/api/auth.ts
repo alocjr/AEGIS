@@ -26,6 +26,8 @@ export interface AuthUser {
   /** Organização (time) do usuário — SWOT/Canvas/Maturidade são compartilhados dentro dela. */
   organization_id?: string | null
   organization_name?: string
+  /** Ferramentas do AI Hub liberadas pelo admin da plataforma (ids: maturity, swot, …). */
+  tools?: string[]
 }
 
 export interface AuthResponse {

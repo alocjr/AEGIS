@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.governance import repository as gov_repo
 from app.governance.gate_template import TEMPLATE_VERSION, montar_checklist_base
 from app.governance.rules.r1_maturidade import (
@@ -30,8 +30,13 @@ from app.governance.schemas import (
     nivel_final_da_regua,
 )
 from app.routes.swot_analysis import _to_item as _swot_to_item
+from app.tools import TOOL_GOVERNANCE
 
-router = APIRouter(prefix="/api/governance", tags=["governance"])
+router = APIRouter(
+    prefix="/api/governance",
+    tags=["governance"],
+    dependencies=[Depends(require_tool(TOOL_GOVERNANCE))],
+)
 
 _PROFUNDIDADE_ORDER = ("fundacao", "intermediario", "completo")
 

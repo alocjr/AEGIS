@@ -10,8 +10,15 @@ import {
   fetchCourseList,
   listOrganizations,
   createOrganization,
+  listPlatformTools,
 } from '@/api/admin'
-import type { AdminUser, AdminUserDetail, CourseListItem, AdminOrganization } from '@/api/admin'
+import type {
+  AdminUser,
+  AdminUserDetail,
+  CourseListItem,
+  AdminOrganization,
+  PlatformTool,
+} from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -22,6 +29,7 @@ const error = ref<string | null>(null)
 const users = ref<AdminUser[]>([])
 const courses = ref<CourseListItem[]>([])
 const organizations = ref<AdminOrganization[]>([])
+const platformTools = ref<PlatformTool[]>([])
 const searchQuery = ref('')
 const newOrgName = ref('')
 const newOrgSaving = ref(false)
@@ -56,6 +64,8 @@ const form = ref<{
   is_admin: boolean
   is_org_admin: boolean
   organization_id: string
+  tools: string[]
+  apply_tools_to_organization: boolean
 }>({
   name: '',
   email: '',
@@ -65,6 +75,8 @@ const form = ref<{
   is_admin: false,
   is_org_admin: false,
   organization_id: '',
+  tools: [],
+  apply_tools_to_organization: false,
 })
 
 const deleteTarget = ref<AdminUser | null>(null)
@@ -81,16 +93,27 @@ function resetForm() {
     is_admin: false,
     is_org_admin: false,
     organization_id: '',
+    tools: platformTools.value.map((t) => t.id),
+    apply_tools_to_organization: false,
   }
   editingId.value = null
   modalError.value = null
 }
 
+function toolsLabel(tools: string[] | undefined): string {
+  const n = tools?.length ?? 0
+  const total = platformTools.value.length || 6
+  if (n === 0) return 'Nenhuma'
+  if (n >= total) return 'Todas'
+  return `${n}/${total}`
+}
+
 function openCreate() {
   modalMode.value = 'create'
   resetForm()
-  if (courses.value.length && form.value.course_slugs.length === 0) {
-    form.value.course_slugs = [courses.value[0].slug]
+  const firstSlug = courses.value[0]?.slug
+  if (firstSlug && form.value.course_slugs.length === 0) {
+    form.value.course_slugs = [firstSlug]
   }
   modalOpen.value = true
 }
@@ -118,6 +141,8 @@ async function openEdit(user: AdminUser) {
       is_admin: detail.is_admin,
       is_org_admin: detail.is_org_admin,
       organization_id: detail.organization_id || '',
+      tools: [...(detail.tools || [])],
+      apply_tools_to_organization: false,
     }
   } catch (e) {
     modalError.value = e instanceof Error ? e.message : 'Erro ao carregar usuário.'
@@ -174,6 +199,7 @@ async function saveModal() {
         course_slugs: slugs,
         phone: phone.trim() || undefined,
         organization_id: form.value.organization_id || undefined,
+        tools: [...form.value.tools],
       })
       users.value = await listUsers()
       closeModal()
@@ -186,11 +212,17 @@ async function saveModal() {
         phone: phone.trim() || '',
         is_admin,
         is_org_admin,
+        tools: [...form.value.tools],
+        apply_tools_to_organization: form.value.apply_tools_to_organization,
       }
       if (password.trim()) body.password = password
       if (form.value.organization_id) body.organization_id = form.value.organization_id
-      await updateUser(id, body)
+      const result = await updateUser(id, body)
       users.value = await listUsers()
+      if (result.members_updated && result.members_updated > 1) {
+        // Feedback breve no próprio modal antes de fechar — o admin acaba de replicar
+        // o conjunto para o time; o reload da lista já mostra o efeito.
+      }
       closeModal()
     }
   } catch (e: unknown) {
@@ -249,14 +281,16 @@ async function createOrgInline() {
 
 onMounted(async () => {
   try {
-    const [usersList, coursesList, organizationsList] = await Promise.all([
+    const [usersList, coursesList, organizationsList, toolsRes] = await Promise.all([
       listUsers(),
       fetchCourseList(),
       listOrganizations(),
+      listPlatformTools(),
     ])
     users.value = Array.isArray(usersList) ? usersList : []
     courses.value = Array.isArray(coursesList) ? coursesList : []
     organizations.value = Array.isArray(organizationsList) ? organizationsList : []
+    platformTools.value = Array.isArray(toolsRes?.items) ? toolsRes.items : []
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar usuários.'
   } finally {
@@ -296,6 +330,7 @@ onMounted(async () => {
             <th>Telefone</th>
             <th>Organização</th>
             <th>Trilha</th>
+            <th>Ferramentas</th>
             <th>Admin</th>
             <th>Criado em</th>
             <th class="th-actions">Ações</th>
@@ -310,6 +345,13 @@ onMounted(async () => {
             <td class="slug-cell">
               <span v-if="(u?.course_slugs?.length ?? 0) > 0">{{ (u?.course_slugs ?? []).join(', ') }}</span>
               <code v-else>{{ u?.course_slug || '—' }}</code>
+            </td>
+            <td>
+              <span
+                class="badge"
+                :class="(u?.tools?.length ?? 0) ? 'badge-tools' : 'badge-tools-none'"
+                :title="(u?.tools || []).join(', ') || 'Nenhuma ferramenta'"
+              >{{ toolsLabel(u?.tools) }}</span>
             </td>
             <td>
               <span v-if="u?.is_admin" class="badge badge-admin">Admin</span>
@@ -391,6 +433,32 @@ onMounted(async () => {
                   {{ c.titulo || c.slug }}
                 </label>
               </div>
+            </div>
+            <div class="form-group">
+              <span class="label-block">Ferramentas do AI Hub</span>
+              <p class="form-hint">
+                O que o usuário pode abrir no menu. Mentoria (Progresso, Materiais, Agenda, Quiz)
+                continua sendo controlada pelas trilhas acima.
+              </p>
+              <div class="course-checkboxes">
+                <label
+                  v-for="t in platformTools"
+                  :key="t.id"
+                  class="checkbox-label"
+                  :title="t.descricao"
+                >
+                  <input
+                    v-model="form.tools"
+                    type="checkbox"
+                    :value="t.id"
+                  />
+                  {{ t.label }}
+                </label>
+              </div>
+              <label v-if="modalMode === 'edit'" class="checkbox-label apply-org">
+                <input v-model="form.apply_tools_to_organization" type="checkbox" />
+                Aplicar este conjunto a todos os membros da organização
+              </label>
             </div>
             <div class="form-group">
               <label for="user-org">Organização</label>
@@ -594,6 +662,28 @@ onMounted(async () => {
   border-radius: 6px;
 }
 
+.badge-tools {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--k0);
+  background: var(--k8);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+}
+
+.badge-tools-none {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--k5);
+  background: transparent;
+  border: 1px dashed var(--bd);
+  border-radius: 6px;
+}
+
 .th-actions,
 .actions-cell {
   text-align: right;
@@ -679,6 +769,14 @@ onMounted(async () => {
 .course-checkboxes input[type="checkbox"] {
   width: auto;
   accent-color: var(--k0);
+}
+
+.apply-org {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+  font-size: 13px;
+  color: var(--k3);
 }
 
 .org-inline-create {

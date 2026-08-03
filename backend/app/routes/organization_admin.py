@@ -19,6 +19,7 @@ from app.database import get_db
 from app.deps import get_current_org_admin, get_current_organization_id
 from app.schemas import OrgMemberCreateRequest, OrgMemberUpdateRequest
 from app.security import hash_password
+from app.tools import default_tools
 
 router = APIRouter(prefix="/api/org-admin", tags=["org-admin"])
 
@@ -88,6 +89,9 @@ def create_member(
         "created_at": now,
         "updated_at": now,
         "email_verified": True,
+        # Mesmo padrão do registro público: tudo liberado; o admin da plataforma restringe
+        # depois (inclusive em lote na organização). Org-admin não gerencia ferramentas.
+        "tools": default_tools(),
     }
     if payload.phone is not None and payload.phone.strip():
         user_doc["phone"] = payload.phone.strip()

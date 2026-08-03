@@ -141,6 +141,10 @@ class CreateMemberTests(unittest.TestCase):
         self.assertEqual(stored["course_slugs"], [])
         self.assertNotIn("is_admin", stored)
         self.assertNotIn("is_org_admin", stored)
+        # Org-admin não gerencia ferramentas — membro nasce com o catálogo completo
+        # (mesmo padrão do registro público); o admin da plataforma restringe depois.
+        from app.tools import default_tools
+        self.assertEqual(stored["tools"], default_tools())
 
     def test_rejects_duplicate_email(self) -> None:
         db = _FakeDb()

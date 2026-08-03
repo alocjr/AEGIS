@@ -22,6 +22,7 @@ from app.security import (
     hash_password,
     hash_password_reset_token,
 )
+from app.tools import default_tools, user_tools
 from app.utils.email import send_password_reset_email
 from app.limiter import limiter
 from app.utils.email_verification import issue_and_send_verification, verify_email_token
@@ -48,6 +49,8 @@ def _user_payload(user: dict, db: Database) -> dict:
         "email_verified": is_email_verified(user),
         "organization_id": str(org_id) if org_id else None,
         "organization_name": (org or {}).get("name") or "",
+        # Ferramentas liberadas pelo admin — o frontend usa para montar o menu e barrar rotas.
+        "tools": user_tools(user),
     }
 
 
@@ -63,6 +66,7 @@ def register(payload: RegisterRequest, response: Response, db: Database = Depend
         "password_hash": hash_password(payload.password),
         "organization_id": provision_solo_organization(payload.name),
         "email_verified": False,
+        "tools": default_tools(),
         "created_at": datetime.now(timezone.utc),
     }
     result = db.users.insert_one(user_doc)

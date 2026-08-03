@@ -7,15 +7,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.routes.canvas_projects import _to_item as _project_to_item
 from app.routes.okrs import _to_item as _okr_cycle_to_item
 from app.routes.swot_analysis import _get_latest as _latest_swot
 from app.routes.swot_analysis import _require_owned as _owned_swot
 from app.routes.swot_analysis import _to_item as _swot_to_item
 from app.swot_from_maturity import _DIM_TO_PILLAR
+from app.tools import TOOL_STRATEGIC_MAP
 
-router = APIRouter(prefix="/api/strategic-map", tags=["strategic-map"])
+router = APIRouter(
+    prefix="/api/strategic-map",
+    tags=["strategic-map"],
+    dependencies=[Depends(require_tool(TOOL_STRATEGIC_MAP))],
+)
 
 _TIER_LABEL = {"basico": "Básico", "completo": "Completo", "complementar": "Complementar"}
 _TIER_ORDER = {"basico": 0, "completo": 1, "complementar": 2}

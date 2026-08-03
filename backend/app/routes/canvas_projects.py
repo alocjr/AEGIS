@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from app.database import get_db
-from app.deps import get_current_organization_id, get_verified_user
+from app.deps import get_current_organization_id, get_verified_user, require_tool
 from app.governance import repository as gov_repo
 from app.governance.rules.r3_canvas import (
     canvas_para_risco_preliminar,
@@ -19,6 +19,7 @@ from app.schemas import (
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
 )
+from app.tools import TOOL_CANVAS
 
 _TYPE_SLUG_TO_LABEL = {
     "automacao": "Automação",
@@ -38,7 +39,11 @@ _HITL = {
     "supervisionar": "supervisionar",
 }
 
-router = APIRouter(prefix="/api/canvas-projects", tags=["canvas-projects"])
+router = APIRouter(
+    prefix="/api/canvas-projects",
+    tags=["canvas-projects"],
+    dependencies=[Depends(require_tool(TOOL_CANVAS))],
+)
 
 _LIST_FIELDS = (
     "contexto",
