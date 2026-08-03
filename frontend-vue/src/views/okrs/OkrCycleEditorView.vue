@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { RouterLink, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   getOkrCycle,
   updateOkrCycle,
   activateOkrCycle,
   archiveOkrCycle,
+  type KeyResult,
   type OkrCycle,
+  type OkrCyclePayload,
   type OkrCycleTipo,
   type Objective,
 } from '@/api/okrs'
@@ -23,20 +25,31 @@ const route = useRoute()
 const router = useRouter()
 const cycleId = computed(() => String(route.params.id || ''))
 
+const MAX_OBJECTIVES = 20
+const MAX_KRS = 20
+/** Espera de digitação antes de gravar: longa o bastante para não salvar no meio de uma frase. */
+const AUTOSAVE_DELAY_MS = 1200
+
 const loading = ref(true)
 const error = ref<string | null>(null)
-const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+const saveState = ref<'saving' | 'saved' | 'error'>('saved')
 const saveError = ref<string | null>(null)
+const savedAt = ref<Date | null>(null)
 const cycle = ref<OkrCycle | null>(null)
-let saving = false
-let pendingSave = false
+
+/** Identidade local estável por linha: `id` só existe depois do primeiro save, e os índices
+ * mudam de lugar quando um item é removido — usar `_uid` como :key evita o Vue reciclar
+ * o input de outra linha (e roubar o foco) durante a edição. */
+let uidSeq = 0
+type KrRow = KeyResult & { _uid: number }
+type ObjRow = Omit<Objective, 'key_results'> & { _uid: number; key_results: KrRow[] }
 
 const form = ref<{
   nome: string
   tipo: OkrCycleTipo
   ano: number
   trimestre: number | null
-  objectives: Objective[]
+  objectives: ObjRow[]
 }>({
   nome: '',
   tipo: 'trimestre',
@@ -45,64 +58,226 @@ const form = ref<{
   objectives: [],
 })
 
-function applyCycle(c: OkrCycle) {
-  cycle.value = c
-  form.value = {
-    nome: c.nome || '',
-    tipo: c.tipo,
-    ano: c.ano,
-    trimestre: c.trimestre,
-    objectives: c.objectives.map((o) => ({
-      ...o,
-      key_results: o.key_results.map((kr) => ({ ...kr })),
-    })),
+/** Contadores de geração: `editGen` avança a cada edição, `savedGen` guarda a geração que o
+ * servidor já confirmou. Enquanto diferem, existe trabalho não gravado. */
+const editGen = ref(0)
+const savedGen = ref(0)
+const dirty = computed(() => editGen.value !== savedGen.value)
+
+/** Ligado enquanto o código (não o usuário) mexe no form, para não contar como edição. */
+let applyingRemote = false
+let autosaveTimer: number | null = null
+let inFlight: Promise<void> | null = null
+
+watch(
+  form,
+  () => {
+    if (applyingRemote || loading.value) return
+    editGen.value += 1
+    scheduleSave()
+  },
+  { deep: true, flush: 'sync' }
+)
+
+function withRemoteChanges(fn: () => void) {
+  applyingRemote = true
+  try {
+    fn()
+  } finally {
+    applyingRemote = false
   }
 }
 
-async function persist() {
-  if (!cycleId.value) return
-  if (saving) {
-    pendingSave = true
-    return
+/** Metadados do ciclo (status, contadores) — nunca sobrescreve o que está sendo editado. */
+function applyCycleMeta(c: OkrCycle) {
+  cycle.value = c
+}
+
+function loadForm(c: OkrCycle) {
+  withRemoteChanges(() => {
+    form.value = {
+      nome: c.nome || '',
+      tipo: c.tipo,
+      ano: c.ano,
+      trimestre: c.trimestre,
+      objectives: (c.objectives || []).map((o) => ({
+        ...o,
+        _uid: ++uidSeq,
+        key_results: (o.key_results || []).map((kr) => ({ ...kr, _uid: ++uidSeq })),
+      })),
+    }
+  })
+  editGen.value = 0
+  savedGen.value = 0
+}
+
+/** Campo numérico vazio vale 0 no payload: o backend recusa `""` com 422 e travaria o save
+ * inteiro enquanto o usuário estivesse com a Base/Meta em branco. */
+function toNum(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+type SentRow = { uid: number; krUids: number[] }
+
+/** Monta o PUT com o que o backend aceita persistir (item sem título é descartado lá) e
+ * devolve o mapa de linhas enviadas, para reatribuir os ids gerados sem recarregar a tela. */
+function buildPayload(): { body: OkrCyclePayload; sent: SentRow[] } {
+  const objectives: Objective[] = []
+  const sent: SentRow[] = []
+  for (const obj of form.value.objectives) {
+    if (!obj.titulo.trim()) continue
+    if (objectives.length >= MAX_OBJECTIVES) break
+    const krs: KeyResult[] = []
+    const krUids: number[] = []
+    for (const kr of obj.key_results) {
+      if (!kr.titulo.trim()) continue
+      if (krs.length >= MAX_KRS) break
+      krs.push({
+        id: kr.id,
+        titulo: kr.titulo,
+        descricao: kr.descricao,
+        unidade: kr.unidade,
+        baseline: toNum(kr.baseline),
+        current: toNum(kr.current),
+        target: toNum(kr.target),
+        direction: kr.direction,
+        dono: kr.dono,
+      })
+      krUids.push(kr._uid)
+    }
+    objectives.push({
+      id: obj.id,
+      titulo: obj.titulo,
+      descricao: obj.descricao,
+      dono: obj.dono,
+      pilar: obj.pilar,
+      swot_id: obj.swot_id ?? null,
+      swot_item_ids: [...(obj.swot_item_ids || [])],
+      tows_ids: [...(obj.tows_ids || [])],
+      key_results: krs,
+    })
+    sent.push({ uid: obj._uid, krUids })
   }
-  saving = true
-  saveState.value = 'saving'
-  saveError.value = null
-  try {
-    const updated = await updateOkrCycle(cycleId.value, {
+  return {
+    body: {
       nome: form.value.nome,
       tipo: form.value.tipo,
-      ano: form.value.ano,
-      trimestre: form.value.trimestre,
-      objectives: form.value.objectives,
-    })
-    applyCycle(updated)
-    saveState.value = 'saved'
-    window.setTimeout(() => {
-      if (saveState.value === 'saved') saveState.value = 'idle'
-    }, 1600)
-  } catch (e) {
-    saveState.value = 'error'
-    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
-  } finally {
-    saving = false
-    if (pendingSave) {
-      pendingSave = false
-      void persist()
-    }
+      ano: toNum(form.value.ano),
+      trimestre: form.value.tipo === 'trimestre' ? form.value.trimestre : null,
+      objectives,
+    },
+    sent,
   }
 }
+
+/** Copia só os ids que o servidor gerou; o texto na tela é a fonte da verdade enquanto edita. */
+function reconcileIds(updated: OkrCycle, sent: SentRow[]) {
+  const objByUid = new Map(form.value.objectives.map((o) => [o._uid, o]))
+  withRemoteChanges(() => {
+    ;(updated.objectives || []).forEach((node, idx) => {
+      const row = sent[idx]
+      const local = row ? objByUid.get(row.uid) : undefined
+      if (!row || !local) return
+      local.id = node.id
+      const krByUid = new Map(local.key_results.map((kr) => [kr._uid, kr]))
+      ;(node.key_results || []).forEach((krNode, krIdx) => {
+        const uid = row.krUids[krIdx]
+        const localKr = uid === undefined ? undefined : krByUid.get(uid)
+        if (localKr) localKr.id = krNode.id
+      })
+    })
+  })
+}
+
+function clearAutosaveTimer() {
+  if (autosaveTimer !== null) {
+    window.clearTimeout(autosaveTimer)
+    autosaveTimer = null
+  }
+}
+
+function scheduleSave() {
+  clearAutosaveTimer()
+  autosaveTimer = window.setTimeout(() => {
+    autosaveTimer = null
+    void runSaves()
+  }, AUTOSAVE_DELAY_MS)
+}
+
+async function putOnce(): Promise<boolean> {
+  const gen = editGen.value
+  const { body, sent } = buildPayload()
+  try {
+    const updated = await updateOkrCycle(cycleId.value, body)
+    reconcileIds(updated, sent)
+    applyCycleMeta(updated)
+    savedGen.value = gen
+    savedAt.value = new Date()
+    return true
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
+    return false
+  }
+}
+
+/** Grava em série até a tela estar limpa; edições feitas durante o request entram na volta. */
+function runSaves(): Promise<void> {
+  if (inFlight) return inFlight
+  if (!cycleId.value || loading.value || !dirty.value) return Promise.resolve()
+  inFlight = (async () => {
+    saveState.value = 'saving'
+    saveError.value = null
+    try {
+      while (dirty.value) {
+        if (!(await putOnce())) {
+          saveState.value = 'error'
+          return
+        }
+      }
+      saveState.value = 'saved'
+    } finally {
+      inFlight = null
+    }
+  })()
+  return inFlight
+}
+
+/** Grava agora (botão, atalho, ações estruturais) sem esperar o debounce. */
+function saveNow(): Promise<void> {
+  clearAutosaveTimer()
+  return runSaves()
+}
+
+/** Espera a fila esvaziar — usada antes de sair da página ou mudar o status do ciclo. */
+async function flushSaves(): Promise<void> {
+  clearAutosaveTimer()
+  if (inFlight) await inFlight
+  if (dirty.value) await runSaves()
+}
+
+const savedAtLabel = computed(() =>
+  savedAt.value
+    ? savedAt.value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : ''
+)
 
 /** Progresso do KR calculado no cliente para feedback instantâneo — mesma fórmula do backend
  * (a direção só serve como rótulo; o cálculo se auto-inverte pelo sinal de target-baseline). */
 function krProgress(kr: { baseline: number; current: number; target: number }): number {
-  const denom = kr.target - kr.baseline
-  const raw = denom === 0 ? 100 : ((kr.current - kr.baseline) / denom) * 100
+  const denom = toNum(kr.target) - toNum(kr.baseline)
+  const raw = denom === 0 ? 100 : ((toNum(kr.current) - toNum(kr.baseline)) / denom) * 100
   return Math.max(0, Math.min(100, raw))
 }
 
+function isDraftObjective(obj: ObjRow): boolean {
+  return !obj.titulo.trim()
+}
+
 function addObjective() {
+  if (form.value.objectives.length >= MAX_OBJECTIVES) return
   form.value.objectives.push({
+    _uid: ++uidSeq,
     titulo: '',
     descricao: '',
     dono: '',
@@ -115,16 +290,17 @@ function addObjective() {
 }
 
 function removeObjective(idx: number) {
+  const obj = form.value.objectives[idx]
+  if (!obj) return
+  delete originOpen.value[obj._uid]
   form.value.objectives.splice(idx, 1)
-  void persist()
+  void saveNow()
 }
 
-function onObjectiveFieldBlur() {
-  void persist()
-}
-
-function addKr(obj: Objective) {
+function addKr(obj: ObjRow) {
+  if (obj.key_results.length >= MAX_KRS) return
   obj.key_results.push({
+    _uid: ++uidSeq,
     titulo: '',
     descricao: '',
     unidade: '',
@@ -136,13 +312,28 @@ function addKr(obj: Objective) {
   })
 }
 
-function removeKr(obj: Objective, idx: number) {
+function removeKr(obj: ObjRow, idx: number) {
   obj.key_results.splice(idx, 1)
-  void persist()
+  void saveNow()
 }
 
-function onKrFieldBlur() {
-  void persist()
+/** Ciclo trimestral sem trimestre é rejeitado com 400 — assume o trimestre corrente. */
+function onTipoChange() {
+  if (form.value.tipo === 'trimestre' && !form.value.trimestre) {
+    form.value.trimestre = Math.floor(new Date().getMonth() / 3) + 1
+  }
+}
+
+function onSaveShortcut(ev: KeyboardEvent) {
+  if (!(ev.metaKey || ev.ctrlKey) || ev.key.toLowerCase() !== 's') return
+  ev.preventDefault()
+  void saveNow()
+}
+
+function onBeforeUnload(ev: BeforeUnloadEvent) {
+  if (!dirty.value && !inFlight) return
+  ev.preventDefault()
+  ev.returnValue = ''
 }
 
 /** Origem estratégica: iniciativas TOWS da SWOT vinculadas a cada Objective. */
@@ -178,7 +369,7 @@ function crossingLabel(initiative: SwotInitiative): string {
   return texts.join(' × ')
 }
 
-function selectedInitiatives(obj: Objective) {
+function selectedInitiatives(obj: ObjRow) {
   const doc = swot.value
   if (!doc) return []
   const chosen = new Set(obj.tows_ids || [])
@@ -189,11 +380,11 @@ function selectedInitiatives(obj: Objective) {
   )
 }
 
-function isTowsSelected(obj: Objective, initiativeId?: string): boolean {
+function isTowsSelected(obj: ObjRow, initiativeId?: string): boolean {
   return !!initiativeId && (obj.tows_ids || []).includes(initiativeId)
 }
 
-async function toggleTows(obj: Objective, initiativeId?: string) {
+async function toggleTows(obj: ObjRow, initiativeId?: string) {
   if (!initiativeId || !swot.value) return
   const chosen = new Set(obj.tows_ids || [])
   if (chosen.has(initiativeId)) {
@@ -208,7 +399,7 @@ async function toggleTows(obj: Objective, initiativeId?: string) {
   swotError.value = null
   obj.tows_ids = [...chosen]
   obj.swot_id = obj.tows_ids.length ? swot.value.id : null
-  await persist()
+  await saveNow()
 }
 
 async function loadSwotDoc(id: string) {
@@ -248,7 +439,8 @@ async function onActivate() {
   activating.value = true
   lifecycleError.value = null
   try {
-    applyCycle(await activateOkrCycle(cycleId.value))
+    await flushSaves()
+    applyCycleMeta(await activateOkrCycle(cycleId.value))
   } catch (e) {
     lifecycleError.value = e instanceof Error ? e.message : 'Erro ao ativar ciclo.'
   } finally {
@@ -260,7 +452,8 @@ async function onArchive() {
   archiving.value = true
   lifecycleError.value = null
   try {
-    applyCycle(await archiveOkrCycle(cycleId.value))
+    await flushSaves()
+    applyCycleMeta(await archiveOkrCycle(cycleId.value))
   } catch (e) {
     lifecycleError.value = e instanceof Error ? e.message : 'Erro ao arquivar ciclo.'
   } finally {
@@ -275,8 +468,12 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 onMounted(async () => {
+  window.addEventListener('keydown', onSaveShortcut)
+  window.addEventListener('beforeunload', onBeforeUnload)
   try {
-    applyCycle(await getOkrCycle(cycleId.value))
+    const c = await getOkrCycle(cycleId.value)
+    applyCycleMeta(c)
+    loadForm(c)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar ciclo.'
     if (String(error.value).includes('não encontrado')) {
@@ -287,6 +484,17 @@ onMounted(async () => {
   }
   void loadSwotList()
 })
+
+onBeforeRouteLeave(async () => {
+  await flushSaves()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onSaveShortcut)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  clearAutosaveTimer()
+  if (dirty.value) void runSaves()
+})
 </script>
 
 <template>
@@ -294,10 +502,21 @@ onMounted(async () => {
     <div class="toolbar">
       <RouterLink to="/okrs" class="back">← OKR</RouterLink>
       <div class="save-status">
-        <span v-if="saveState === 'saving'">Salvando…</span>
-        <span v-else-if="saveState === 'saved'" class="ok">Salvo</span>
-        <span v-else-if="saveState === 'error'" class="err">{{ saveError || 'Erro ao salvar' }}</span>
-        <span v-else class="muted">Salva ao sair do campo</span>
+        <span v-if="saveState === 'error'" class="err">{{ saveError || 'Erro ao salvar' }}</span>
+        <span v-else-if="saveState === 'saving'">Salvando…</span>
+        <span v-else-if="dirty" class="pending">Alterações não salvas</span>
+        <span v-else-if="savedAtLabel" class="ok">Salvo às {{ savedAtLabel }}</span>
+        <span v-else class="muted">Salva automaticamente enquanto você escreve</span>
+        <button
+          v-if="dirty || saveState === 'error'"
+          type="button"
+          class="btn-save"
+          title="Salvar agora (⌘S / Ctrl+S)"
+          :disabled="saveState === 'saving'"
+          @click="saveNow()"
+        >
+          {{ saveState === 'error' ? 'Tentar novamente' : 'Salvar agora' }}
+        </button>
       </div>
     </div>
 
@@ -312,25 +531,24 @@ onMounted(async () => {
             class="head-nome"
             placeholder="Nome do ciclo (opcional)"
             maxlength="120"
-            @blur="persist"
           />
           <span class="status-badge" :data-status="cycle.status">{{ STATUS_LABEL[cycle.status] }}</span>
         </div>
         <div class="head-row head-meta">
           <label class="head-field">
             <span>Tipo</span>
-            <select v-model="form.tipo" @change="persist">
+            <select v-model="form.tipo" @change="onTipoChange">
               <option value="trimestre">Trimestre</option>
               <option value="ano">Ano</option>
             </select>
           </label>
           <label class="head-field">
             <span>Ano</span>
-            <input v-model.number="form.ano" type="number" min="2020" max="2100" @blur="persist" />
+            <input v-model.number="form.ano" type="number" min="2020" max="2100" />
           </label>
           <label v-if="form.tipo === 'trimestre'" class="head-field">
             <span>Trimestre</span>
-            <select v-model.number="form.trimestre" @change="persist">
+            <select v-model.number="form.trimestre">
               <option :value="1">Q1</option>
               <option :value="2">Q2</option>
               <option :value="3">Q3</option>
@@ -364,15 +582,20 @@ onMounted(async () => {
         </p>
       </header>
 
-      <section v-for="(obj, objIdx) in form.objectives" :key="objIdx" class="card objective-card">
+      <section
+        v-for="(obj, objIdx) in form.objectives"
+        :key="obj._uid"
+        class="card objective-card"
+        :class="{ draft: isDraftObjective(obj) }"
+      >
         <div class="objective-head">
           <input
             v-model="obj.titulo"
             class="objective-titulo"
             placeholder="Título do objetivo"
             maxlength="300"
-            @blur="onObjectiveFieldBlur"
           />
+          <span v-if="isDraftObjective(obj)" class="draft-badge">Rascunho</span>
           <button type="button" class="btn-remove" title="Remover objetivo" @click="removeObjective(objIdx)">×</button>
         </div>
         <div class="objective-fields">
@@ -382,127 +605,146 @@ onMounted(async () => {
             rows="2"
             maxlength="2000"
             placeholder="Descrição (opcional)"
-            @blur="onObjectiveFieldBlur"
           />
           <div class="objective-meta-row">
-            <input v-model="obj.dono" placeholder="Dono" maxlength="200" @blur="onObjectiveFieldBlur" />
-            <input v-model="obj.pilar" placeholder="Pilar (opcional)" maxlength="40" @blur="onObjectiveFieldBlur" />
+            <input v-model="obj.dono" placeholder="Dono" maxlength="200" />
+            <input v-model="obj.pilar" placeholder="Pilar (opcional)" maxlength="40" />
           </div>
         </div>
 
-        <p v-if="!obj.titulo.trim()" class="obj-hint">
-          Digite o título do objetivo para habilitar os Key Results e a origem estratégica (TOWS).
+        <p v-if="isDraftObjective(obj)" class="obj-hint">
+          Dê um título ao objetivo para que ele seja gravado — o resto do preenchimento pode
+          continuar normalmente até lá.
         </p>
 
-        <template v-else>
-          <section class="origin">
-            <button
-              type="button"
-              class="origin-head"
-              :aria-expanded="!!originOpen[objIdx]"
-              @click="originOpen[objIdx] = !originOpen[objIdx]"
-            >
-              <span class="origin-title">Origem estratégica · TOWS</span>
-              <span v-if="(obj.tows_ids || []).length" class="origin-count">
-                {{ (obj.tows_ids || []).length }} iniciativa(s)
-              </span>
-              <span v-else class="origin-count muted">nenhuma iniciativa vinculada</span>
-              <span class="origin-caret" aria-hidden="true">{{ originOpen[objIdx] ? '−' : '+' }}</span>
-            </button>
+        <section class="origin">
+          <button
+            type="button"
+            class="origin-head"
+            :aria-expanded="!!originOpen[obj._uid]"
+            @click="originOpen[obj._uid] = !originOpen[obj._uid]"
+          >
+            <span class="origin-title">Origem estratégica · TOWS</span>
+            <span v-if="(obj.tows_ids || []).length" class="origin-count">
+              {{ (obj.tows_ids || []).length }} iniciativa(s)
+            </span>
+            <span v-else class="origin-count muted">nenhuma iniciativa vinculada</span>
+            <span class="origin-caret" aria-hidden="true">{{ originOpen[obj._uid] ? '−' : '+' }}</span>
+          </button>
 
-            <div v-if="!originOpen[objIdx] && selectedInitiatives(obj).length" class="origin-chips">
-              <span v-for="init in selectedInitiatives(obj)" :key="init.id" class="origin-chip">
-                <b>{{ init.groupLabel }}</b>{{ init.acao }}
-              </span>
-            </div>
+          <div v-if="!originOpen[obj._uid] && selectedInitiatives(obj).length" class="origin-chips">
+            <span v-for="init in selectedInitiatives(obj)" :key="init.id" class="origin-chip">
+              <b>{{ init.groupLabel }}</b>{{ init.acao }}
+            </span>
+          </div>
 
-            <div v-if="originOpen[objIdx]" class="origin-body">
-              <div v-if="swotError" class="origin-err">{{ swotError }}</div>
-              <p v-if="swotLoading" class="origin-none">Carregando estratégias…</p>
-              <p v-else-if="!swotList.length" class="origin-none">
-                Nenhuma SWOT criada ainda.
-                <RouterLink to="/swot" class="origin-link">Abrir SWOT de IA</RouterLink>
-              </p>
-              <template v-else-if="swot">
-                <label v-if="swotList.length > 1" class="origin-select">
-                  <span>SWOT de origem</span>
-                  <select :value="swot.id" @change="onSelectSwot">
-                    <option v-for="s in swotList" :key="s.id" :value="s.id">
-                      {{ s.veredito_titulo || 'SWOT sem veredito' }} · {{ s.tows_count }} estratégia(s)
-                    </option>
-                  </select>
-                </label>
-                <div class="origin-groups">
-                  <div v-for="group in TOWS_GROUPS" :key="group.field" class="origin-group">
-                    <div class="origin-group-head">
-                      <b>{{ group.label }}</b>
-                      <span>{{ group.hint }}</span>
-                    </div>
-                    <p v-if="!(swot[group.field] || []).length" class="origin-none">
-                      Sem estratégias neste cruzamento.
-                    </p>
-                    <ul v-else class="origin-list">
-                      <li v-for="(init, initIdx) in swot[group.field]" :key="init.id || initIdx">
-                        <label class="origin-item" :class="{ active: isTowsSelected(obj, init.id) }">
-                          <input
-                            type="checkbox"
-                            :checked="isTowsSelected(obj, init.id)"
-                            :disabled="!init.id"
-                            @change="toggleTows(obj, init.id)"
-                          />
-                          <span class="origin-item-body">
-                            <span class="origin-acao">{{ init.acao || '—' }}</span>
-                            <span v-if="crossingLabel(init)" class="origin-cross">{{ crossingLabel(init) }}</span>
-                          </span>
-                        </label>
-                      </li>
-                    </ul>
+          <div v-if="originOpen[obj._uid]" class="origin-body">
+            <div v-if="swotError" class="origin-err">{{ swotError }}</div>
+            <p v-if="swotLoading" class="origin-none">Carregando estratégias…</p>
+            <p v-else-if="!swotList.length" class="origin-none">
+              Nenhuma SWOT criada ainda.
+              <RouterLink to="/swot" class="origin-link">Abrir SWOT de IA</RouterLink>
+            </p>
+            <template v-else-if="swot">
+              <label v-if="swotList.length > 1" class="origin-select">
+                <span>SWOT de origem</span>
+                <select :value="swot.id" @change="onSelectSwot">
+                  <option v-for="s in swotList" :key="s.id" :value="s.id">
+                    {{ s.veredito_titulo || 'SWOT sem veredito' }} · {{ s.tows_count }} estratégia(s)
+                  </option>
+                </select>
+              </label>
+              <div class="origin-groups">
+                <div v-for="group in TOWS_GROUPS" :key="group.field" class="origin-group">
+                  <div class="origin-group-head">
+                    <b>{{ group.label }}</b>
+                    <span>{{ group.hint }}</span>
                   </div>
+                  <p v-if="!(swot[group.field] || []).length" class="origin-none">
+                    Sem estratégias neste cruzamento.
+                  </p>
+                  <ul v-else class="origin-list">
+                    <li v-for="(init, initIdx) in swot[group.field]" :key="init.id || initIdx">
+                      <label class="origin-item" :class="{ active: isTowsSelected(obj, init.id) }">
+                        <input
+                          type="checkbox"
+                          :checked="isTowsSelected(obj, init.id)"
+                          :disabled="!init.id"
+                          @change="toggleTows(obj, init.id)"
+                        />
+                        <span class="origin-item-body">
+                          <span class="origin-acao">{{ init.acao || '—' }}</span>
+                          <span v-if="crossingLabel(init)" class="origin-cross">{{ crossingLabel(init) }}</span>
+                        </span>
+                      </label>
+                    </li>
+                  </ul>
                 </div>
-              </template>
-            </div>
-          </section>
+              </div>
+            </template>
+          </div>
+        </section>
 
-          <div class="kr-list">
-            <div v-for="(kr, krIdx) in obj.key_results" :key="krIdx" class="kr-row">
+        <div class="kr-list">
+          <div
+            v-for="(kr, krIdx) in obj.key_results"
+            :key="kr._uid"
+            class="kr-row"
+            :class="{ draft: !kr.titulo.trim() }"
+          >
+            <div class="kr-head">
               <input
                 v-model="kr.titulo"
                 class="kr-titulo"
-                placeholder="Resultado-chave"
+                placeholder="Resultado-chave (ex.: reduzir tempo de resposta de 8h para 5h)"
                 maxlength="300"
-                @blur="onKrFieldBlur"
               />
-              <div class="kr-fields">
-                <input v-model="kr.unidade" class="kr-unidade" placeholder="Unidade" maxlength="40" @blur="onKrFieldBlur" />
-                <label class="kr-num">
-                  <span>Base</span>
-                  <input v-model.number="kr.baseline" type="number" step="any" @blur="onKrFieldBlur" />
-                </label>
-                <label class="kr-num">
-                  <span>Atual</span>
-                  <input v-model.number="kr.current" type="number" step="any" @blur="onKrFieldBlur" />
-                </label>
-                <label class="kr-num">
-                  <span>Meta</span>
-                  <input v-model.number="kr.target" type="number" step="any" @blur="onKrFieldBlur" />
-                </label>
-                <select v-model="kr.direction" class="kr-direction" @change="onKrFieldBlur">
-                  <option value="increase">↑ Aumentar</option>
-                  <option value="decrease">↓ Reduzir</option>
-                </select>
-                <button type="button" class="btn-remove" title="Remover Key Result" @click="removeKr(obj, krIdx)">×</button>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: `${krProgress(kr)}%` }" />
-                <span class="progress-label">{{ krProgress(kr).toFixed(0) }}%</span>
-              </div>
+              <span v-if="!kr.titulo.trim()" class="draft-badge">Rascunho</span>
             </div>
-            <button type="button" class="btn-add-kr" @click="addKr(obj)">+ Resultado-chave</button>
+            <div class="kr-fields">
+              <input v-model="kr.unidade" class="kr-unidade" placeholder="Unidade" maxlength="40" />
+              <label class="kr-num">
+                <span>Base</span>
+                <input v-model.number="kr.baseline" type="number" step="any" />
+              </label>
+              <label class="kr-num">
+                <span>Atual</span>
+                <input v-model.number="kr.current" type="number" step="any" />
+              </label>
+              <label class="kr-num">
+                <span>Meta</span>
+                <input v-model.number="kr.target" type="number" step="any" />
+              </label>
+              <select v-model="kr.direction" class="kr-direction">
+                <option value="increase">↑ Aumentar</option>
+                <option value="decrease">↓ Reduzir</option>
+              </select>
+              <button type="button" class="btn-remove" title="Remover Key Result" @click="removeKr(obj, krIdx)">×</button>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: `${krProgress(kr)}%` }" />
+              <span class="progress-label">{{ krProgress(kr).toFixed(0) }}%</span>
+            </div>
           </div>
-        </template>
+          <button
+            type="button"
+            class="btn-add-kr"
+            :disabled="obj.key_results.length >= MAX_KRS"
+            @click="addKr(obj)"
+          >
+            + Resultado-chave
+          </button>
+        </div>
       </section>
 
-      <button type="button" class="btn-add-objective" @click="addObjective">+ Objetivo</button>
+      <button
+        type="button"
+        class="btn-add-objective"
+        :disabled="form.objectives.length >= MAX_OBJECTIVES"
+        @click="addObjective"
+      >
+        + Objetivo
+      </button>
     </template>
   </div>
 </template>
@@ -514,10 +756,17 @@ onMounted(async () => {
   padding: 20px 20px 60px;
 }
 .toolbar {
+  position: sticky;
+  top: var(--bar-h, 64px);
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 12px;
+  padding: 10px 0;
+  margin-bottom: 6px;
+  background: var(--k9);
+  border-bottom: 1px solid var(--bd);
 }
 .back {
   font-size: 13px;
@@ -528,6 +777,9 @@ onMounted(async () => {
   color: var(--k0);
 }
 .save-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 12px;
   color: var(--k5);
 }
@@ -536,6 +788,22 @@ onMounted(async () => {
 }
 .save-status .err {
   color: #8f2b2b;
+}
+.save-status .pending {
+  color: var(--warn);
+}
+.btn-save {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--k0);
+  background: var(--k0);
+  color: var(--wh);
+  cursor: pointer;
+}
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 .card {
   background: var(--wh);
@@ -637,10 +905,24 @@ onMounted(async () => {
   flex-direction: column;
   gap: 12px;
 }
+.objective-card.draft {
+  border-style: dashed;
+}
 .objective-head {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.draft-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--warnBg);
+  color: var(--warn);
+  white-space: nowrap;
 }
 .objective-titulo {
   flex: 1;
@@ -846,7 +1128,17 @@ onMounted(async () => {
   flex-direction: column;
   gap: 8px;
 }
+.kr-row.draft {
+  border-style: dashed;
+}
+.kr-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .kr-titulo {
+  flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   font-size: 14px;
@@ -920,9 +1212,14 @@ onMounted(async () => {
   color: var(--k5);
   cursor: pointer;
 }
-.btn-add-kr:hover {
+.btn-add-kr:hover:not(:disabled) {
   color: var(--k0);
   border-color: var(--k0);
+}
+.btn-add-kr:disabled,
+.btn-add-objective:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .btn-add-objective {
   width: 100%;
@@ -934,7 +1231,7 @@ onMounted(async () => {
   color: var(--k5);
   cursor: pointer;
 }
-.btn-add-objective:hover {
+.btn-add-objective:hover:not(:disabled) {
   color: var(--k0);
   border-color: var(--k0);
 }
