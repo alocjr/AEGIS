@@ -279,7 +279,9 @@ def get_strategic_map(
 
     # Ciclo OKR ativo da organização (nenhum = camada de OKR fica vazia, sem erro)
     active_cycle_doc = db.okr_cycles.find_one({"organization_id": org_id, "status": "ativo"})
-    active_cycle = _okr_cycle_to_item(active_cycle_doc) if active_cycle_doc else None
+    active_cycle = (
+        _okr_cycle_to_item(active_cycle_doc, include_drafts=False) if active_cycle_doc else None
+    )
     all_objectives: list[dict] = active_cycle["objectives"] if active_cycle else []
 
     kr_ids_all: set[str] = {

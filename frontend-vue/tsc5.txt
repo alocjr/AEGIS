@@ -1,0 +1,69 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
+src/stores/auth.ts(21,9): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/views/admin/AdminQuizView.vue(14,3): error TS6196: 'AdminQuizDetail' is declared but never used.
+src/views/admin/AdminQuizView.vue(85,3): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(100,3): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(100,18): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(105,7): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(106,3): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(106,14): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(107,7): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(107,46): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(108,5): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(108,5): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(132,29): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(133,28): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(138,31): error TS18048: 'next' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(178,9): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(187,29): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(207,29): error TS2532: Object is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(220,10): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(221,9): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(222,22): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminQuizView.vue(224,21): error TS18048: 'q' is possibly 'undefined'.
+src/views/admin/AdminUsuariosView.vue(93,32): error TS2532: Object is possibly 'undefined'.
+src/views/AgendaView.vue(56,10): error TS2532: Object is possibly 'undefined'.
+src/views/AiMaturityListView.vue(30,13): error TS2532: Object is possibly 'undefined'.
+src/views/AiMaturityListView.vue(49,7): error TS6133: 'RADAR_SIZE' is declared but its value is never read.
+src/views/ProgramaView.vue(11,3): error TS6196: 'JornadaSemana' is declared but never used.
+src/views/ProgramaView.vue(15,3): error TS6196: 'EntregavelResumo' is declared but never used.
+src/views/ProgramaView.vue(60,7): error TS6133: 'quizPorEncontro' is declared but its value is never read.
+src/views/ProgramaView.vue(89,10): error TS6133: 'isLiberado' is declared but its value is never read.
+src/views/ProgramaView.vue(93,10): error TS6133: 'isConcluido' is declared but its value is never read.
+src/views/ProgramaView.vue(157,39): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+src/views/QuizRespostasView.vue(143,26): error TS2339: Property 'sumTotal' does not exist on type '{ total: number; responded: number; avgPct: number; sumScore: number; sumAnswered: number; pctResponded: number; }'.
+src/views/QuizView.vue(459,54): error TS2532: Object is possibly 'undefined'.
+src/views/QuizView.vue(460,39): error TS2532: Object is possibly 'undefined'.
+src/views/QuizView.vue(460,83): error TS2532: Object is possibly 'undefined'.
+src/views/QuizView.vue(468,54): error TS2532: Object is possibly 'undefined'.
+src/views/QuizView.vue(469,24): error TS2532: Object is possibly 'undefined'.
+src/views/QuizView.vue(469,91): error TS2532: Object is possibly 'undefined'.
+src/views/SwotAnalysisView.vue(437,5): error TS2532: Object is possibly 'undefined'.
+src/views/SwotAnalysisView.vue(616,3): error TS2322: Type '{ texto: string; id?: string | undefined; pilar?: string | undefined; question_id?: string | undefined; impacto?: number | null | undefined; viabilidade?: number | null | undefined; probabilidade?: number | ... 1 more ... | undefined; evidencia?: string | undefined; prioridade?: number | ... 1 more ... | undefined; ...' is not assignable to type '{ id: string; texto: string; pilar: SwotPilarId | string; question_id: string; impacto: number | null; viabilidade: number | null; probabilidade: number | null; evidencia: string; prioridade: number | null; tows: boolean; }'.
+  Types of property 'id' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/views/SwotAnalysisView.vue(645,5): error TS2322: Type '{ id?: string; acao?: string | undefined; dono?: string | undefined; horizonte?: string | undefined; itens_internos?: string[]; itens_externos?: string[]; }' is not assignable to type '{ id?: string | undefined; acao: string; dono: string; horizonte: string; itens_internos?: string[] | undefined; itens_externos?: string[] | undefined; }'.
+  Types of property 'acao' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/views/SwotAnalysisView.vue(876,10): error TS2345: Argument of type '{ rows: string; maxlength: string; placeholder: string; class: string; value: string; onBlur: (opts?: { rebuildTows?: boolean; }) => Promise<void>; }' is not assignable to parameter of type 'TextareaHTMLAttributes & ReservedProps & Record<string, unknown>'.
+  Types of property 'onBlur' are incompatible.
+    Type '(opts?: { rebuildTows?: boolean | undefined; } | undefined) => Promise<void>' is not assignable to type '(payload: FocusEvent) => void'.
+      Types of parameters 'opts' and 'payload' are incompatible.
+        Type 'FocusEvent' has no properties in common with type '{ rebuildTows?: boolean | undefined; }'.
+src/views/SwotAnalysisView.vue(1146,10): error TS2345: Argument of type '{ maxlength: string; placeholder: string; class: string; onBlur: (opts?: { rebuildTows?: boolean; }) => Promise<void>; }' is not assignable to parameter of type 'InputHTMLAttributes & ReservedProps & Record<string, unknown>'.
+  Types of property 'onBlur' are incompatible.
+    Type '(opts?: { rebuildTows?: boolean | undefined; } | undefined) => Promise<void>' is not assignable to type '(payload: FocusEvent) => void'.
+      Types of parameters 'opts' and 'payload' are incompatible.
+        Type 'FocusEvent' has no properties in common with type '{ rebuildTows?: boolean | undefined; }'.
+src/views/SwotAnalysisView.vue(1153,10): error TS2345: Argument of type '{ rows: string; maxlength: string; placeholder: string; class: string; value: string; onBlur: (opts?: { rebuildTows?: boolean; }) => Promise<void>; }' is not assignable to parameter of type 'TextareaHTMLAttributes & ReservedProps & Record<string, unknown>'.
+  Types of property 'onBlur' are incompatible.
+    Type '(opts?: { rebuildTows?: boolean | undefined; } | undefined) => Promise<void>' is not assignable to type '(payload: FocusEvent) => void'.
+      Types of parameters 'opts' and 'payload' are incompatible.
+        Type 'FocusEvent' has no properties in common with type '{ rebuildTows?: boolean | undefined; }'.
+src/views/TrilhaShowcaseView.vue(6,15): error TS6196: 'CoursePublic' is declared but never used.
+src/views/TrilhaShowcaseView.vue(6,39): error TS6196: 'JornadaSemana' is declared but never used.
+src/views/TrilhaShowcaseView.vue(6,54): error TS6196: 'MaterialSuporte' is declared but never used.

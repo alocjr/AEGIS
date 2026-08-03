@@ -54,8 +54,10 @@ export interface OkrCycleSummary {
   nome: string
   label: string
   status: OkrCycleStatus
+  /** Contagens só do que está publicado (com título); rascunhos ficam em `drafts_count`. */
   objectives_count: number
   key_results_count: number
+  drafts_count: number
   progress_pct: number | null
   created_at: string | null
   updated_at: string | null

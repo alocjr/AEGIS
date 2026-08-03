@@ -53,6 +53,10 @@ def _id_list(value, max_items: int = 20) -> list[str]:
 
 
 def _normalize_key_result(raw, used_ids: set[str]) -> dict | None:
+    """Normaliza sem descartar quem ainda não tem título: o editor grava sozinho a cada pausa
+    de digitação, então perder o item sem título significaria apagar o preenchimento em curso.
+    Item sem título é rascunho — persiste, mas fica fora dos contadores, do ciclo ativo e do
+    Mapa Estratégico (ver `_published_objectives`)."""
     if isinstance(raw, KeyResult):
         data = raw.model_dump()
     elif isinstance(raw, dict):
@@ -60,8 +64,6 @@ def _normalize_key_result(raw, used_ids: set[str]) -> dict | None:
     else:
         return None
     titulo = str(data.get("titulo") or "").strip()[:300]
-    if not titulo:
-        return None
     kr_id = str(data.get("id") or "").strip()[:64]
     if not kr_id or kr_id in used_ids:
         kr_id = _new_id("kr")
@@ -137,8 +139,6 @@ def _normalize_objective(raw, used_ids: set[str], valid_swot_ids: set[str]) -> d
     else:
         return None
     titulo = str(data.get("titulo") or "").strip()[:300]
-    if not titulo:
-        return None
     obj_id = str(data.get("id") or "").strip()[:64]
     if not obj_id or obj_id in used_ids:
         obj_id = _new_id("obj")
@@ -181,9 +181,40 @@ def _kr_node(kr: dict) -> dict:
 
 
 def _objective_node(obj: dict) -> dict:
+    """Devolve todos os KRs (o editor precisa dos rascunhos) mas mede o progresso só nos
+    publicados, para um KR ainda sem nome não puxar a média do objetivo."""
     krs = [_kr_node(kr) for kr in obj.get("key_results") or []]
-    progress = round(sum(k["progress_pct"] for k in krs) / len(krs), 1) if krs else None
+    published = [kr for kr in krs if _is_published(kr)]
+    progress = (
+        round(sum(k["progress_pct"] for k in published) / len(published), 1) if published else None
+    )
     return {**obj, "key_results": krs, "progress_pct": progress}
+
+
+def _is_published(node: dict) -> bool:
+    """Publicado = tem título. Sem título é rascunho: guardado, mas invisível para o resto."""
+    return bool(str(node.get("titulo") or "").strip())
+
+
+def _published_objectives(objectives: list[dict]) -> list[dict]:
+    """Objectives publicados, cada um só com os KRs publicados — a visão que o Mapa
+    Estratégico, o ciclo ativo e os contadores usam."""
+    return [
+        {**obj, "key_results": [kr for kr in obj.get("key_results") or [] if _is_published(kr)]}
+        for obj in objectives
+        if _is_published(obj)
+    ]
+
+
+def _drafts_count(objectives: list[dict]) -> int:
+    objs = sum(1 for obj in objectives if not _is_published(obj))
+    krs = sum(
+        1
+        for obj in objectives
+        for kr in obj.get("key_results") or []
+        if not _is_published(kr)
+    )
+    return objs + krs
 
 
 def _label(doc: dict) -> str:
@@ -195,9 +226,13 @@ def _label(doc: dict) -> str:
     return str(doc.get("ano") or "")
 
 
-def _to_item(doc: dict, *, summary: bool = False) -> dict:
+def _to_item(doc: dict, *, summary: bool = False, include_drafts: bool = True) -> dict:
+    """Serializa o ciclo. `include_drafts=False` entrega só o que está publicado — use nos
+    consumidores (ciclo ativo, Mapa Estratégico); o editor precisa do documento completo.
+    Contadores e progresso ignoram rascunhos nas duas formas."""
     objectives = [_objective_node(o) for o in doc.get("objectives") or []]
-    kr_pcts = [kr["progress_pct"] for o in objectives for kr in o["key_results"]]
+    published = _published_objectives(objectives)
+    kr_pcts = [kr["progress_pct"] for o in published for kr in o["key_results"]]
     created_at = doc.get("created_at")
     updated_at = doc.get("updated_at")
     base = {
@@ -208,15 +243,16 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "nome": doc.get("nome") or "",
         "label": _label(doc),
         "status": doc.get("status") or "planejamento",
-        "objectives_count": len(objectives),
+        "objectives_count": len(published),
         "key_results_count": len(kr_pcts),
+        "drafts_count": _drafts_count(objectives),
         "progress_pct": round(sum(kr_pcts) / len(kr_pcts), 1) if kr_pcts else None,
         "created_at": created_at.isoformat() if created_at else None,
         "updated_at": updated_at.isoformat() if updated_at else None,
     }
     if summary:
         return base
-    return {**base, "objectives": objectives}
+    return {**base, "objectives": objectives if include_drafts else published}
 
 
 def _get_active(db: Database, org_id) -> dict | None:
@@ -279,11 +315,12 @@ def get_active_cycle(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Ciclo OKR ativo da organização (404 se nenhum ciclo estiver ativo)."""
+    """Ciclo OKR ativo da organização, só com Objectives/KRs publicados — é a fonte para
+    vincular KRs no Canvas (404 se nenhum ciclo estiver ativo)."""
     doc = _get_active(db, org_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Nenhum ciclo OKR ativo")
-    return _to_item(doc)
+    return _to_item(doc, include_drafts=False)
 
 
 @router.get("/cycles/{cycle_id}")

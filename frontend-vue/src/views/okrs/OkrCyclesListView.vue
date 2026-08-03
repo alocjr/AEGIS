@@ -164,6 +164,9 @@ onMounted(async () => {
               <div class="list-meta-row">
                 <span>{{ item.objectives_count }} objetivo{{ item.objectives_count === 1 ? '' : 's' }}</span>
                 <span>{{ item.key_results_count }} resultado{{ item.key_results_count === 1 ? '-chave' : 's-chave' }}</span>
+                <span v-if="item.drafts_count" class="list-drafts">
+                  {{ item.drafts_count }} rascunho{{ item.drafts_count === 1 ? '' : 's' }}
+                </span>
                 <span>Atualizado {{ formatDate(item.updated_at) }}</span>
               </div>
               <div v-if="item.progress_pct != null" class="progress-bar">
@@ -354,6 +357,9 @@ onMounted(async () => {
   gap: 4px 14px;
   font-size: 12px;
   color: var(--k5);
+}
+.list-drafts {
+  color: var(--warn);
 }
 .progress-bar {
   position: relative;

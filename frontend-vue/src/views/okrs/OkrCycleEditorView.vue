@@ -29,6 +29,7 @@ const MAX_OBJECTIVES = 20
 const MAX_KRS = 20
 /** Espera de digitação antes de gravar: longa o bastante para não salvar no meio de uma frase. */
 const AUTOSAVE_DELAY_MS = 1200
+const DRAFT_HINT = 'Salvo como rascunho — entra nos contadores e no Mapa Estratégico quando tiver um título.'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -118,20 +119,27 @@ function toNum(value: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/** Ano apagado no meio da digitação (ou fora de 2020-2100) é recusado com 422 e travaria toda
+ * a gravação — mantém o último ano válido até o usuário terminar de digitar. */
+function safeAno(): number {
+  const n = toNum(form.value.ano)
+  if (n >= 2020 && n <= 2100) return n
+  return cycle.value?.ano ?? new Date().getFullYear()
+}
+
 type SentRow = { uid: number; krUids: number[] }
 
-/** Monta o PUT com o que o backend aceita persistir (item sem título é descartado lá) e
- * devolve o mapa de linhas enviadas, para reatribuir os ids gerados sem recarregar a tela. */
+/** Monta o PUT com tudo que está na tela — inclusive rascunho sem título, que o backend
+ * guarda e mantém fora dos contadores — e devolve o mapa de linhas enviadas, para reatribuir
+ * os ids gerados sem recarregar a tela. A resposta vem na mesma ordem, item a item. */
 function buildPayload(): { body: OkrCyclePayload; sent: SentRow[] } {
   const objectives: Objective[] = []
   const sent: SentRow[] = []
   for (const obj of form.value.objectives) {
-    if (!obj.titulo.trim()) continue
     if (objectives.length >= MAX_OBJECTIVES) break
     const krs: KeyResult[] = []
     const krUids: number[] = []
     for (const kr of obj.key_results) {
-      if (!kr.titulo.trim()) continue
       if (krs.length >= MAX_KRS) break
       krs.push({
         id: kr.id,
@@ -163,7 +171,7 @@ function buildPayload(): { body: OkrCyclePayload; sent: SentRow[] } {
     body: {
       nome: form.value.nome,
       tipo: form.value.tipo,
-      ano: toNum(form.value.ano),
+      ano: safeAno(),
       trimestre: form.value.tipo === 'trimestre' ? form.value.trimestre : null,
       objectives,
     },
@@ -595,7 +603,7 @@ onBeforeUnmount(() => {
             placeholder="Título do objetivo"
             maxlength="300"
           />
-          <span v-if="isDraftObjective(obj)" class="draft-badge">Rascunho</span>
+          <span v-if="isDraftObjective(obj)" class="draft-badge" :title="DRAFT_HINT">Rascunho</span>
           <button type="button" class="btn-remove" title="Remover objetivo" @click="removeObjective(objIdx)">×</button>
         </div>
         <div class="objective-fields">
@@ -613,8 +621,8 @@ onBeforeUnmount(() => {
         </div>
 
         <p v-if="isDraftObjective(obj)" class="obj-hint">
-          Dê um título ao objetivo para que ele seja gravado — o resto do preenchimento pode
-          continuar normalmente até lá.
+          Rascunho: já está salvo, mas só entra nos contadores e no Mapa Estratégico depois de
+          ganhar um título.
         </p>
 
         <section class="origin">
@@ -699,7 +707,7 @@ onBeforeUnmount(() => {
                 placeholder="Resultado-chave (ex.: reduzir tempo de resposta de 8h para 5h)"
                 maxlength="300"
               />
-              <span v-if="!kr.titulo.trim()" class="draft-badge">Rascunho</span>
+              <span v-if="!kr.titulo.trim()" class="draft-badge" :title="DRAFT_HINT">Rascunho</span>
             </div>
             <div class="kr-fields">
               <input v-model="kr.unidade" class="kr-unidade" placeholder="Unidade" maxlength="40" />

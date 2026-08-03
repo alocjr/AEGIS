@@ -231,9 +231,9 @@ class UpdateCycleTests(unittest.TestCase):
         self.assertEqual(second["objectives"][0]["id"], obj_id)
         self.assertEqual(second["objectives"][0]["key_results"][0]["id"], kr_id)
 
-    def test_untitled_objectives_and_key_results_are_dropped(self) -> None:
-        """Item sem título não é persistido — o editor mantém a linha na tela como rascunho e
-        avisa o usuário, em vez de perder o preenchimento silenciosamente."""
+    def test_untitled_items_are_kept_as_drafts_out_of_the_counters(self) -> None:
+        """Rascunho (sem título) é gravado — o editor salva sozinho e não pode perder o que está
+        sendo digitado — mas fica fora de objectives_count/key_results_count e do progresso."""
         db = _FakeDb()
         org_id = ObjectId()
         cycle = okrs_routes.create_cycle(
@@ -243,19 +243,77 @@ class UpdateCycleTests(unittest.TestCase):
         updated = okrs_routes.update_cycle(
             cycle["id"],
             OkrCycleUpdateRequest(objectives=[
-                Objective(titulo="", descricao="rascunho ainda sem título"),
-                Objective(titulo="Objetivo válido", key_results=[
-                    KeyResult(titulo="", baseline=1, target=2),
-                    KeyResult(titulo="KR válido", target=10),
+                Objective(titulo="", descricao="objetivo ainda sem título", key_results=[
+                    KeyResult(titulo="KR de um objetivo rascunho", target=10, current=10),
+                ]),
+                Objective(titulo="Objetivo publicado", key_results=[
+                    KeyResult(titulo="", baseline=0, current=0, target=10),
+                    KeyResult(titulo="KR publicado", target=10, current=5),
                 ]),
             ]),
             user=_user(), org_id=org_id, db=db,
         )
 
-        self.assertEqual([o["titulo"] for o in updated["objectives"]], ["Objetivo válido"])
-        self.assertEqual(
-            [kr["titulo"] for kr in updated["objectives"][0]["key_results"]], ["KR válido"]
+        self.assertEqual(len(updated["objectives"]), 2)
+        self.assertEqual(len(updated["objectives"][0]["key_results"]), 1)
+        self.assertEqual(len(updated["objectives"][1]["key_results"]), 2)
+        self.assertEqual(updated["objectives_count"], 1)
+        self.assertEqual(updated["key_results_count"], 1)
+        self.assertEqual(updated["drafts_count"], 2)
+        # Progresso vem só do KR publicado (50%), sem o KR rascunho de 100% nem o de 0%.
+        self.assertEqual(updated["objectives"][1]["progress_pct"], 50.0)
+        self.assertEqual(updated["progress_pct"], 50.0)
+
+    def test_response_keeps_client_order_so_the_editor_can_map_ids(self) -> None:
+        """O editor casa a resposta com o que enviou pela posição para reatribuir os ids sem
+        recarregar a tela; nenhum item pode ser descartado ou reordenado no caminho."""
+        db = _FakeDb()
+        org_id = ObjectId()
+        cycle = okrs_routes.create_cycle(
+            OkrCycleCreateRequest(tipo="ano", ano=2026), user=_user(), org_id=org_id, db=db
         )
+
+        sent = [
+            Objective(titulo="", key_results=[KeyResult(titulo="")]),
+            Objective(titulo="Segundo", key_results=[KeyResult(titulo=""), KeyResult(titulo="B")]),
+        ]
+        updated = okrs_routes.update_cycle(
+            cycle["id"], OkrCycleUpdateRequest(objectives=sent), user=_user(), org_id=org_id, db=db
+        )
+
+        self.assertEqual([o["titulo"] for o in updated["objectives"]], ["", "Segundo"])
+        self.assertEqual(
+            [len(o["key_results"]) for o in updated["objectives"]],
+            [len(o.key_results) for o in sent],
+        )
+        self.assertEqual([kr["titulo"] for kr in updated["objectives"][1]["key_results"]], ["", "B"])
+
+    def test_active_cycle_hides_drafts_from_consumers(self) -> None:
+        """O Canvas vincula KRs a partir do ciclo ativo — rascunho sem nome não pode aparecer lá."""
+        db = _FakeDb()
+        org_id = ObjectId()
+        cycle = okrs_routes.create_cycle(
+            OkrCycleCreateRequest(tipo="ano", ano=2026), user=_user(), org_id=org_id, db=db
+        )
+        okrs_routes.update_cycle(
+            cycle["id"],
+            OkrCycleUpdateRequest(objectives=[
+                Objective(titulo="", descricao="rascunho"),
+                Objective(titulo="Objetivo publicado", key_results=[
+                    KeyResult(titulo=""),
+                    KeyResult(titulo="KR publicado", target=10),
+                ]),
+            ]),
+            user=_user(), org_id=org_id, db=db,
+        )
+        okrs_routes.activate_cycle(cycle["id"], user=_user(), org_id=org_id, db=db)
+
+        active = okrs_routes.get_active_cycle(user=_user(), org_id=org_id, db=db)
+        editor_view = okrs_routes.get_cycle(cycle["id"], user=_user(), org_id=org_id, db=db)
+
+        self.assertEqual([o["titulo"] for o in active["objectives"]], ["Objetivo publicado"])
+        self.assertEqual([kr["titulo"] for kr in active["objectives"][0]["key_results"]], ["KR publicado"])
+        self.assertEqual(len(editor_view["objectives"]), 2)
 
     def test_invalid_swot_id_reference_is_nulled_not_rejected(self) -> None:
         db = _FakeDb()
