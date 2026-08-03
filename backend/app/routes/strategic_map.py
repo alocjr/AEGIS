@@ -9,6 +9,7 @@ from pymongo.database import Database
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user
 from app.routes.canvas_projects import _to_item as _project_to_item
+from app.routes.okrs import _to_item as _okr_cycle_to_item
 from app.routes.swot_analysis import _get_latest as _latest_swot
 from app.routes.swot_analysis import _require_owned as _owned_swot
 from app.routes.swot_analysis import _to_item as _swot_to_item
@@ -156,11 +157,20 @@ def _project_ref(project: dict) -> dict:
     }
 
 
+def _kr_ref(kr: dict, projects_by_kr: dict[str, list[dict]]) -> dict:
+    return {**kr, "projects": [_project_ref(p) for p in projects_by_kr.get(kr.get("id") or "", [])]}
+
+
+def _objective_with_projects(obj: dict, projects_by_kr: dict[str, list[dict]]) -> dict:
+    return {**obj, "key_results": [_kr_ref(kr, projects_by_kr) for kr in obj.get("key_results") or []]}
+
+
 def _initiative_node(
     field: str,
     raw: dict,
     items_by_id: dict[str, dict],
     projects_by_tows: dict[str, list[dict]],
+    objectives_by_tows: dict[str, list[dict]],
 ) -> dict:
     counterparts = []
     for ref in raw.get("itens_externos") or []:
@@ -181,6 +191,7 @@ def _initiative_node(
         "itens_internos": list(raw.get("itens_internos") or []),
         "counterparts": counterparts,
         "projects": [_project_ref(p) for p in projects_by_tows.get(raw.get("id") or "", [])],
+        "objectives": objectives_by_tows.get(raw.get("id") or "", []),
     }
 
 
@@ -189,6 +200,7 @@ def _item_node(
     initiatives_by_item: dict[str, list[dict]],
     projects_by_item: dict[str, list[dict]],
     external_usage: dict[str, int],
+    objectives_by_item: dict[str, list[dict]],
 ) -> dict:
     item_id = item.get("id") or ""
     return {
@@ -207,6 +219,7 @@ def _item_node(
         # Quantas estratégias TOWS usam este item como contraparte externa
         "used_in": external_usage.get(item_id, 0),
         "projects": [_project_ref(p) for p in projects_by_item.get(item_id, [])],
+        "objectives": objectives_by_item.get(item_id, []),
     }
 
 
@@ -264,6 +277,49 @@ def get_strategic_map(
             if ref in initiative_ids:
                 projects_by_tows.setdefault(ref, []).append(project)
 
+    # Ciclo OKR ativo da organização (nenhum = camada de OKR fica vazia, sem erro)
+    active_cycle_doc = db.okr_cycles.find_one({"organization_id": org_id, "status": "ativo"})
+    active_cycle = _okr_cycle_to_item(active_cycle_doc) if active_cycle_doc else None
+    all_objectives: list[dict] = active_cycle["objectives"] if active_cycle else []
+
+    kr_ids_all: set[str] = {
+        kr["id"] for obj in all_objectives for kr in obj["key_results"] if kr.get("id")
+    }
+    projects_by_kr: dict[str, list[dict]] = {}
+    for project in projects:
+        for ref in project.get("kr_ids") or []:
+            if ref in kr_ids_all:
+                projects_by_kr.setdefault(ref, []).append(project)
+
+    # Só conta vínculo cujo alvo (item SWOT ou iniciativa TOWS) existe na SWOT exibida
+    objectives_by_item: dict[str, list[dict]] = {}
+    objectives_by_tows: dict[str, list[dict]] = {}
+    used_objective_ids: set[str] = set()
+    for obj in all_objectives:
+        node = _objective_with_projects(obj, projects_by_kr)
+        valid_items = [ref for ref in obj["swot_item_ids"] if ref in items_by_id]
+        valid_tows = [ref for ref in obj["tows_ids"] if ref in initiative_ids]
+        if not valid_items and not valid_tows:
+            continue
+        used_objective_ids.add(obj["id"])
+        for ref in valid_items:
+            objectives_by_item.setdefault(ref, []).append(node)
+        for ref in valid_tows:
+            objectives_by_tows.setdefault(ref, []).append(node)
+
+    orphan_objectives = [
+        _objective_with_projects(obj, projects_by_kr)
+        for obj in all_objectives
+        if obj["id"] not in used_objective_ids
+    ]
+    linked_kr_ids = set(projects_by_kr.keys())
+    orphan_key_results = [
+        {**kr, "objective_titulo": obj["titulo"]}
+        for obj in all_objectives
+        for kr in obj["key_results"]
+        if kr["id"] not in linked_kr_ids
+    ]
+
     initiatives_by_item: dict[str, list[dict]] = {}
     external_usage: dict[str, int] = {}
     orphan_initiatives: list[dict] = []
@@ -271,7 +327,7 @@ def get_strategic_map(
     if swot:
         for field in _TOWS_FIELDS:
             for raw in swot.get(field) or []:
-                node = _initiative_node(field, raw, items_by_id, projects_by_tows)
+                node = _initiative_node(field, raw, items_by_id, projects_by_tows, objectives_by_tows)
                 initiative_count += 1
                 for counterpart in node["counterparts"]:
                     ref = counterpart["id"]
@@ -311,7 +367,7 @@ def get_strategic_map(
             levels = question.get("levels") or {}
             qkey = _key(qid)
             item_nodes = [
-                _item_node(item, initiatives_by_item, projects_by_item, external_usage)
+                _item_node(item, initiatives_by_item, projects_by_item, external_usage, objectives_by_item)
                 for item in items_by_question.get(qkey, [])
             ]
             used_item_ids.update(node["id"] for node in item_nodes)
@@ -350,7 +406,7 @@ def get_strategic_map(
         )
 
     orphan_items = [
-        _item_node(item, initiatives_by_item, projects_by_item, external_usage)
+        _item_node(item, initiatives_by_item, projects_by_item, external_usage, objectives_by_item)
         for item_id, item in items_by_id.items()
         if item_id not in used_item_ids
     ]
@@ -404,12 +460,19 @@ def get_strategic_map(
     return {
         "source": source,
         "sources": sources,
+        "okr_cycle": (
+            {"id": active_cycle["id"], "label": active_cycle["label"], "status": active_cycle["status"]}
+            if active_cycle
+            else None
+        ),
         "dimensions": dimensions,
         "unlinked": {
             "swot_items": orphan_items,
             "initiatives": orphan_initiatives,
             "watchlist": orphan_watchlist,
             "projects": orphan_projects,
+            "objectives": orphan_objectives,
+            "key_results": orphan_key_results,
         },
         "stats": {
             "dimensions": len(dimensions),
@@ -419,5 +482,9 @@ def get_strategic_map(
             "initiatives": initiative_count,
             "projects_total": len(projects),
             "projects_linked": len(linked_project_ids),
+            "objectives": len(all_objectives),
+            "objectives_linked": len(used_objective_ids),
+            "key_results": len(kr_ids_all),
+            "key_results_linked": len(linked_kr_ids),
         },
     }

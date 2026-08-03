@@ -52,6 +52,13 @@ class _FakeDb:
         for name, docs in collections.items():
             setattr(self, name, _Collection(docs))
 
+    def __getattr__(self, name: str) -> _Collection:
+        # Coleção não passada no fixture (ex.: okr_cycles quando o teste não usa OKR) —
+        # se comporta como vazia, em vez de AttributeError.
+        col = _Collection([])
+        setattr(self, name, col)
+        return col
+
 
 def _map_for(db: _FakeDb, user: dict, org_id: ObjectId) -> dict:
     """Chama a rota fora do FastAPI (os defaults `Query` precisam ser explícitos)."""
@@ -238,6 +245,107 @@ class StrategicMapTests(unittest.TestCase):
         self.assertEqual(head["result"]["level_label"], "Estruturado")
         self.assertEqual(len(payload["sources"]), 1)
         self.assertEqual(payload["sources"][0]["swot_id"], head["swot_id"])
+
+    def test_no_active_okr_cycle_does_not_crash(self) -> None:
+        db, user, org_id, _project, _initiative = self._fixture()
+        payload = _map_for(db, user, org_id)
+        self.assertIsNone(payload["okr_cycle"])
+        self.assertEqual(payload["unlinked"]["objectives"], [])
+        self.assertEqual(payload["unlinked"]["key_results"], [])
+        self.assertEqual(payload["stats"]["objectives"], 0)
+        self.assertEqual(payload["stats"]["key_results"], 0)
+
+    def test_objective_linked_to_tows_appears_nested_under_initiative(self) -> None:
+        db, user, org_id, project, initiative = self._fixture()
+        kr = {
+            "id": "kr_abc", "titulo": "Reduzir TMA", "descricao": "", "unidade": "min",
+            "baseline": 40.0, "current": 25.0, "target": 10.0, "direction": "decrease", "dono": "",
+        }
+        objective = {
+            "id": "obj_1", "titulo": "Atendimento mais rápido", "descricao": "", "dono": "",
+            "pilar": "", "swot_id": None, "swot_item_ids": [], "tows_ids": [initiative["id"]],
+            "key_results": [kr],
+        }
+        project["kr_ids"] = ["kr_abc"]
+        db.okr_cycles = _Collection([
+            {
+                "_id": ObjectId(), "organization_id": org_id, "status": "ativo",
+                "tipo": "ano", "ano": 2026, "trimestre": None, "nome": "",
+                "objectives": [objective], "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        ])
+
+        payload = _map_for(db, user, org_id)
+
+        self.assertEqual(payload["okr_cycle"]["status"], "ativo")
+        self.assertEqual(payload["stats"]["objectives"], 1)
+        self.assertEqual(payload["stats"]["objectives_linked"], 1)
+        self.assertEqual(payload["stats"]["key_results"], 1)
+        self.assertEqual(payload["stats"]["key_results_linked"], 1)
+        self.assertEqual(payload["unlinked"]["objectives"], [])
+        self.assertEqual(payload["unlinked"]["key_results"], [])
+
+        force = next(
+            item
+            for dim in payload["dimensions"]
+            for q in dim["questions"]
+            for item in q["items"]
+            if item["id"] == "f_ev1"
+        )
+        linked_initiative = next(i for i in force["initiatives"] if i["id"] == initiative["id"])
+        self.assertEqual(len(linked_initiative["objectives"]), 1)
+        obj_node = linked_initiative["objectives"][0]
+        self.assertEqual(obj_node["id"], "obj_1")
+        self.assertEqual(obj_node["key_results"][0]["progress_pct"], 50.0)
+        self.assertEqual([p["id"] for p in obj_node["key_results"][0]["projects"]], [str(project["_id"])])
+
+    def test_objective_with_no_valid_link_is_orphan(self) -> None:
+        db, user, org_id, _project, _initiative = self._fixture()
+        objective = {
+            "id": "obj_orfao", "titulo": "Objetivo solto", "descricao": "", "dono": "",
+            "pilar": "", "swot_id": None, "swot_item_ids": [], "tows_ids": ["tows_inexistente"],
+            "key_results": [],
+        }
+        db.okr_cycles = _Collection([
+            {
+                "_id": ObjectId(), "organization_id": org_id, "status": "ativo",
+                "tipo": "ano", "ano": 2026, "trimestre": None, "nome": "",
+                "objectives": [objective], "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        ])
+
+        payload = _map_for(db, user, org_id)
+
+        self.assertEqual(len(payload["unlinked"]["objectives"]), 1)
+        self.assertEqual(payload["unlinked"]["objectives"][0]["id"], "obj_orfao")
+        self.assertEqual(payload["stats"]["objectives_linked"], 0)
+
+    def test_key_result_without_project_link_is_orphan(self) -> None:
+        db, user, org_id, _project, initiative = self._fixture()
+        kr = {
+            "id": "kr_sem_projeto", "titulo": "Meta sem projeto", "descricao": "", "unidade": "",
+            "baseline": 0.0, "current": 0.0, "target": 100.0, "direction": "increase", "dono": "",
+        }
+        objective = {
+            "id": "obj_2", "titulo": "Objetivo com KR órfão", "descricao": "", "dono": "",
+            "pilar": "", "swot_id": None, "swot_item_ids": [], "tows_ids": [initiative["id"]],
+            "key_results": [kr],
+        }
+        db.okr_cycles = _Collection([
+            {
+                "_id": ObjectId(), "organization_id": org_id, "status": "ativo",
+                "tipo": "ano", "ano": 2026, "trimestre": None, "nome": "",
+                "objectives": [objective], "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        ])
+
+        payload = _map_for(db, user, org_id)
+
+        self.assertEqual([kr["id"] for kr in payload["unlinked"]["key_results"]], ["kr_sem_projeto"])
+        self.assertEqual(payload["stats"]["key_results_linked"], 0)
 
     def test_maturity_without_swot_keeps_questions(self) -> None:
         db, user, org_id, _project, _initiative = self._fixture()

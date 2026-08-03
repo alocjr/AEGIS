@@ -20,6 +20,7 @@ import {
   type SwotListField,
   type SwotTowsField,
 } from '@/api/swotAnalysis'
+import { getActiveOkrCycle, type OkrCycle } from '@/api/okrs'
 
 const route = useRoute()
 const router = useRouter()
@@ -200,6 +201,7 @@ const form = ref({
   swot_id: null as string | null,
   swot_item_ids: [] as string[],
   tows_ids: [] as string[],
+  kr_ids: [] as string[],
 })
 
 /** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
@@ -339,6 +341,62 @@ async function removeSwotItemLink(itemId: string) {
   await persist()
 }
 
+/** Key Results (OKR) que este projeto endereça — do ciclo OKR ativo da organização. */
+const MAX_KR_LINKS = 20
+const okrCycle = ref<OkrCycle | null>(null)
+const okrLoading = ref(false)
+const okrError = ref<string | null>(null)
+const krSectionOpen = ref(false)
+
+const krsById = computed(() => {
+  const map = new Map<string, { titulo: string; objetivoTitulo: string; progress_pct: number }>()
+  for (const obj of okrCycle.value?.objectives || []) {
+    for (const kr of obj.key_results) {
+      map.set(kr.id, { titulo: kr.titulo, objetivoTitulo: obj.titulo, progress_pct: kr.progress_pct })
+    }
+  }
+  return map
+})
+
+const selectedKeyResults = computed(() =>
+  form.value.kr_ids
+    .map((id) => ({ id, kr: krsById.value.get(id) }))
+    .filter((entry): entry is { id: string; kr: { titulo: string; objetivoTitulo: string; progress_pct: number } } => !!entry.kr)
+)
+
+function isKrSelected(krId?: string): boolean {
+  return !!krId && form.value.kr_ids.includes(krId)
+}
+
+async function toggleKr(krId?: string) {
+  if (!krId) return
+  const chosen = new Set(form.value.kr_ids)
+  if (chosen.has(krId)) {
+    chosen.delete(krId)
+  } else {
+    if (chosen.size >= MAX_KR_LINKS) {
+      okrError.value = `Máximo de ${MAX_KR_LINKS} Key Results por projeto.`
+      return
+    }
+    chosen.add(krId)
+  }
+  okrError.value = null
+  form.value.kr_ids = [...chosen]
+  await persist()
+}
+
+async function loadActiveOkrCycle() {
+  okrLoading.value = true
+  try {
+    okrCycle.value = await getActiveOkrCycle()
+  } catch {
+    // Sem ciclo ativo (404) é estado normal — o template mostra um aviso apontando para /okrs
+    okrCycle.value = null
+  } finally {
+    okrLoading.value = false
+  }
+}
+
 const typeOptions = ref<string[]>([
   'Automação',
   'Classificação/Previsão',
@@ -405,6 +463,7 @@ function applyProject(p: CanvasProject) {
     swot_id: p.swot_id ?? null,
     swot_item_ids: [...(p.swot_item_ids || [])],
     tows_ids: [...(p.tows_ids || [])],
+    kr_ids: [...(p.kr_ids || [])],
   }
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
@@ -566,6 +625,8 @@ onMounted(async () => {
     applyProject(p)
     if ((p.tows_ids || []).length || (p.swot_item_ids || []).length) originOpen.value = true
     void loadOrigin(p)
+    if ((p.kr_ids || []).length) krSectionOpen.value = true
+    void loadActiveOkrCycle()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Erro ao carregar projeto.'
     if (String(error.value).includes('nao encontrado') || String(error.value).includes('não encontrado')) {
@@ -772,6 +833,70 @@ onUnmounted(() => {
               </span>
             </div>
           </template>
+        </div>
+      </section>
+
+      <section class="origin">
+        <button
+          type="button"
+          class="origin-head"
+          :aria-expanded="krSectionOpen"
+          @click="krSectionOpen = !krSectionOpen"
+        >
+          <span class="num">00</span>
+          <span class="cell-title origin-title">Key Results (OKR) endereçados</span>
+          <span v-if="form.kr_ids.length" class="origin-count">
+            {{ form.kr_ids.length }} resultado(s)
+          </span>
+          <span v-else class="origin-count muted">nenhum Key Result vinculado</span>
+          <span class="origin-caret" aria-hidden="true">{{ krSectionOpen ? '−' : '+' }}</span>
+        </button>
+
+        <div v-if="!krSectionOpen && selectedKeyResults.length" class="origin-chips">
+          <span v-for="entry in selectedKeyResults" :key="entry.id" class="origin-chip">
+            <b>{{ entry.kr.objetivoTitulo }}</b>{{ entry.kr.titulo }}
+          </span>
+        </div>
+
+        <div v-if="krSectionOpen" class="origin-body">
+          <p class="hint">
+            Marque os Key Results que este projeto endereça. O vínculo aparece no Mapa
+            Estratégico ligando o Objective ao Key Result e a este canvas.
+          </p>
+
+          <div v-if="okrError" class="origin-err">{{ okrError }}</div>
+          <p v-if="okrLoading" class="origin-none">Carregando ciclo OKR…</p>
+          <p v-else-if="!okrCycle" class="origin-none">
+            Nenhum ciclo OKR ativo.
+            <RouterLink to="/okrs" class="origin-link">Abrir painel de OKR</RouterLink>
+          </p>
+          <p v-else-if="!okrCycle.objectives.length" class="origin-none">
+            O ciclo ativo ({{ okrCycle.label }}) ainda não tem Objectives.
+            <RouterLink :to="`/okrs/${okrCycle.id}`" class="origin-link">Editar ciclo</RouterLink>
+          </p>
+          <div v-else class="origin-groups">
+            <div v-for="obj in okrCycle.objectives" :key="obj.id" class="origin-group">
+              <div class="origin-group-head">
+                <b>{{ obj.titulo }}</b>
+              </div>
+              <p v-if="!obj.key_results.length" class="origin-none">Sem Key Results neste objetivo.</p>
+              <ul v-else class="origin-list">
+                <li v-for="kr in obj.key_results" :key="kr.id">
+                  <label class="origin-item" :class="{ active: isKrSelected(kr.id) }">
+                    <input
+                      type="checkbox"
+                      :checked="isKrSelected(kr.id)"
+                      @change="toggleKr(kr.id)"
+                    />
+                    <span class="origin-item-body">
+                      <span class="origin-acao">{{ kr.titulo || '—' }}</span>
+                      <span class="origin-cross">{{ kr.progress_pct.toFixed(0) }}% concluído</span>
+                    </span>
+                  </label>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 

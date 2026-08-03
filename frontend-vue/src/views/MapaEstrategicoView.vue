@@ -8,6 +8,7 @@ import {
   type StrategicMapInitiative,
   type StrategicMapItem,
   type StrategicMapQuestion,
+  type StrategicMapObjective,
 } from '@/api/strategicMap'
 import {
   createCanvasProject,
@@ -110,6 +111,9 @@ function itemKey(item: StrategicMapItem): string {
 }
 function towsKey(initiative: StrategicMapInitiative): string {
   return `t:${initiative.id}`
+}
+function objKey(objective: StrategicMapObjective): string {
+  return `obj:${objective.id}`
 }
 
 function isOpen(key: string): boolean {
@@ -270,7 +274,12 @@ const unlinkedItems = computed<StrategicMapItem[]>(() => {
 const hasUnlinked = computed(() => {
   const doc = map.value
   if (!doc) return false
-  return unlinkedItems.value.length > 0 || doc.unlinked.projects.length > 0
+  return (
+    unlinkedItems.value.length > 0 ||
+    doc.unlinked.projects.length > 0 ||
+    doc.unlinked.objectives.length > 0 ||
+    doc.unlinked.key_results.length > 0
+  )
 })
 
 function projectById(id: string): CanvasProjectSummary | undefined {
@@ -528,6 +537,13 @@ onMounted(() => {
             <RouterLink to="/projetos" class="btn-ghost">Projetos</RouterLink>
           </div>
           <p v-if="notice" class="notice">{{ notice }}</p>
+          <p v-if="!map?.okr_cycle" class="notice">
+            Nenhum ciclo OKR ativo — Objectives e Key Results não aparecem na árvore.
+            <RouterLink to="/okrs" class="link">Abrir painel de OKR</RouterLink>
+          </p>
+          <p v-else class="source-optica">
+            Ciclo OKR ativo: <RouterLink :to="`/okrs/${map.okr_cycle.id}`" class="link">{{ map.okr_cycle.label }}</RouterLink>
+          </p>
         </section>
 
         <!-- Indicadores -->
@@ -546,6 +562,16 @@ onMounted(() => {
             <div class="kpi-label">Estratégias TOWS</div>
             <div class="kpi-value">{{ stats.initiatives }}</div>
             <div class="kpi-sub">cruzamentos gerados</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Objectives</div>
+            <div class="kpi-value">{{ stats.objectives_linked }}</div>
+            <div class="kpi-sub">de {{ stats.objectives }} vinculados à árvore</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Key Results</div>
+            <div class="kpi-value">{{ stats.key_results_linked }}</div>
+            <div class="kpi-sub">de {{ stats.key_results }} com projeto vinculado</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Projetos</div>
@@ -696,6 +722,9 @@ onMounted(() => {
                             <span class="tows-badge">{{ TOWS_LABEL[initiative.field] }}</span>
                             <span class="row-title">{{ initiative.acao || '—' }}</span>
                             <span class="row-tags">
+                              <span v-if="initiative.objectives.length" class="tag">
+                                {{ initiative.objectives.length }} objetivo(s)
+                              </span>
                               <span v-if="initiative.projects.length" class="tag tag--proj">
                                 {{ initiative.projects.length }} projeto(s)
                               </span>
@@ -714,6 +743,54 @@ onMounted(() => {
                                 >{{ counterpart.texto || counterpart.id }}</span>
                               </p>
                             </li>
+
+                            <li v-for="objective in initiative.objectives" :key="objective.id" class="node">
+                              <div class="row row--tows">
+                                <button
+                                  type="button"
+                                  class="twist"
+                                  :aria-expanded="isOpen(objKey(objective))"
+                                  @click="toggle(objKey(objective))"
+                                >{{ isOpen(objKey(objective)) ? '−' : '+' }}</button>
+                                <span class="tows-badge">Objective</span>
+                                <span class="row-title">{{ objective.titulo || '—' }}</span>
+                                <span class="row-tags">
+                                  <span v-if="objective.progress_pct != null" class="tag">
+                                    {{ objective.progress_pct.toFixed(0) }}%
+                                  </span>
+                                  <span v-if="objective.key_results.length" class="tag">
+                                    {{ objective.key_results.length }} KR(s)
+                                  </span>
+                                </span>
+                              </div>
+                              <ul v-if="isOpen(objKey(objective))" class="branch">
+                                <li v-if="!objective.key_results.length" class="node">
+                                  <p class="panel-empty">Sem Key Results ainda.</p>
+                                </li>
+                                <li v-for="kr in objective.key_results" :key="kr.id" class="node">
+                                  <div class="row row--project">
+                                    <span class="proj-badge">KR</span>
+                                    <span class="row-title">{{ kr.titulo || '—' }}</span>
+                                    <span class="row-tags">
+                                      <span class="tag">{{ kr.progress_pct.toFixed(0) }}%</span>
+                                      <span v-if="kr.projects.length" class="tag tag--proj">
+                                        {{ kr.projects.length }} projeto(s)
+                                      </span>
+                                    </span>
+                                  </div>
+                                  <ul v-if="kr.projects.length" class="branch">
+                                    <li v-for="project in kr.projects" :key="project.id" class="node">
+                                      <div class="row row--project">
+                                        <RouterLink :to="`/projetos/${project.id}`" class="row-title link">
+                                          {{ project.title }}
+                                        </RouterLink>
+                                      </div>
+                                    </li>
+                                  </ul>
+                                </li>
+                              </ul>
+                            </li>
+
                             <li
                               v-for="project in initiative.projects"
                               :key="project.id"
@@ -866,12 +943,15 @@ onMounted(() => {
             <span class="sec-title">Fora da árvore</span>
             <span class="tag muted">
               {{ unlinkedItems.length }} item(ns) ·
-              {{ map?.unlinked.projects.length ?? 0 }} projeto(s)
+              {{ map?.unlinked.projects.length ?? 0 }} projeto(s) ·
+              {{ map?.unlinked.objectives.length ?? 0 }} objetivo(s) ·
+              {{ map?.unlinked.key_results.length ?? 0 }} KR(s)
             </span>
           </button>
           <div v-if="isOpen('x:unlinked')" class="unlinked-body">
             <p class="panel-label">
-              Itens sem pergunta de origem (criados à mão ou importados) e projetos sem vínculo.
+              Itens sem pergunta de origem (criados à mão ou importados), projetos, Objectives e
+              Key Results sem vínculo.
             </p>
             <ul v-if="unlinkedItems.length" class="plain-list">
               <li v-for="item in unlinkedItems" :key="item.id">
@@ -889,6 +969,18 @@ onMounted(() => {
                 <span class="tag muted">
                   {{ project.linked_to_swot ? 'sem item de origem' : 'sem SWOT de origem' }}
                 </span>
+              </li>
+            </ul>
+            <ul v-if="map?.unlinked.objectives.length" class="plain-list">
+              <li v-for="objective in map.unlinked.objectives" :key="objective.id">
+                {{ objective.titulo }}
+                <span class="tag muted">sem TOWS/SWOT de origem válido</span>
+              </li>
+            </ul>
+            <ul v-if="map?.unlinked.key_results.length" class="plain-list">
+              <li v-for="kr in map.unlinked.key_results" :key="kr.id">
+                {{ kr.titulo }}
+                <span class="tag muted">{{ kr.objective_titulo }} · sem projeto vinculado</span>
               </li>
             </ul>
           </div>

@@ -70,6 +70,7 @@ from app.routes.canvas_projects import router as canvas_projects_router
 from app.routes.course import router as course_router
 from app.routes.governance import router as governance_router
 from app.routes.maturity import router as maturity_router
+from app.routes.okrs import router as okrs_router
 from app.routes.organization_admin import router as organization_admin_router
 from app.routes.progress import router as progress_router
 from app.routes.quiz import router as quiz_router
@@ -214,6 +215,7 @@ app.include_router(canvas_projects_router)
 app.include_router(governance_router)
 app.include_router(organization_admin_router)
 app.include_router(swot_analysis_router)
+app.include_router(okrs_router)
 app.include_router(strategic_map_router)
 app.include_router(quiz_router)
 app.include_router(admin_router)

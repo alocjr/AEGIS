@@ -112,6 +112,8 @@ class CanvasProjectUpdateRequest(BaseModel):
     swot_item_ids: list[str] | None = Field(None, max_length=20)
     tows_ids: list[str] | None = Field(None, max_length=20)
     justificativa_tows: str | None = Field(None, max_length=4000)
+    # Key Results (OKR) que este projeto endereça
+    kr_ids: list[str] | None = Field(None, max_length=20)
 
 
 class CanvasImportRequest(BaseModel):
@@ -218,6 +220,56 @@ class SwotImportRequest(BaseModel):
     veredito_tipo: str | None = Field(None, max_length=40)
     veredito_titulo: str | None = Field(None, max_length=300)
     veredito_texto: str | None = Field(None, max_length=8000)
+
+
+class KeyResult(BaseModel):
+    """Resultado-chave de um Objective — meta numérica baseline → current → target."""
+
+    id: str | None = Field(None, max_length=64)
+    titulo: str = Field(default="", max_length=300)
+    descricao: str = Field(default="", max_length=1000)
+    unidade: str = Field(default="", max_length=40)
+    baseline: float = 0.0
+    current: float = 0.0
+    target: float = 0.0
+    direction: Literal["increase", "decrease"] = "increase"
+    dono: str = Field(default="", max_length=200)
+
+
+class Objective(BaseModel):
+    """Objetivo de um ciclo OKR — vinculado à SWOT/TOWS que o originou."""
+
+    id: str | None = Field(None, max_length=64)
+    titulo: str = Field(default="", max_length=300)
+    descricao: str = Field(default="", max_length=2000)
+    dono: str = Field(default="", max_length=200)
+    pilar: str = Field(default="", max_length=40)
+    # Origem estratégica: mesmo shape de CanvasProjectUpdateRequest.swot_id/swot_item_ids/tows_ids
+    swot_id: str | None = Field(None, max_length=24)
+    swot_item_ids: list[str] = Field(default_factory=list, max_length=20)
+    tows_ids: list[str] = Field(default_factory=list, max_length=20)
+    key_results: list[KeyResult] = Field(default_factory=list, max_length=20)
+
+
+class OkrCycleCreateRequest(BaseModel):
+    tipo: Literal["trimestre", "ano"] = "trimestre"
+    ano: int = Field(ge=2020, le=2100)
+    trimestre: int | None = Field(None, ge=1, le=4)
+    nome: str | None = Field(None, max_length=120)
+
+
+class OkrCycleUpdateRequest(BaseModel):
+    """Full-replace do ciclo (objectives inteiro) — mesmo padrão de SwotAnalysisUpdateRequest.
+
+    `status` fica de fora de propósito: só muda via /activate e /archive, protegendo o
+    invariante "um único ciclo ativo por organização" de ser burlado por um PUT genérico.
+    """
+
+    nome: str | None = Field(None, max_length=120)
+    tipo: Literal["trimestre", "ano"] | None = None
+    ano: int | None = Field(None, ge=2020, le=2100)
+    trimestre: int | None = Field(None, ge=1, le=4)
+    objectives: list[Objective] | None = Field(None, max_length=20)
 
 
 class QuizSubmitRequest(BaseModel):

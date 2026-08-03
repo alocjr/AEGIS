@@ -35,6 +35,8 @@ export interface CanvasProjectSummary {
   swot_item_ids: string[]
   /** Iniciativas TOWS que motivaram o projeto. */
   tows_ids: string[]
+  /** Key Results (OKR) que este projeto endereça. */
+  kr_ids: string[]
   /** `aprovado_portfolio` após o hook de Governança (ver aprovarPortfolio). */
   status: 'rascunho' | 'aprovado_portfolio'
   /** Sistema de IA criado no módulo de Governança, se aprovado para o portfólio. */
@@ -76,6 +78,7 @@ export type CanvasProjectPayload = Partial<{
   swot_item_ids: string[]
   tows_ids: string[]
   justificativa_tows: string
+  kr_ids: string[]
 }>
 
 export function listCanvasProjects(): Promise<{ items: CanvasProjectSummary[] }> {

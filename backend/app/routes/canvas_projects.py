@@ -70,6 +70,7 @@ _EMPTY_FIELDS = {
     "swot_item_ids": [],
     "tows_ids": [],
     "justificativa_tows": "",
+    "kr_ids": [],
     "dados_estruturado": {"descricao": "", "sensibilidade": None},
     "riscos_estruturado": {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
     "status": "rascunho",
@@ -146,6 +147,7 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "swot_id": str(doc["swot_id"]) if doc.get("swot_id") else None,
         "swot_item_ids": _clean_ref_ids(doc.get("swot_item_ids")),
         "tows_ids": _clean_ref_ids(doc.get("tows_ids")),
+        "kr_ids": _clean_ref_ids(doc.get("kr_ids")),
         "status": doc.get("status") or "rascunho",
         "ai_system_id": str(doc["ai_system_id"]) if doc.get("ai_system_id") else None,
     }
@@ -621,12 +623,12 @@ def update_project(
 
     if "swot_id" in data:
         updates["swot_id"] = _owned_swot_id(db, org_id, data["swot_id"])
-    for key in ("swot_item_ids", "tows_ids"):
+    for key in ("swot_item_ids", "tows_ids", "kr_ids"):
         if key in data:
             updates[key] = _clean_ref_ids(data[key])
 
     for key, value in data.items():
-        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids"):
+        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids", "kr_ids"):
             continue
         if key in _LIST_FIELDS:
             updates[key] = _clean_item_list(value)

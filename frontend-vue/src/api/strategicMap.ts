@@ -1,6 +1,7 @@
 import { get } from './client'
 import type { SwotListField, SwotTowsField, SwotWatchlistItem } from './swotAnalysis'
 import type { CanvasQuadrant } from './canvasProjects'
+import type { OkrCycleStatus, OkrDirection } from './okrs'
 
 /** Projeto (canvas) pendurado em um item SWOT ou em uma iniciativa TOWS. */
 export interface StrategicMapProject {
@@ -19,6 +20,40 @@ export interface StrategicMapOrphanProject extends StrategicMapProject {
   linked_to_swot: boolean
 }
 
+export interface StrategicMapKeyResult {
+  id: string
+  titulo: string
+  descricao: string
+  unidade: string
+  baseline: number
+  current: number
+  target: number
+  direction: OkrDirection
+  dono: string
+  progress_pct: number
+  progress_pct_raw: number
+  /** Projetos do Canvas que endereçam este Key Result. */
+  projects: StrategicMapProject[]
+}
+
+export interface StrategicMapObjective {
+  id: string
+  titulo: string
+  descricao: string
+  dono: string
+  pilar: string
+  swot_id: string | null
+  swot_item_ids: string[]
+  tows_ids: string[]
+  key_results: StrategicMapKeyResult[]
+  progress_pct: number | null
+}
+
+export interface StrategicMapOrphanKeyResult extends StrategicMapKeyResult {
+  /** Título do Objective ao qual este KR pertence (fora do contexto normal da árvore). */
+  objective_titulo: string
+}
+
 export interface StrategicMapCounterpart {
   id: string
   quadrant: SwotListField | null
@@ -34,6 +69,8 @@ export interface StrategicMapInitiative {
   itens_internos: string[]
   counterparts: StrategicMapCounterpart[]
   projects: StrategicMapProject[]
+  /** Objectives (OKR) que nasceram desta iniciativa TOWS. */
+  objectives: StrategicMapObjective[]
 }
 
 export interface StrategicMapItem {
@@ -52,6 +89,8 @@ export interface StrategicMapItem {
   /** Quantas estratégias TOWS usam este item como contraparte externa. */
   used_in: number
   projects: StrategicMapProject[]
+  /** Objectives (OKR) vinculados diretamente a este item SWOT. */
+  objectives: StrategicMapObjective[]
 }
 
 export interface StrategicMapQuestion {
@@ -108,15 +147,25 @@ export interface StrategicMapHead {
   swot_updated_at: string | null
 }
 
+export interface StrategicMapOkrCycleRef {
+  id: string
+  label: string
+  status: OkrCycleStatus
+}
+
 export interface StrategicMap {
   source: StrategicMapHead
   sources: StrategicMapSource[]
+  /** Ciclo OKR ativo da organização; null se nenhum ciclo estiver ativo. */
+  okr_cycle: StrategicMapOkrCycleRef | null
   dimensions: StrategicMapDimension[]
   unlinked: {
     swot_items: StrategicMapItem[]
     initiatives: StrategicMapInitiative[]
     watchlist: SwotWatchlistItem[]
     projects: StrategicMapOrphanProject[]
+    objectives: StrategicMapObjective[]
+    key_results: StrategicMapOrphanKeyResult[]
   }
   stats: {
     dimensions: number
@@ -126,6 +175,10 @@ export interface StrategicMap {
     initiatives: number
     projects_total: number
     projects_linked: number
+    objectives: number
+    objectives_linked: number
+    key_results: number
+    key_results_linked: number
   }
 }
 

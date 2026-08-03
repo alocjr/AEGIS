@@ -222,6 +222,15 @@ def init_indexes() -> None:
         partialFilterExpression={"maturity_response_id": {"$exists": True}},
     )
     purge_legacy_swot_analyses()
+
+    # OKR: vários ciclos por organização (trimestre/ano); no máximo um "ativo" por vez.
+    db.okr_cycles.create_index([("organization_id", 1), ("updated_at", -1)])
+    db.okr_cycles.create_index(
+        [("organization_id", 1)],
+        unique=True,
+        partialFilterExpression={"status": "ativo"},
+    )
+
     db.auth_rate_limits.create_index("at", expireAfterSeconds=3600)
     db.auth_rate_limits.create_index([("email", 1), ("scope", 1), ("at", -1)])
 

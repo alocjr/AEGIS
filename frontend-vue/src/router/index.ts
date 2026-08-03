@@ -26,6 +26,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'projetos', name: 'ProjetosList', component: () => import('@/views/ProjetosListView.vue'), meta: { title: 'Projetos' } },
       { path: 'projetos/:id', name: 'ProjetoCanvas', component: () => import('@/views/ProjetoCanvasView.vue'), meta: { title: 'Canvas · Projeto' } },
       { path: 'swot/:id?', name: 'SwotAnalysis', component: () => import('@/views/SwotAnalysisView.vue'), meta: { title: 'SWOT de IA' } },
+      { path: 'okrs', name: 'OkrCyclesList', component: () => import('@/views/okrs/OkrCyclesListView.vue'), meta: { title: 'OKR' } },
+      { path: 'okrs/:id', name: 'OkrCycleEditor', component: () => import('@/views/okrs/OkrCycleEditorView.vue'), meta: { title: 'OKR · Ciclo' } },
       {
         path: 'mapa-estrategico',
         name: 'MapaEstrategico',
@@ -95,7 +97,7 @@ const router = createRouter({
   routes,
 })
 
-const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/quiz', '/mapa-estrategico', '/governanca', '/organizacao']
+const protectedPaths = ['/programa', '/materiais', '/agenda', '/quiz-respostas', '/ai-maturity', '/projetos', '/swot', '/okrs', '/quiz', '/mapa-estrategico', '/governanca', '/organizacao']
 const adminPathPrefix = '/admin'
 const orgAdminPathPrefix = '/organizacao'
 
@@ -126,6 +128,7 @@ router.beforeEach(async (to, _from, next) => {
       to.path.startsWith('/ai-maturity') ||
       to.path.startsWith('/projetos') ||
       to.path.startsWith('/swot') ||
+      to.path.startsWith('/okrs') ||
       to.path.startsWith('/governanca') ||
       to.path.startsWith('/organizacao')
   )
