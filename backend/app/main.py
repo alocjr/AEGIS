@@ -183,6 +183,13 @@ def lp_js():
     return _public_static_file("lp.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/calc.html")
+@app.get("/calculadora-de-tokens")
+def calc_html():
+    """Calculadora de tokens (HTML estático em public/). URL canônica usada no SEO do arquivo."""
+    return _public_static_file("calc.html", "text/html; charset=utf-8")
+
+
 @app.get("/robots.txt")
 def robots_txt():
     return _public_static_file("robots.txt", "text/plain; charset=utf-8")
@@ -314,7 +321,17 @@ if USE_VUE_UI:
 
     @app.get("/{full_path:path}")
     def vue_spa_fallback(full_path: str):
-        """Fallback SPA: qualquer rota não API/static/assets retorna o index da Vue."""
+        """Fallback SPA: qualquer rota não API/static/assets retorna o index da Vue.
+
+        HTML solto na raiz de `public/` (ex.: calc.html) é servido como arquivo — senão o
+        catch-all engolia a URL e devolvia o index da Vue, quebrando páginas estáticas online.
+        """
+        name = full_path.strip("/")
+        if name.endswith(".html") and "/" not in name and ".." not in name:
+            try:
+                return _public_static_file(name, "text/html; charset=utf-8")
+            except StarletteHTTPException:
+                pass
         return _vue_index()
 
 else:
