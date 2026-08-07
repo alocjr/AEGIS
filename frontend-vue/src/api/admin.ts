@@ -136,6 +136,48 @@ export function fetchDashboard(): Promise<DashboardOrganization[]> {
   return get<DashboardOrganization[]>('/api/admin/dashboard')
 }
 
+// ——— Analytics de acesso ———
+
+export interface ResourceAccessItem {
+  key: string
+  label: string
+  category: string
+  /** Ferramenta/área que agrupa a funcionalidade (ex.: "SWOT de IA"). */
+  group: string
+  events: number
+  unique_users: number
+  unique_visitors: number
+  last_at: string | null
+}
+
+export interface ResourceAccessCategory {
+  key: string
+  label: string
+  events: number
+  resources: ResourceAccessItem[]
+}
+
+export interface ResourceAccessReport {
+  range_days: number
+  since: string
+  generated_at: string
+  totals: {
+    events: number
+    unique_users: number
+    unique_visitors: number
+    tracked_resources: number
+  }
+  daily: { day: string; events: number }[]
+  categories: ResourceAccessCategory[]
+}
+
+/** Períodos aceitos pelo backend (`ALLOWED_ANALYTICS_RANGES`). */
+export const ANALYTICS_RANGES = [7, 30, 90, 365] as const
+
+export function fetchResourceAccessReport(days: number): Promise<ResourceAccessReport> {
+  return get<ResourceAccessReport>(`/api/admin/analytics/resources?days=${days}`)
+}
+
 export interface UserCourseAndProgress {
   user: { id: string; name: string; email: string }
   course_slug: string

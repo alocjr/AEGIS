@@ -50,6 +50,22 @@ def get_current_user(
     return user
 
 
+def get_optional_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Database = Depends(get_db),
+):
+    """Usuário logado quando houver sessão válida, `None` caso contrário — sem nunca bloquear.
+
+    Para rotas públicas que só querem enriquecer o registro com a identidade de quem já está
+    logado (ex.: contagem de acesso), um token ausente ou vencido não é erro.
+    """
+    try:
+        return get_current_user(request, credentials, db)
+    except HTTPException:
+        return None
+
+
 def get_verified_user(user=Depends(get_current_user)):
     if not is_email_verified(user):
         raise HTTPException(

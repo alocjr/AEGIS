@@ -2,13 +2,22 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pymongo.database import Database
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
+from app import analytics
 from app.database import get_db
+from app.deps import get_optional_user
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/public", tags=["public"])
+
+
+class TrackAccessRequest(BaseModel):
+    """Chave do recurso aberto. O catálogo em `app.analytics` decide se ela vale."""
+
+    resource_key: str = Field(min_length=1, max_length=80)
 
 
 class LeadCreate(BaseModel):
@@ -95,6 +104,35 @@ def list_landing_prompts_public(db: Database = Depends(get_db)):
         }
         for d in docs
     ]
+
+
+@router.post("/track", status_code=204)
+@limiter.limit("120/minute")
+def track_resource_access(
+    request: Request,
+    payload: TrackAccessRequest,
+    db: Database = Depends(get_db),
+    user=Depends(get_optional_user),
+) -> Response:
+    """Registra a abertura de um recurso. Público: a calculadora e a landing não têm sessão.
+
+    Chave desconhecida e visitante acima do teto do minuto também respondem 204: telemetria não
+    pode virar erro para quem só está usando a plataforma, e distinguir "chave inválida" de
+    "registrado" entregaria a um scanner quais chaves existem. O `@limiter` acima é a barreira
+    externa contra enxurrada — o teto por visitante, em `analytics`, é o que protege a contagem.
+    """
+    resource_key = payload.resource_key.strip()
+    category = analytics.resolve_category(db, resource_key)
+    if category is not None:
+        analytics.record_access(
+            db,
+            resource_key=resource_key,
+            category=category,
+            user=user,
+            ip=request.client.host if request.client else "",
+            user_agent=request.headers.get("user-agent", ""),
+        )
+    return Response(status_code=204)
 
 
 @router.post("/leads")

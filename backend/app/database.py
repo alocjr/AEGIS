@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from pymongo.database import Database
 from bson import ObjectId
 
+from app import analytics
 from app.config import settings
 from app.tools import default_tools
 
@@ -273,3 +274,10 @@ def init_indexes() -> None:
     db.ai_governance_evidence.create_index(
         [("organization_id", 1), ("system_id", 1), ("revision", -1)]
     )
+
+    # Contagem de acessos aos recursos (dashboard do admin). O TTL em "at" também é o índice
+    # que atende os recortes por período do relatório.
+    db[analytics.COLLECTION].create_index("at", expireAfterSeconds=analytics.RETENTION_DAYS * 86400)
+    db[analytics.COLLECTION].create_index([("resource_key", 1), ("at", -1)])
+    db[analytics.COLLECTION].create_index([("visitor_hash", 1), ("at", -1)])
+    db[analytics.COLLECTION].create_index([("day", 1)])

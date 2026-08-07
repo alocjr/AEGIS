@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { toolRequiredForPath } from '@/lib/tools'
+import { resourceKeyForRoute, trackResourceAccess } from '@/lib/track'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -87,6 +88,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/layouts/AdminLayout.vue'),
     children: [
       { path: '', name: 'AdminDashboard', component: () => import('@/views/admin/AdminDashboardView.vue'), meta: { title: 'Admin' } },
+      { path: 'acessos', name: 'AdminAnalytics', component: () => import('@/views/admin/AdminAnalyticsView.vue'), meta: { title: 'Admin · Acessos' } },
       { path: 'trilhas', name: 'AdminTrilhas', component: () => import('@/views/admin/AdminTrilhasView.vue'), meta: { title: 'Admin · Trilhas' } },
       { path: 'materiais-landing', name: 'AdminMateriaisLanding', component: () => import('@/views/admin/AdminMateriaisLandingView.vue'), meta: { title: 'Admin · Materiais Landing' } },
       { path: 'prompts-landing', name: 'AdminPromptsLanding', component: () => import('@/views/admin/AdminPromptsLandingView.vue'), meta: { title: 'Admin · Prompts Landing' } },
@@ -173,6 +175,9 @@ router.beforeEach(async (to, _from, next) => {
 router.afterEach((to) => {
   const title = (to.meta?.title as string) ?? 'Valorian 4 Future'
   document.title = title.includes('Valorian') ? title : `${title} · Valorian 4 Future`
+
+  const resourceKey = resourceKeyForRoute(to.name)
+  if (resourceKey) trackResourceAccess(resourceKey)
 })
 
 export default router

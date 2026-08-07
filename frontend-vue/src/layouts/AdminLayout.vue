@@ -16,6 +16,7 @@ function onLogout() {
     <aside class="admin-sidebar">
       <RouterLink to="/" class="admin-sidebar-link">← Início</RouterLink>
       <RouterLink to="/admin" class="admin-sidebar-link" exact-active-class="active">Dashboard</RouterLink>
+      <RouterLink to="/admin/acessos" class="admin-sidebar-link" active-class="active">Acessos</RouterLink>
       <RouterLink to="/admin/trilhas" class="admin-sidebar-link" active-class="active">Trilhas</RouterLink>
       <RouterLink to="/admin/materiais-landing" class="admin-sidebar-link" active-class="active">Materiais da Landing</RouterLink>
       <RouterLink to="/admin/prompts-landing" class="admin-sidebar-link" active-class="active">Prompts da Landing</RouterLink>

@@ -189,3 +189,18 @@ function calc(){
 }
 ['input','change'].forEach(ev=>document.querySelectorAll('input,select,textarea').forEach(x=>x.addEventListener(ev,calc)));
 apply('agente');
+
+/* Contagem de acesso (dashboard do admin). Página pública e sem sessão na maior parte das
+   visitas: nesse caso o backend registra apenas como visitante anônimo. Fica aqui, e não
+   inline no HTML, porque o CSP da aplicação é script-src 'self'. */
+try {
+  fetch('/api/public/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resource_key: 'utilitario.calculadora_tokens' }),
+    credentials: 'include',
+    keepalive: true
+  }).catch(function () {});
+} catch (e) {
+  // Telemetria nunca pode quebrar a calculadora
+}

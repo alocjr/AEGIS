@@ -7,6 +7,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo.database import Database
 
+from app import analytics
 from app.database import get_db, provision_solo_organization
 from app.deps import get_current_admin
 from app.routes.course import NoTrilhaAssignedError, _progress_with_quiz_effect, _require_primary_course_slug
@@ -39,6 +40,9 @@ from app.security import hash_password
 from app.tools import TOOLS, default_tools, sanitize_tools, user_tools
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# Janelas fixas: cada valor vira um filtro de intervalo no dashboard e um `$match` indexado.
+ALLOWED_ANALYTICS_RANGES = frozenset({7, 30, 90, 365})
 
 
 def _course_to_list_item(course: dict) -> dict:
@@ -354,6 +358,21 @@ def list_tools(admin=Depends(get_current_admin)):
     A tela de usuários monta os checkboxes a partir daqui — ids e rótulos vivem só no backend.
     """
     return {"items": [dict(tool) for tool in TOOLS]}
+
+
+@router.get("/analytics/resources")
+def resource_access_analytics(
+    days: int = 30,
+    admin=Depends(get_current_admin),
+    db: Database = Depends(get_db),
+):
+    """Contagem de acessos por recurso da plataforma no período. Apenas admin."""
+    if days not in ALLOWED_ANALYTICS_RANGES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Período inválido. Use um destes: {sorted(ALLOWED_ANALYTICS_RANGES)}.",
+        )
+    return analytics.resource_access_report(db, days)
 
 
 @router.get("/organizations")

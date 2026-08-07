@@ -1,3 +1,40 @@
+/* Contagem de acesso (dashboard do admin). Expõe window.vTrack para o resto do arquivo.
+   A landing roda dentro de um iframe no app Vue, então a base da API vem de ?apiBase= — a
+   mesma convenção já usada pelos materiais, prompts e leads. */
+(function trackerBoot() {
+  function apiUrl(path) {
+    var params = new URLSearchParams(window.location.search);
+    var fromQuery = params.get('apiBase');
+    if (fromQuery && fromQuery.length) {
+      return fromQuery.replace(/\/$/, '') + path;
+    }
+    return path;
+  }
+
+  window.vTrack = function vTrack(resourceKey) {
+    if (!resourceKey) return;
+    try {
+      fetch(apiUrl('/api/public/track'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resource_key: resourceKey }),
+        credentials: 'include',
+        keepalive: true
+      }).catch(function () {});
+    } catch (e) {
+      // Telemetria nunca pode quebrar a landing
+    }
+  };
+
+  window.vTrack('plataforma.landing');
+
+  // Delegação: os cards de material e os prompts são renderizados depois, via API.
+  document.addEventListener('click', function (ev) {
+    var el = ev.target && ev.target.closest ? ev.target.closest('[data-track-key]') : null;
+    if (el) window.vTrack(el.getAttribute('data-track-key'));
+  });
+})();
+
 /* Materiais da landing: carrega primeiro e isolado — não pode ficar preso em "Carregando…". */
 (function loadLandingMaterialsBoot() {
   function materialsApiUrl() {
@@ -22,13 +59,14 @@
     var audio = item.audio_url
       ? '<audio class="material-audio" controls preload="none" src="' + escapeHtml(item.audio_url) + '">Seu navegador não suporta áudio.</audio>'
       : '';
+    var trackAttr = ' data-track-key="material:' + escapeHtml(item.id) + '"';
     return (
       '<article class="material-card">' +
         '<h3 class="material-card-title">' + escapeHtml(item.title) + '</h3>' +
         '<p class="material-card-desc">' + escapeHtml(item.description) + '</p>' +
         '<div class="material-card-links">' +
-          '<a class="material-link" href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Baixar material →</a>' +
-          '<a class="material-link" href="' + escapeHtml(item.summary_url) + '" target="_blank" rel="noopener noreferrer">Resumo executivo →</a>' +
+          '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Baixar material →</a>' +
+          '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.summary_url) + '" target="_blank" rel="noopener noreferrer">Resumo executivo →</a>' +
         '</div>' +
         audio +
       '</article>'
@@ -112,7 +150,7 @@
       : '';
     return (
       '<li>' +
-        '<a class="prompt-link" href="' + escapeHtml(item.prompt_url) + '" target="_blank" rel="noopener noreferrer">' +
+        '<a class="prompt-link" data-track-key="prompt:' + escapeHtml(item.id) + '" href="' + escapeHtml(item.prompt_url) + '" target="_blank" rel="noopener noreferrer">' +
           meta +
           '<span class="prompt-link-title">' + escapeHtml(item.title) + '</span>' +
           '<span class="prompt-link-desc">' + escapeHtml(item.description) + '</span>' +
