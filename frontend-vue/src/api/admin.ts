@@ -336,6 +336,10 @@ export interface LandingMaterial {
   active: boolean
   created_at: string | null
   updated_at: string | null
+  /** Cliques acumulados nos links do card, somando material e resumo executivo. */
+  access_count: number
+  access_visitors: number
+  last_access_at: string | null
 }
 
 export interface LandingMaterialPayload {
@@ -392,6 +396,10 @@ export interface LandingPrompt {
   active: boolean
   created_at: string | null
   updated_at: string | null
+  /** Cliques acumulados no link do prompt na landing. */
+  access_count: number
+  access_visitors: number
+  last_access_at: string | null
 }
 
 export interface LandingPromptPayload {

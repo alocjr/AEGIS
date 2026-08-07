@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { ANALYTICS_RANGES, fetchResourceAccessReport } from '@/api/admin'
 import type { ResourceAccessCategory, ResourceAccessItem, ResourceAccessReport } from '@/api/admin'
+import { formatCount, formatLastAccess } from '@/lib/accessFormat'
 
 const RANGE_LABELS: Record<number, string> = {
   7: '7 dias',
@@ -14,26 +15,6 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const report = ref<ResourceAccessReport | null>(null)
 const days = ref<number>(30)
-
-const numberFmt = new Intl.NumberFormat('pt-BR')
-
-function formatNumber(value: number): string {
-  return numberFmt.format(value)
-}
-
-function formatLastAccess(iso: string | null): string {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
-}
 
 interface ResourceGroup {
   name: string
@@ -107,7 +88,7 @@ const dailyMax = computed(() => Math.max(...dailySeries.value.map((d) => d.event
 
 function dayTooltip(entry: { day: string; events: number }): string {
   const [year, month, day] = entry.day.split('-')
-  return `${day}/${month}/${year} · ${formatNumber(entry.events)} acessos`
+  return `${day}/${month}/${year} · ${formatCount(entry.events)} acessos`
 }
 
 async function load() {
@@ -153,20 +134,20 @@ watch(days, load, { immediate: true })
       <div class="kpi-grid">
         <article class="kpi">
           <span class="kpi-label">Acessos</span>
-          <strong class="kpi-value">{{ formatNumber(report.totals.events) }}</strong>
+          <strong class="kpi-value">{{ formatCount(report.totals.events) }}</strong>
         </article>
         <article class="kpi">
           <span class="kpi-label">Usuários identificados</span>
-          <strong class="kpi-value">{{ formatNumber(report.totals.unique_users) }}</strong>
+          <strong class="kpi-value">{{ formatCount(report.totals.unique_users) }}</strong>
         </article>
         <article class="kpi">
           <span class="kpi-label">Visitantes únicos</span>
-          <strong class="kpi-value">{{ formatNumber(report.totals.unique_visitors) }}</strong>
+          <strong class="kpi-value">{{ formatCount(report.totals.unique_visitors) }}</strong>
           <span class="kpi-hint">inclui quem não está logado</span>
         </article>
         <article class="kpi">
           <span class="kpi-label">Recursos monitorados</span>
-          <strong class="kpi-value">{{ formatNumber(report.totals.tracked_resources) }}</strong>
+          <strong class="kpi-value">{{ formatCount(report.totals.tracked_resources) }}</strong>
         </article>
       </div>
 
@@ -191,13 +172,13 @@ watch(days, load, { immediate: true })
       <section v-for="section in sections" :key="section.key" class="cat">
         <header class="cat-head">
           <h2 class="cat-name">{{ section.label }}</h2>
-          <span class="cat-total">{{ formatNumber(section.events) }} acessos</span>
+          <span class="cat-total">{{ formatCount(section.events) }} acessos</span>
         </header>
 
         <div v-for="group in section.groups" :key="group.name" class="group">
           <h3 v-if="section.showGroupNames" class="group-name">
             {{ group.name }}
-            <span class="group-total">{{ formatNumber(group.events) }}</span>
+            <span class="group-total">{{ formatCount(group.events) }}</span>
           </h3>
           <table class="data-table">
             <thead>
@@ -217,9 +198,9 @@ watch(days, load, { immediate: true })
                     <span class="res-bar-fill" :style="{ width: barWidth(item, section.max) }" />
                   </span>
                 </td>
-                <td class="num strong">{{ formatNumber(item.events) }}</td>
-                <td class="num">{{ formatNumber(item.unique_users) }}</td>
-                <td class="num">{{ formatNumber(item.unique_visitors) }}</td>
+                <td class="num strong">{{ formatCount(item.events) }}</td>
+                <td class="num">{{ formatCount(item.unique_users) }}</td>
+                <td class="num">{{ formatCount(item.unique_visitors) }}</td>
                 <td class="num muted">{{ formatLastAccess(item.last_at) }}</td>
               </tr>
             </tbody>

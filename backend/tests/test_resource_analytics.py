@@ -140,6 +140,49 @@ class RecordAccessTests(unittest.TestCase):
         self.assertEqual(self.events.inserted, [])
 
 
+class AccessCountsForKeysTests(unittest.TestCase):
+    """Números que as telas de gestão de materiais/prompts da landing mostram por item."""
+
+    def setUp(self) -> None:
+        self.material_id = ObjectId()
+        self.last_at = datetime.now(timezone.utc)
+        self.db = FakeDb(
+            {
+                analytics.COLLECTION: FakeCollection(
+                    aggregate_rows={
+                        "by_resource": [
+                            {
+                                "_id": analytics.material_key(self.material_id),
+                                "events": 9,
+                                # $addToSet já devolve sem repetição — 9 cliques, 2 pessoas.
+                                "visitors": ["a", "b"],
+                                "last_at": self.last_at,
+                            }
+                        ]
+                    }
+                )
+            }
+        )
+
+    def test_keys_follow_the_dynamic_format_accepted_on_ingestion(self) -> None:
+        self.assertEqual(analytics.material_key(self.material_id), f"material:{self.material_id}")
+        self.assertEqual(analytics.prompt_key(self.material_id), f"prompt:{self.material_id}")
+
+    def test_counts_are_returned_per_key(self) -> None:
+        counts = analytics.access_counts_for_keys(self.db, [analytics.material_key(self.material_id)])
+        stat = counts[analytics.material_key(self.material_id)]
+        self.assertEqual(stat["events"], 9)
+        self.assertEqual(stat["unique_visitors"], 2)
+        self.assertEqual(stat["last_at"], self.last_at)
+
+    def test_key_without_access_is_simply_absent(self) -> None:
+        counts = analytics.access_counts_for_keys(self.db, [analytics.prompt_key(ObjectId())])
+        self.assertNotIn(analytics.prompt_key(ObjectId()), counts)
+
+    def test_empty_input_does_not_query_the_database(self) -> None:
+        self.assertEqual(analytics.access_counts_for_keys(self.db, []), {})
+
+
 class ReportTests(unittest.TestCase):
     def setUp(self) -> None:
         self.prompt_id = ObjectId()

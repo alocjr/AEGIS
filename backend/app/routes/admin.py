@@ -991,7 +991,18 @@ def sync_quiz_ids(
     return {"message": "Sincronização concluída", "courses_updated": updated}
 
 
-def _landing_material_to_item(doc: dict) -> dict:
+def _access_stats(stats: dict, key: str) -> dict:
+    """Recorte de acesso de um item, no formato que as telas de gestão consomem."""
+    stat = stats.get(key) or {}
+    last_at = stat.get("last_at")
+    return {
+        "access_count": int(stat.get("events", 0)),
+        "access_visitors": int(stat.get("unique_visitors", 0)),
+        "last_access_at": last_at.isoformat() if last_at else None,
+    }
+
+
+def _landing_material_to_item(doc: dict, stats: dict) -> dict:
     return {
         "id": str(doc["_id"]),
         "title": doc.get("title", ""),
@@ -1003,14 +1014,16 @@ def _landing_material_to_item(doc: dict) -> dict:
         "active": bool(doc.get("active", True)),
         "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
         "updated_at": doc["updated_at"].isoformat() if doc.get("updated_at") else None,
+        **_access_stats(stats, analytics.material_key(doc["_id"])),
     }
 
 
 @router.get("/landing-materials")
 def list_landing_materials(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
-    """Lista cards de materiais da landing. Apenas admin."""
+    """Lista cards de materiais da landing, com quantos acessos cada um teve. Apenas admin."""
     docs = list(db.landing_materials.find({}).sort([("order", 1), ("created_at", 1)]))
-    return [_landing_material_to_item(d) for d in docs]
+    stats = analytics.access_counts_for_keys(db, [analytics.material_key(d["_id"]) for d in docs])
+    return [_landing_material_to_item(d, stats) for d in docs]
 
 
 @router.post("/landing-materials/upload")
@@ -1085,7 +1098,7 @@ def create_landing_material(
     }
     result = db.landing_materials.insert_one(doc)
     doc["_id"] = result.inserted_id
-    return _landing_material_to_item(doc)
+    return _landing_material_to_item(doc, {})  # id recém-criado: não há acesso possível ainda
 
 
 @router.put("/landing-materials/{material_id}")
@@ -1121,7 +1134,8 @@ def update_landing_material(
 
     db.landing_materials.update_one({"_id": oid}, {"$set": updates})
     doc = db.landing_materials.find_one({"_id": oid})
-    return _landing_material_to_item(doc)
+    key = analytics.material_key(oid)
+    return _landing_material_to_item(doc, analytics.access_counts_for_keys(db, [key]))
 
 
 @router.delete("/landing-materials/{material_id}")
@@ -1139,7 +1153,7 @@ def delete_landing_material(
     return {"message": "Material removido", "id": material_id}
 
 
-def _landing_prompt_to_item(doc: dict) -> dict:
+def _landing_prompt_to_item(doc: dict, stats: dict) -> dict:
     return {
         "id": str(doc["_id"]),
         "title": doc.get("title", ""),
@@ -1150,14 +1164,16 @@ def _landing_prompt_to_item(doc: dict) -> dict:
         "active": bool(doc.get("active", True)),
         "created_at": doc["created_at"].isoformat() if doc.get("created_at") else None,
         "updated_at": doc["updated_at"].isoformat() if doc.get("updated_at") else None,
+        **_access_stats(stats, analytics.prompt_key(doc["_id"])),
     }
 
 
 @router.get("/landing-prompts")
 def list_landing_prompts(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
-    """Lista prompts MD da landing. Apenas admin."""
+    """Lista prompts MD da landing, com quantos acessos cada um teve. Apenas admin."""
     docs = list(db.landing_prompts.find({}).sort([("order", 1), ("created_at", 1)]))
-    return [_landing_prompt_to_item(d) for d in docs]
+    stats = analytics.access_counts_for_keys(db, [analytics.prompt_key(d["_id"]) for d in docs])
+    return [_landing_prompt_to_item(d, stats) for d in docs]
 
 
 @router.post("/landing-prompts/upload")
@@ -1230,7 +1246,7 @@ def create_landing_prompt(
     }
     result = db.landing_prompts.insert_one(doc)
     doc["_id"] = result.inserted_id
-    return _landing_prompt_to_item(doc)
+    return _landing_prompt_to_item(doc, {})  # id recém-criado: não há acesso possível ainda
 
 
 @router.put("/landing-prompts/{prompt_id}")
@@ -1264,7 +1280,8 @@ def update_landing_prompt(
 
     db.landing_prompts.update_one({"_id": oid}, {"$set": updates})
     doc = db.landing_prompts.find_one({"_id": oid})
-    return _landing_prompt_to_item(doc)
+    key = analytics.prompt_key(oid)
+    return _landing_prompt_to_item(doc, analytics.access_counts_for_keys(db, [key]))
 
 
 @router.delete("/landing-prompts/{prompt_id}")

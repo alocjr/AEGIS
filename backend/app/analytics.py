@@ -126,6 +126,48 @@ def visitor_hash(ip: str, user_agent: str, day: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
+def material_key(material_id) -> str:
+    """Chave de um card de material gratuito da landing."""
+    return f"material:{material_id}"
+
+
+def prompt_key(prompt_id) -> str:
+    """Chave de um prompt da landing."""
+    return f"prompt:{prompt_id}"
+
+
+def access_counts_for_keys(db: Database, keys: list[str]) -> dict[str, dict]:
+    """Acessos acumulados por chave, sem recorte de período.
+
+    Usado nas telas em que o admin gerencia o item (materiais e prompts da landing): ali o número
+    que importa é "quanto esse card rendeu desde que existe", não a janela do dashboard. O teto
+    natural é a retenção de `RETENTION_DAYS`.
+    """
+    if not keys:
+        return {}
+    rows = db[COLLECTION].aggregate(
+        [
+            {"$match": {"resource_key": {"$in": keys}}},
+            {
+                "$group": {
+                    "_id": "$resource_key",
+                    "events": {"$sum": 1},
+                    "visitors": {"$addToSet": "$visitor_hash"},
+                    "last_at": {"$max": "$at"},
+                }
+            },
+        ]
+    )
+    return {
+        row["_id"]: {
+            "events": int(row["events"]),
+            "unique_visitors": len(row["visitors"]),
+            "last_at": row["last_at"],
+        }
+        for row in rows
+    }
+
+
 def resolve_category(db: Database, resource_key: str) -> str | None:
     """Categoria da chave, ou `None` se ela não corresponde a nenhum recurso existente.
 

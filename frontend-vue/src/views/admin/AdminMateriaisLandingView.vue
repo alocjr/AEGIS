@@ -8,8 +8,17 @@ import {
   uploadLandingMaterialFile,
 } from '@/api/admin'
 import type { LandingMaterial } from '@/api/admin'
+import { formatCount, formatLastAccess } from '@/lib/accessFormat'
 
 type UrlField = 'material_url' | 'summary_url' | 'audio_url'
+
+/** Detalhe do acesso no tooltip: a coluna precisa caber, mas o número sozinho engana —
+ * cliques repetidos da mesma pessoa contam, e visitantes únicos é que dizem o alcance. */
+function accessTitle(item: LandingMaterial): string {
+  if (item.access_count === 0) return 'Nenhum acesso registrado'
+  const visitors = `${formatCount(item.access_visitors)} visitante(s) único(s)`
+  return `${formatCount(item.access_count)} clique(s) em "Baixar material" e "Resumo executivo" · ${visitors}`
+}
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -202,6 +211,7 @@ onMounted(async () => {
             <th>Material</th>
             <th>Resumo</th>
             <th>Áudio</th>
+            <th class="th-access">Acessos</th>
             <th class="th-actions">Ações</th>
           </tr>
         </thead>
@@ -220,6 +230,12 @@ onMounted(async () => {
               <a :href="item.summary_url" target="_blank" rel="noopener" class="link">Abrir</a>
             </td>
             <td>{{ item.audio_url ? 'Sim' : '—' }}</td>
+            <td class="td-access" :title="accessTitle(item)">
+              <span class="access-count">{{ formatCount(item.access_count) }}</span>
+              <span v-if="item.access_count > 0" class="access-meta">
+                {{ formatLastAccess(item.last_access_at) }}
+              </span>
+            </td>
             <td class="td-actions">
               <button type="button" class="btn-secondary btn-sm" @click="openEdit(item)">Editar</button>
               <button type="button" class="btn-danger btn-sm" @click="askDelete(item)">Excluir</button>
@@ -436,6 +452,21 @@ onMounted(async () => {
 .th-actions,
 .td-actions {
   white-space: nowrap;
+}
+.th-access,
+.td-access {
+  white-space: nowrap;
+  text-align: right;
+}
+.access-count {
+  font-weight: 600;
+  color: var(--k0);
+}
+.access-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--k5);
+  margin-top: 2px;
 }
 .td-actions {
   display: flex;
