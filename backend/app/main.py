@@ -190,6 +190,16 @@ def calc_html():
     return _public_static_file("calc.html", "text/html; charset=utf-8")
 
 
+@app.get("/calc.js")
+def calc_js():
+    return _public_static_file("calc.js", "application/javascript; charset=utf-8")
+
+
+@app.get("/calc-jszip.js")
+def calc_jszip():
+    return _public_static_file("calc-jszip.js", "application/javascript; charset=utf-8")
+
+
 @app.get("/robots.txt")
 def robots_txt():
     return _public_static_file("robots.txt", "text/plain; charset=utf-8")
