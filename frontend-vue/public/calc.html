@@ -53,7 +53,7 @@
     "Comparação entre modelos (Haiku, Sonnet, Opus, Fable/Mythos)",
     "Modo agente com ciclo ReAct e escada de tokens",
     "Composição da entrada: system prompt, ferramentas MCP, RAG, arquivos e imagens",
-    "Anexo de arquivos Office (.docx, .xlsx, .pptx) com contagem incluindo estrutura",
+    "Anexo de arquivos Office (.docx, .xlsx, .pptx) com opção de contar só texto ou texto + estrutura",
     "Anexo de imagem com máscara de tokens de visão (patches)"
   ],
   "publisher": {
@@ -229,6 +229,8 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
     <label>Anexar arquivo Office <span class="h">— .docx · .xlsx · .pptx · .txt (lido no seu navegador)</span></label>
     <input type="file" id="file" accept=".docx,.xlsx,.pptx,.txt,.csv,.md">
     <div class="fileinfo" id="fileInfo"></div>
+    <label class="switch" style="margin-top:10px"><input type="checkbox" id="docStruct" checked><span class="track"><span class="knob"></span></span><span class="txt">Contar texto + estrutura do arquivo</span></label>
+    <div class="hint" id="docStructHint">Ligado: totaliza a marcação Office (XML). Desligado: só o texto visível.</div>
 
     <label>Anexar imagem <span class="h">— visão: a imagem também vira tokens (patches)</span></label>
     <input type="file" id="imgfile" accept="image/*">
@@ -297,7 +299,7 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 </div>
 
 <div class="foot">
-  <b>Como estimamos:</b> tokens ≈ caracteres ÷ (3 em português, 4 em inglês). A <b>entrada</b> soma: system prompt + definições de ferramentas (MCP) + entrada do usuário + arquivo anexado + dados retornados pelos MCPs + raciocínio acumulado. Num agente, tudo isso é relido a cada passo — o cache reduz em 90% a parte fixa (system + ferramentas). O arquivo é contado incluindo a estrutura do Office (marcação XML), não apenas o texto visível — é o que o modelo recebe ao ingerir o documento bruto. É lido localmente, no seu navegador — nada é enviado a servidores. Preços por milhão de tokens, de referência.
+  <b>Como estimamos:</b> tokens ≈ caracteres ÷ (3 em português, 4 em inglês). A <b>entrada</b> soma: system prompt + definições de ferramentas (MCP) + entrada do usuário + arquivo anexado + dados retornados pelos MCPs + raciocínio acumulado. Num agente, tudo isso é relido a cada passo — o cache reduz em 90% a parte fixa (system + ferramentas). No arquivo anexado, o switch escolhe se a totalização usa só o texto visível ou texto + estrutura Office (marcação XML — o que o modelo recebe ao ingerir o documento bruto). É lido localmente, no seu navegador — nada é enviado a servidores. Preços por milhão de tokens, de referência.
   <div class="fwm">VALORIAN · LETRAMENTO EM IA</div>
 </div>
 

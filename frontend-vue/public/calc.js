@@ -133,7 +133,11 @@ function renderTokens(text,div,elId){
 }
 function calc(){
  const m=MODELS[$('model').value];const div=$('lang').value==='pt'?3:4;
- const sysTok=simTokens($('sysp').value,div).count, userTok=simTokens($('txt').value,div).count, docTok=docRaw?simTokens(docRaw,div).count:0;
+ const withStruct=$('docStruct').checked;
+ const docStructTok=docRaw?simTokens(docRaw,div).count:0;
+ const docTextTok=docPlain?simTokens(docPlain,div).count:0;
+ const docTok=withStruct?docStructTok:docTextTok;
+ const sysTok=simTokens($('sysp').value,div).count, userTok=simTokens($('txt').value,div).count;
  const showTk=$('showtok').checked;
  $('syspView').classList.toggle('on',showTk); $('txtView').classList.toggle('on',showTk);
  if(imgURL) renderImg();
@@ -142,7 +146,10 @@ function calc(){
  const obs=+$('obs').value||0, out=+$('out').value||0, rpd=+$('rpd').value||0, fx=+$('fx').value||0, ragTok=+$('ragtok').value||0;
  const fixed=sysTok+toolTok, agent=$('agent').checked, N=+$('steps').value;
  $('sysTok').textContent=nf.format(sysTok)+' tk';$('userTok').textContent=nf.format(userTok)+' tk';$('toolTok').textContent=nf.format(toolTok)+' tk';
- if(docName&&$('docTk')){const dtxt=simTokens(docPlain,div).count; $('docTk').textContent=nf.format(docTok)+' tk (com estrutura) · '+nf.format(dtxt)+' tk só texto ';}
+ if(docName&&$('docTk')){
+   const mode=withStruct?'com estrutura':'só texto';
+   $('docTk').textContent=nf.format(docTok)+' tk ('+mode+') · '+nf.format(docStructTok)+' tk c/ estrutura · '+nf.format(docTextTok)+' tk só texto ';
+ }
  $('stepsV').textContent=N;$('obsV').textContent=nf.format(obs);
  $('adv').classList.toggle('on',agent);$('stair').classList.toggle('on',agent);
  $('modelName').textContent=m.name;$('mode').textContent=agent?'Agente · ciclo ReAct':'Pergunta & resposta';
@@ -179,11 +186,13 @@ function calc(){
    const mxs=Math.max(...stepInputs);
    $('stairRows').innerHTML=stepInputs.map((v,i)=>`<div class="s"><span class="k">passo ${i+1}</span><span class="f" style="width:${Math.max(4,v/mxs*170)}px"></span><span class="v">${nf.format(Math.round(v))} tk</span></div>`).join('');
    const single=(fixed+userTok+docTok)/1e6*m.in+out/1e6*m.out, mult=per/single;
-   const docNote=docName?` O arquivo <b>${docName}</b> (${nf.format(docTok)} tk) é relido a cada passo.`:'';
+   const docMode=withStruct?'texto + estrutura':'só texto';
+   const docNote=docName?` O arquivo <b>${docName}</b> (${nf.format(docTok)} tk, ${docMode}) é relido a cada passo.`:'';
    $('note').innerHTML=`Este agente consome <b>~${mult.toFixed(1)}× mais</b> que uma pergunta única. Os <b>dados dos MCPs</b> são ${(comp.obs/totIn*100).toFixed(0)}% da entrada.`+docNote+(!$('cache').checked?` Ligue o <b>cache</b>.`:'');
  }else{
    const ratio=cIn>0?(cOut/cIn):0;
-   const docNote=docName?` O arquivo anexado soma ${nf.format(docTok)} tk à entrada.`:'';
+   const docMode=withStruct?'texto + estrutura':'só texto';
+   const docNote=docName?` O arquivo anexado soma ${nf.format(docTok)} tk à entrada (${docMode}).`:'';
    $('note').innerHTML=`Só o <b>system prompt + ferramentas</b> já são ${nf.format(fixed)} tk de entrada fixa.`+(ragTok>0?` O <b>contexto recuperado (RAG)</b> soma ${nf.format(ragTok)} tk — costuma ser a maior fatia.`:'')+docNote+` A saída pesa <b>${ratio>0?ratio.toFixed(1)+'×':'—'}</b> a entrada aqui.`;
  }
 }
