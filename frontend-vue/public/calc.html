@@ -221,15 +221,15 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 <div class="wrap">
   <div class="presetbar">
     <span class="t">Tarefa</span>
-    <span class="preset" data-p="simples">Pergunta simples</span>
+    <span class="preset active" data-p="simples">Pergunta simples</span>
     <span class="preset" data-p="relatorio">Relatório longo (RAG)</span>
-    <span class="preset active" data-p="agente">Agente com MCPs · 5 passos</span>
+    <span class="preset" data-p="agente">Agente com MCPs · 5 passos</span>
   </div>
 
 <div class="grid">
   <div class="card">
     <div class="kick">Cenário</div>
-    <h2 id="scenTitle">Agente com MCPs</h2>
+    <h2 id="scenTitle">Pergunta simples</h2>
 
     <div class="grouphead"><span class="gnum">I</span><span class="gname">Entrada</span></div>
 
@@ -258,7 +258,7 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 
     <div class="substep">Ferramentas / MCPs</div>
     <div class="row" id="toolsRow">
-      <div><label>Ferramentas / MCPs <span class="h">(nº)</span></label><input type="number" id="ntools" min="0" step="1" value="5"></div>
+      <div><label>Ferramentas / MCPs <span class="h">(nº)</span></label><input type="number" id="ntools" min="0" step="1" value="0"></div>
       <div><label>Tokens por definição <span class="h">(schema)</span></label><input type="number" id="pertool" min="0" step="10" value="150"></div>
     </div>
     <div class="chipline"><span class="l">Definições de ferramentas na entrada</span><span class="n" id="toolTok">—</span></div>
@@ -268,7 +268,7 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 
     <div class="grouphead"><span class="gnum">II</span><span class="gname">Resposta</span></div>
     <div class="row">
-      <div><label>Saída por resposta <span class="h">tokens</span></label><input type="number" id="out" value="600" min="0" step="50"></div>
+      <div><label>Saída por resposta <span class="h">tokens</span></label><input type="number" id="out" value="120" min="0" step="50"></div>
       <div></div>
     </div>
 
@@ -279,19 +279,19 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
     <div class="row"><div><select id="model"><option value="haiku">Haiku 4.5 — US$1/US$5</option><option value="sonnet" selected>Sonnet — US$3/US$15</option><option value="opus">Opus 4.8 — US$5/US$25</option><option value="fable">Fable 5 / Mythos 5 — US$10/US$50</option></select></div></div>
 
     <label class="switch"><input type="checkbox" id="cache"><span class="track"><span class="knob"></span></span><span class="txt">Cache no prefixo fixo (–90%)</span></label>
-    <label class="switch"><input type="checkbox" id="agent" checked><span class="track"><span class="knob"></span></span><span class="txt">É um agente (ciclo ReAct)?</span></label>
-    <div class="adv on" id="adv">
-      <label>Passos do agente: <span class="rngval" id="stepsV">5</span></label>
-      <input type="range" id="steps" min="1" max="15" value="5">
-      <label>Dados retornados por ferramenta/MCP por passo: <span class="rngval" id="obsV">1.000</span> tokens</label>
-      <input type="range" id="obs" min="100" max="4000" value="1000" step="100">
+    <label class="switch"><input type="checkbox" id="agent"><span class="track"><span class="knob"></span></span><span class="txt">É um agente (ciclo ReAct)?</span></label>
+    <div class="adv" id="adv">
+      <label>Passos do agente: <span class="rngval" id="stepsV">3</span></label>
+      <input type="range" id="steps" min="1" max="15" value="3">
+      <label>Dados retornados por ferramenta/MCP por passo: <span class="rngval" id="obsV">600</span> tokens</label>
+      <input type="range" id="obs" min="100" max="4000" value="600" step="100">
       <div class="hint">Cada “Observação” é o dado que o MCP devolve (JSON, linhas de banco, página). Ela entra na entrada e é <b>relida em todos os passos seguintes</b>.</div>
     </div>
   </div>
 
   <div class="card result">
     <div class="grouphead"><span class="gnum">IV</span><span class="gname">Resultado</span></div>
-    <span class="badge" id="mode">Agente · ciclo ReAct</span>
+    <span class="badge" id="mode">Pergunta & resposta</span>
     <div class="big" id="perInt">—</div>
     <div class="sub">custo por interação · <span id="modelName">Sonnet</span></div>
 
@@ -306,7 +306,7 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 
     <div class="substep">Volume da aplicação</div>
     <div class="row">
-      <div><label>Requisições por dia</label><input type="number" id="rpd" value="500" min="0" step="100"></div>
+      <div><label>Requisições por dia</label><input type="number" id="rpd" value="2000" min="0" step="100"></div>
       <div><label>Cotação PTAX <span class="h">R$/US$</span></label><input type="number" id="fx" value="5.40" min="0" step="0.1"></div>
     </div>
     <div class="row">

@@ -196,7 +196,7 @@ function calc(){
  }
 }
 ['input','change'].forEach(ev=>document.querySelectorAll('input,select,textarea').forEach(x=>x.addEventListener(ev,calc)));
-apply('agente');
+apply('simples');
 
 /* Contagem de acesso (dashboard do admin). Página pública e sem sessão na maior parte das
    visitas: nesse caso o backend registra apenas como visitante anônimo. Fica aqui, e não

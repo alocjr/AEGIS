@@ -200,6 +200,18 @@ def calc_jszip():
     return _public_static_file("calc-jszip.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/tutorial-tokens.html")
+@app.get("/tutorial-tokens")
+def tutorial_tokens_html():
+    """Tutorial interativo de tokens (HTML estático em public/)."""
+    return _public_static_file("tutorial-tokens.html", "text/html; charset=utf-8")
+
+
+@app.get("/tutorial-tokens.js")
+def tutorial_tokens_js():
+    return _public_static_file("tutorial-tokens.js", "application/javascript; charset=utf-8")
+
+
 @app.get("/robots.txt")
 def robots_txt():
     return _public_static_file("robots.txt", "text/plain; charset=utf-8")
