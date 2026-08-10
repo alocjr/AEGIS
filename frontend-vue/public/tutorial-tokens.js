@@ -14,10 +14,15 @@ const MODELS=[
  {id:'sonnet',name:'Sonnet',tag:'Intermediário',in:3,out:15},
  {id:'opus',name:'Opus 4.8',tag:'Topo de linha',in:5,out:25},
  {id:'fable',name:'Fable 5 / Mythos 5',tag:'Fronteira',in:10,out:50}];
+/* Exemplos gerados a partir do system prompt (Assistente Financeiro Acme) +
+   pergunta "Qual foi a receita do último trimestre?" — números ilustrativos. */
 const OUT_OPTS=[
- {id:'curta',name:'Resposta curta',desc:'Uma frase objetiva.',tk:120},
- {id:'media',name:'Resposta média',desc:'Um parágrafo com números.',tk:400},
- {id:'longa',name:'Resposta longa',desc:'Análise estruturada.',tk:1200}];
+ {id:'curta',name:'Resposta curta',desc:'Uma frase objetiva.',
+  sample:'A receita do último trimestre (3T/2025) foi de R$ 48,2 milhões, conforme o fechamento gerencial.'},
+ {id:'media',name:'Resposta média',desc:'Um parágrafo com números e comparação.',
+  sample:'A receita do último trimestre (3T/2025) foi de R$ 48,2 milhões. Em relação ao 3T/2024 (R$ 44,0 milhões), o crescimento foi de 9,5%; frente ao 2T/2025 (R$ 45,1 milhões), a alta foi de 6,9%. O avanço concentrou-se em serviços recorrentes, enquanto a linha de produtos permaneceu estável. Não tenho neste contexto o detalhamento por unidade de negócio — sugiro o relatório gerencial consolidado.'},
+ {id:'longa',name:'Resposta longa',desc:'Análise estruturada com riscos e lacunas.',
+  sample:'Sumário executivo\nA receita do último trimestre (3T/2025) fechou em R$ 48,2 milhões, acima do 3T/2024 e do trimestre imediatamente anterior.\n\nPrincipais números\n• 3T/2025: R$ 48,2 milhões\n• 3T/2024: R$ 44,0 milhões (variação de +9,5%)\n• 2T/2025: R$ 45,1 milhões (variação de +6,9% na sequência trimestral)\nPeríodo de referência: fechamento gerencial do 3T/2025. Unidade: reais.\n\nFatores que explicam a variação\n1. Serviços recorrentes — expansão da base contratada e renovação de contratos anuais sustentaram a maior parte do crescimento.\n2. Produtos — volume estável, sem campanha extraordinária no período; contribuição neutra à variação.\n3. Efeito cambial residual — há indício de impacto positivo em contratos indexados ao dólar, mas a contribuição isolada não está disponível neste contexto.\n\nRiscos relevantes para o próximo trimestre\n• Concentração em clientes enterprise (participação individual não informada neste contexto).\n• Janela de renovações no 4T, com risco de churn se a retenção não acompanhar o ritmo do 3T.\n• Pipeline comercial ainda não refletido no fechamento gerencial — a receita futura depende de conversão não mensurada aqui.\n\nLacunas e próximos passos\nNão tenho neste contexto: breakdown por unidade de negócio, margem bruta do trimestre e previsão oficial de 4T/2025. Recomendo consultar o relatório gerencial consolidado e o forecast comercial para completar a leitura.'}];
 const DOCMODES=[{id:'text',label:'Só texto'},{id:'struct',label:'Texto + estrutura'}];
 
 const S={sys:'medio',ask:'curta',lang:'pt',model:'sonnet',out:'curta',rpd:2000,fx:5.4,fee:8,docMode:'struct'};
@@ -55,7 +60,7 @@ function totals(){
   const askTok=simTokens(curAsk().text,d).count;
   const docTok=docSrc()?simTokens(docSrc(),d).count:0;
   const inTok=sysTok+askTok+docTok;
-  const outTok=curOut().tk;
+  const outTok=simTokens(curOut().sample,d).count;
   const m=curModel();
   const cIn=inTok/1e6*m.in,cOut=outTok/1e6*m.out,per=cIn+cOut;
   return {sysTok,askTok,docTok,inTok,outTok,cIn,cOut,per,
@@ -170,13 +175,14 @@ function renderAll(){
   });
   $('mkModelCost').textContent=usd(t.per);
 
-  buildChoice($('chOut'),OUT_OPTS,'out',o=>o.desc,o=>nf.format(o.tk)+' tk');
+  buildChoice($('chOut'),OUT_OPTS,'out',o=>o.desc,o=>nf.format(simTokens(o.sample,d).count)+' tk');
+  $('mkOutSample').textContent=curOut().sample;
   $('mkOutIn').textContent=nf.format(t.inTok)+' tk';
   $('mkOutOut').textContent=nf.format(t.outTok)+' tk';
   $('mkOutCin').textContent=usd(t.cIn);
   $('mkOutCout').textContent=usd(t.cOut);
   const shareOut=t.per>0?(t.cOut/t.per*100):0;
-  $('mkOutNote').innerHTML='A saída é <b>'+shareOut.toFixed(0)+'%</b> do custo, com apenas '+nf.format(t.outTok)+' tokens gerados.';
+  $('mkOutNote').innerHTML='Exemplo gerado a partir do system prompt e da pergunta. A saída é <b>'+shareOut.toFixed(0)+'%</b> do custo, com <b>'+nf.format(t.outTok)+'</b> tokens gerados.';
 
   // composição (entrada)
   const segIn=SEG.filter(s=>s.k!=='outTok');

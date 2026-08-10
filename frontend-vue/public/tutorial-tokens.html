@@ -94,7 +94,7 @@ input[type=range]{width:100%;accent-color:var(--gold);height:26px}
   box-shadow:0 0 0 1px rgba(199,165,102,.3), 0 0 0 5px rgba(199,165,102,.08), 0 14px 36px rgba(0,0,0,.4)}
 .mocklabel{font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--goldd);font-weight:700;margin-bottom:8px}
 .mockbox{width:100%;font-size:11.5px;color:var(--ink);background:var(--marfim);border:1px solid var(--line);
-  border-radius:8px;padding:9px 11px;line-height:1.5;white-space:pre-wrap;max-height:150px;overflow:auto}
+  border-radius:8px;padding:9px 11px;line-height:1.5;white-space:pre-wrap;max-height:180px;overflow:auto}
 .mockchip{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:8px;background:var(--marf2);
   border-radius:7px;padding:7px 11px;font-size:11.5px}
 .mockchip .n{font-family:'JetBrains Mono';font-weight:700;color:var(--goldd);font-size:13.5px;white-space:nowrap}
@@ -295,9 +295,10 @@ input[type=file]{display:none}
       <div class="choices" id="chOut"></div>
     </div>
     <div class="mock">
-      <div class="mocklabel">Entrada vs. saída</div>
+      <div class="mocklabel">Exemplo de resposta</div>
+      <div class="mockbox" id="mkOutSample"></div>
+      <div class="mockchip"><span>Tokens de saída</span><span class="n" id="mkOutOut">—</span></div>
       <div class="kvline"><span>Tokens de entrada</span><b id="mkOutIn">—</b></div>
-      <div class="kvline"><span>Tokens de saída</span><b id="mkOutOut">—</b></div>
       <div class="kvline"><span>Custo da entrada</span><b id="mkOutCin">—</b></div>
       <div class="kvline"><span>Custo da saída</span><b id="mkOutCout">—</b></div>
       <div class="mocknote" id="mkOutNote"></div>

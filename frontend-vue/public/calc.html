@@ -160,6 +160,8 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 .modeswitch{display:none;align-items:center;gap:6px;margin:8px 0 2px}
 .modeswitch.on{display:flex}
 .modeswitch .zl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
+.samplebox{margin-top:8px;padding:11px 13px;background:var(--marfim);border:1px solid var(--line);border-radius:9px;font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap;max-height:220px;overflow:auto}
+.samplebox:empty{display:none}
 .imgview{margin-top:8px}
 .imgview .imgwrap{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;display:inline-block}
 .imgview img{display:block}
@@ -267,8 +269,11 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
     <div class="row" id="ragRow"><div><label>Contexto recuperado (RAG) <span class="h">tokens — trechos buscados e injetados na entrada</span></label><input type="number" id="ragtok" min="0" step="100" value="0"></div></div>
 
     <div class="grouphead"><span class="gnum">II</span><span class="gname">Resposta</span></div>
+    <div class="substep">Tamanho da resposta <span class="h">— exemplos a partir do system prompt e da pergunta</span></div>
+    <div class="modeswitch on" id="outModeRow" style="display:flex"><span class="zl">Exemplo:</span><button class="zb active" data-om="curta">Curta</button><button class="zb" data-om="media">Média</button><button class="zb" data-om="longa">Longa</button></div>
+    <div class="samplebox" id="outSample"></div>
     <div class="row">
-      <div><label>Saída por resposta <span class="h">tokens</span></label><input type="number" id="out" value="120" min="0" step="50"></div>
+      <div><label>Saída por resposta <span class="h">tokens</span></label><input type="number" id="out" value="33" min="0" step="10"></div>
       <div></div>
     </div>
 
