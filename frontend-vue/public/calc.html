@@ -157,6 +157,9 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 .zoomrow .zl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
 .zb{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--navy);background:var(--marf2);border:1px solid var(--line);border-radius:14px;padding:4px 11px;cursor:pointer}
 .zb.active{background:var(--gold);border-color:var(--gold)}
+.modeswitch{display:none;align-items:center;gap:6px;margin:8px 0 2px}
+.modeswitch.on{display:flex}
+.modeswitch .zl{font-size:12px;font-weight:600;color:var(--muted);margin-right:2px}
 .imgview{margin-top:8px}
 .imgview .imgwrap{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;display:inline-block}
 .imgview img{display:block}
@@ -192,6 +195,19 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 .callout b{color:var(--gold)}
 .foot{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12px;line-height:1.6}
 .foot b{color:var(--goldd)}
+.grouphead{display:flex;align-items:center;gap:9px;margin:22px 0 4px;padding-top:14px;border-top:1px solid var(--line)}
+.grouphead:first-of-type{margin-top:4px;padding-top:0;border-top:none}
+.grouphead .gnum{font-family:'JetBrains Mono';font-weight:700;font-size:11px;color:var(--navy);
+  background:var(--gold);border-radius:5px;padding:2px 7px;letter-spacing:.5px}
+.grouphead .gname{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--goldd);font-weight:700}
+.result .grouphead{border-top-color:rgba(199,165,102,.28)}
+.result .grouphead .gname{color:var(--gold)}
+.substep{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);
+  font-weight:700;margin:16px 0 2px}
+.result .substep{color:#8ca0bd}
+.result label{color:var(--cream)}
+.result label .h{color:#8ca0bd}
+.result input[type=number]{background:rgba(255,255,255,.07);border-color:rgba(199,165,102,.3);color:var(--cream)}
 .fwm{margin-top:8px;font-weight:700;letter-spacing:3px;color:var(--goldd);font-size:12px}
 </style>
 </head>
@@ -214,30 +230,34 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
   <div class="card">
     <div class="kick">Cenário</div>
     <h2 id="scenTitle">Agente com MCPs</h2>
-    <label class="switch" style="margin-top:12px"><input type="checkbox" id="showtok"><span class="track"><span class="knob"></span></span><span class="txt">Exibir tokens dos inputs (simulação)</span></label>
 
-    <label>System prompt <span class="h">— instruções do modelo (também são tokens!)</span></label>
-    <textarea id="sysp"></textarea>
-    <div class="chipline"><span class="l">Tokens do system prompt</span><span class="n" id="sysTok">—</span></div>
-    <div class="tkview" id="syspView"></div>
+    <div class="grouphead"><span class="gnum">I</span><span class="gname">Entrada</span></div>
 
-    <label>Entrada do usuário <span class="h">— a pergunta/tarefa</span></label>
+    <div class="substep">Pergunta do usuário</div>
     <textarea id="txt"></textarea>
     <div class="chipline"><span class="l">Tokens da entrada do usuário</span><span class="n" id="userTok">—</span></div>
     <div class="tkview" id="txtView"></div>
 
-    <label>Anexar arquivo Office <span class="h">— .docx · .xlsx · .pptx · .txt (lido no seu navegador)</span></label>
+    <div class="substep">System prompt</div>
+    <textarea id="sysp"></textarea>
+    <div class="chipline"><span class="l">Tokens do system prompt</span><span class="n" id="sysTok">—</span></div>
+    <div class="tkview" id="syspView"></div>
+
+    <div class="substep">Exibir tokens</div>
+    <label class="switch" id="showtokRow"><input type="checkbox" id="showtok"><span class="track"><span class="knob"></span></span><span class="txt">Exibir tokens dos inputs (simulação)</span></label>
+
+    <div class="substep">Arquivo anexado</div>
     <input type="file" id="file" accept=".docx,.xlsx,.pptx,.txt,.csv,.md">
     <div class="fileinfo" id="fileInfo"></div>
-    <label class="switch" style="margin-top:10px"><input type="checkbox" id="docStruct" checked><span class="track"><span class="knob"></span></span><span class="txt">Contar texto + estrutura do arquivo</span></label>
-    <div class="hint" id="docStructHint">Ligado: totaliza a marcação Office (XML). Desligado: só o texto visível.</div>
+    <div class="modeswitch" id="docModeRow"><span class="zl">Contar:</span><button class="zb active" data-dm="struct">Texto + estrutura</button><button class="zb" data-dm="text">Só texto</button></div>
 
-    <label>Anexar imagem <span class="h">— visão: a imagem também vira tokens (patches)</span></label>
+    <div class="substep">Imagem anexada</div>
     <input type="file" id="imgfile" accept="image/*">
     <div class="fileinfo" id="imgInfo"></div>
     <div class="imgview" id="imgView"></div>
 
-    <div class="row">
+    <div class="substep">Ferramentas / MCPs</div>
+    <div class="row" id="toolsRow">
       <div><label>Ferramentas / MCPs <span class="h">(nº)</span></label><input type="number" id="ntools" min="0" step="1" value="5"></div>
       <div><label>Tokens por definição <span class="h">(schema)</span></label><input type="number" id="pertool" min="0" step="10" value="150"></div>
     </div>
@@ -246,18 +266,17 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 
     <div class="row" id="ragRow"><div><label>Contexto recuperado (RAG) <span class="h">tokens — trechos buscados e injetados na entrada</span></label><input type="number" id="ragtok" min="0" step="100" value="0"></div></div>
 
-    <div class="row">
-      <div><label>Idioma</label><select id="lang"><option value="pt" selected>Português (~3 car./token)</option><option value="en">Inglês (~4 car./token)</option></select></div>
-      <div><label>Modelo</label><select id="model"><option value="haiku">Haiku 4.5 — US$1/US$5</option><option value="sonnet" selected>Sonnet — US$3/US$15</option><option value="opus">Opus 4.8 — US$5/US$25</option><option value="fable">Fable 5 / Mythos 5 — US$10/US$50</option></select></div>
-    </div>
+    <div class="grouphead"><span class="gnum">II</span><span class="gname">Resposta</span></div>
     <div class="row">
       <div><label>Saída por resposta <span class="h">tokens</span></label><input type="number" id="out" value="600" min="0" step="50"></div>
-      <div><label>Requisições por dia</label><input type="number" id="rpd" value="500" min="0" step="100"></div>
-    </div>
-    <div class="row">
-      <div><label>Câmbio <span class="h">R$/US$</span></label><input type="number" id="fx" value="5.40" min="0" step="0.1"></div>
       <div></div>
     </div>
+
+    <div class="grouphead"><span class="gnum">III</span><span class="gname">Configurações</span></div>
+    <div class="substep">Idioma</div>
+    <div class="row"><div><select id="lang"><option value="pt" selected>Português (~3 car./token)</option><option value="en">Inglês (~4 car./token)</option></select></div></div>
+    <div class="substep">Modelo</div>
+    <div class="row"><div><select id="model"><option value="haiku">Haiku 4.5 — US$1/US$5</option><option value="sonnet" selected>Sonnet — US$3/US$15</option><option value="opus">Opus 4.8 — US$5/US$25</option><option value="fable">Fable 5 / Mythos 5 — US$10/US$50</option></select></div></div>
 
     <label class="switch"><input type="checkbox" id="cache"><span class="track"><span class="knob"></span></span><span class="txt">Cache no prefixo fixo (–90%)</span></label>
     <label class="switch"><input type="checkbox" id="agent" checked><span class="track"><span class="knob"></span></span><span class="txt">É um agente (ciclo ReAct)?</span></label>
@@ -271,27 +290,36 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
   </div>
 
   <div class="card result">
-    <div class="kick">Resultado</div>
+    <div class="grouphead"><span class="gnum">IV</span><span class="gname">Resultado</span></div>
     <span class="badge" id="mode">Agente · ciclo ReAct</span>
     <div class="big" id="perInt">—</div>
     <div class="sub">custo por interação · <span id="modelName">Sonnet</span></div>
 
-    <div class="divl"></div>
-    <div class="kick" style="margin-bottom:8px">Composição da entrada <span id="inTot" style="color:#9FB0C4;font-weight:400;letter-spacing:0;text-transform:none;font-family:'JetBrains Mono'"></span></div>
+    <div class="substep">Raio X — composição da entrada <span id="inTot" style="font-family:'JetBrains Mono';letter-spacing:0;text-transform:none;color:#9FB0C4;font-weight:400"></span></div>
     <div class="compbar" id="compbar"></div>
     <div class="leg" id="leg"></div>
 
     <div class="stair" id="stair">
-      <div class="divl"></div>
-      <div class="sub" style="margin-bottom:6px">Entrada relida a cada passo</div>
+      <div class="sub" style="margin:10px 0 6px">Entrada relida a cada passo</div>
       <div id="stairRows"></div>
     </div>
 
-    <div class="divl"></div>
+    <div class="substep">Volume da aplicação</div>
+    <div class="row">
+      <div><label>Requisições por dia</label><input type="number" id="rpd" value="500" min="0" step="100"></div>
+      <div><label>Cotação PTAX <span class="h">R$/US$</span></label><input type="number" id="fx" value="5.40" min="0" step="0.1"></div>
+    </div>
+    <div class="row">
+      <div><label>Encargos do cartão <span class="h">spread + IOF (%)</span></label><input type="number" id="fee" value="8" min="0" step="0.5"></div>
+      <div></div>
+    </div>
+
+    <div class="substep">Sua conta</div>
     <div class="kv"><span class="k">Custo da entrada</span><span class="v" id="costIn">—</span></div>
     <div class="kv"><span class="k">Custo da saída <span id="outTk" style="color:#7f8ba3"></span></span><span class="v gold" id="costOut">—</span></div>
     <div class="kv"><span class="k">Por mês <span style="color:#7f8ba3">(30 dias)</span></span><span class="v gold" id="monthly">—</span></div>
-    <div class="kv"><span class="k">Por mês em reais</span><span class="v" id="monthlyBrl">—</span></div>
+    <div class="kv"><span class="k">Dólar efetivo <span id="feeTag" style="color:#7f8ba3"></span></span><span class="v" id="fxEff">—</span></div>
+    <div class="kv"><span class="k">Por mês em reais <span style="color:#7f8ba3">(dólar efetivo)</span></span><span class="v gold" id="monthlyBrl">—</span></div>
 
     <div class="callout" id="note"></div>
   </div>
@@ -299,7 +327,7 @@ input[type=range]{width:100%;accent-color:var(--goldd)}
 </div>
 
 <div class="foot">
-  <b>Como estimamos:</b> tokens ≈ caracteres ÷ (3 em português, 4 em inglês). A <b>entrada</b> soma: system prompt + definições de ferramentas (MCP) + entrada do usuário + arquivo anexado + dados retornados pelos MCPs + raciocínio acumulado. Num agente, tudo isso é relido a cada passo — o cache reduz em 90% a parte fixa (system + ferramentas). No arquivo anexado, o switch escolhe se a totalização usa só o texto visível ou texto + estrutura Office (marcação XML — o que o modelo recebe ao ingerir o documento bruto). É lido localmente, no seu navegador — nada é enviado a servidores. Preços por milhão de tokens, de referência.
+  <b>Como estimamos:</b> tokens ≈ caracteres ÷ (3 em português, 4 em inglês). A <b>entrada</b> soma: system prompt + definições de ferramentas (MCP) + entrada do usuário + arquivo anexado + dados retornados pelos MCPs + raciocínio acumulado. Num agente, tudo isso é relido a cada passo — o cache reduz em 90% a parte fixa (system + ferramentas). No arquivo anexado, escolha se a totalização usa só o texto visível ou texto + estrutura Office (marcação XML — o que o modelo recebe ao ingerir o documento bruto). É lido localmente, no seu navegador — nada é enviado a servidores. Preços por milhão de tokens, de referência. O valor em reais usa o <b>dólar efetivo</b> — a cotação PTAX acrescida dos encargos do cartão (spread do banco + IOF), na média ~8%.
   <div class="fwm">VALORIAN · LETRAMENTO EM IA</div>
 </div>
 
