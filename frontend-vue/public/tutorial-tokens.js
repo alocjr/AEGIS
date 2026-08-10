@@ -184,18 +184,20 @@ function renderAll(){
   const shareOut=t.per>0?(t.cOut/t.per*100):0;
   $('mkOutNote').innerHTML='Exemplo gerado a partir do system prompt e da pergunta. A saída é <b>'+shareOut.toFixed(0)+'%</b> do custo, com <b>'+nf.format(t.outTok)+'</b> tokens gerados.';
 
-  // composição (entrada)
-  const segIn=SEG.filter(s=>s.k!=='outTok');
-  $('mkCompLabel').textContent='Composição da entrada · '+nf.format(t.inTok)+' tk';
-  $('mkCompBar').innerHTML=segIn.map(s=>{const v=t[s.k];if(v<=0)return '';
-    return '<span style="width:'+(v/t.inTok*100)+'%;background:'+s.color+'"></span>';}).join('');
-  $('mkCompLeg').innerHTML=segIn.map(s=>{const v=t[s.k],pc=t.inTok>0?(v/t.inTok*100):0;
+  // composição (entrada + resposta)
+  const totAll=t.inTok+t.outTok;
+  $('mkCompLabel').textContent='Composição total · '+nf.format(totAll)+' tk';
+  $('mkCompBar').innerHTML=SEG.map(s=>{const v=t[s.k];if(v<=0)return '';
+    return '<span style="width:'+(v/totAll*100)+'%;background:'+s.color+'"></span>';}).join('');
+  $('mkCompLeg').innerHTML=SEG.map(s=>{const v=t[s.k];if(v<=0)return '';
+    const pc=totAll>0?(v/totAll*100):0;
     return '<div class="kvline"><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+
       s.color+';margin-right:6px"></span>'+s.label+'</span><b>'+nf.format(v)+' tk · '+pc.toFixed(0)+'%</b></div>';}).join('');
-  const pSys=t.inTok>0?t.sysTok/t.inTok*100:0;
-  $('compNote').innerHTML='Com as suas escolhas, o system prompt é <b>'+pSys.toFixed(0)+
-    '%</b> da entrada'+(t.docTok>0?' e o arquivo, <b>'+(t.docTok/t.inTok*100).toFixed(0)+'%</b>':'')+
-    '. Quanto maior a fatia fixa, mais vale enxugar as instruções ou usar cache.';
+  const pSys=totAll>0?t.sysTok/totAll*100:0;
+  const pOut=totAll>0?t.outTok/totAll*100:0;
+  $('compNote').innerHTML='Com as suas escolhas, a <b>resposta</b> é <b>'+pOut.toFixed(0)+
+    '%</b> dos tokens'+(t.docTok>0?', o arquivo <b>'+(t.docTok/totAll*100).toFixed(0)+'%</b>':'')+
+    ' e o system prompt <b>'+pSys.toFixed(0)+'%</b>. Lembre: cada token de saída custa ~5× um de entrada.';
 
   $('rpdVal').textContent=nf.format(S.rpd);
   $('fxVal').textContent=S.fx.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
