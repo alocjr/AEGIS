@@ -266,7 +266,7 @@ onMounted(async () => {
             </label>
 
             <div class="field field-full">
-              <span>Material (PDF ou link)</span>
+              <span>Material (PDF, HTML ou link)</span>
               <div class="url-upload-row">
                 <input
                   v-model="form.material_url"
@@ -279,7 +279,7 @@ onMounted(async () => {
                   <input
                     type="file"
                     class="file-input"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf"
+                    accept=".pdf,.html,.htm,.doc,.docx,.ppt,.pptx,application/pdf,text/html"
                     :disabled="uploading.material_url"
                     @change="onUpload('material_url', $event)"
                   />

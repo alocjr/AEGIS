@@ -6,6 +6,7 @@
 <title>Como os Tokens Funcionam — Tutorial Interativo · Valorian</title>
 <meta name="description" content="Tutorial interativo: escolha o system prompt, a pergunta, o arquivo anexado, o idioma e o modelo, e veja ao vivo como cada escolha muda o custo em tokens da sua IA.">
 <meta name="theme-color" content="#0A1728">
+<meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -13,12 +14,15 @@
 :root{--navy:#0A1728;--navy2:#14304F;--panel:#1B3050;--marfim:#FBF8F1;--paper:#FFFFFF;--marf2:#F1EADB;
 --gold:#C7A566;--goldd:#A9832B;--cream:#F4EFE4;--ink:#14304F;--muted:#6E6A62;--line:#E8E0CE;
 --c-sys:#9FB0C4;--c-user:#E0C97A;--c-doc:#2E6E6A;--c-out:#8A5A2B;
---navh:64px;--summh:96px;--appH:100vh;--bottomh:160px;}
+--navh:64px;--summh:96px;--appH:100vh;--bottomh:160px;color-scheme:dark;}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:var(--appH);overflow:hidden;overscroll-behavior:none;position:fixed;inset:0}
+html{background-color:#0A1728}
+html,body{height:var(--appH);overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;background-color:#0A1728}
 @supports (height:100dvh){:root{--appH:100dvh}}
-body{font-family:'Inter',system-ui,sans-serif;background:radial-gradient(ellipse at 75% 12%, var(--navy2) 0%, var(--navy) 60%);
-  color:var(--cream);-webkit-text-size-adjust:100%}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--cream);-webkit-text-size-adjust:100%}
+/* Safari ignora radial-gradient com var() e não pinta o fundo de body position:fixed — camada própria com hex. */
+body::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-color:#0A1728;
+  background-image:radial-gradient(ellipse at 75% 12%, #14304F 0%, #0A1728 60%)}
 
 /* ---------- TOPO ---------- */
 .progresswrap{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(199,165,102,.15);z-index:41}

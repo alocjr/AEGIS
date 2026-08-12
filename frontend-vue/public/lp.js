@@ -55,19 +55,38 @@
       .replace(/'/g, '&#39;');
   }
 
+  function isHtmlUrl(url) {
+    if (!url) return false;
+    var path = String(url).split('?')[0].split('#')[0].toLowerCase();
+    return path.endsWith('.html') || path.endsWith('.htm');
+  }
+
+  function renderMaterialLinks(item) {
+    var trackAttr = ' data-track-key="material:' + escapeHtml(item.id) + '"';
+    if (isHtmlUrl(item.material_url)) {
+      return (
+        '<div class="material-card-links">' +
+          '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Acessar aqui →</a>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="material-card-links">' +
+        '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Baixar material →</a>' +
+        '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.summary_url) + '" target="_blank" rel="noopener noreferrer">Resumo executivo →</a>' +
+      '</div>'
+    );
+  }
+
   function renderMaterialCard(item) {
     var audio = item.audio_url
       ? '<audio class="material-audio" controls preload="none" src="' + escapeHtml(item.audio_url) + '">Seu navegador não suporta áudio.</audio>'
       : '';
-    var trackAttr = ' data-track-key="material:' + escapeHtml(item.id) + '"';
     return (
       '<article class="material-card">' +
         '<h3 class="material-card-title">' + escapeHtml(item.title) + '</h3>' +
         '<p class="material-card-desc">' + escapeHtml(item.description) + '</p>' +
-        '<div class="material-card-links">' +
-          '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.material_url) + '" target="_blank" rel="noopener noreferrer">Baixar material →</a>' +
-          '<a class="material-link"' + trackAttr + ' href="' + escapeHtml(item.summary_url) + '" target="_blank" rel="noopener noreferrer">Resumo executivo →</a>' +
-        '</div>' +
+        renderMaterialLinks(item) +
         audio +
       '</article>'
     );

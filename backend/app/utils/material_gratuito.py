@@ -11,6 +11,8 @@ FRONTEND_VUE_PUBLIC = BASE_DIR / "frontend-vue" / "public"
 # Extensões aceitas no upload admin
 ALLOWED_EXTENSIONS = {
     ".pdf",
+    ".html",
+    ".htm",
     ".mp3",
     ".m4a",
     ".wav",
