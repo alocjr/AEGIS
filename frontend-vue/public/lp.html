@@ -726,9 +726,145 @@
       color: var(--gold-pale);
     }
 
+    /* ─── IA HUB ─── */
+    .iahub {
+      background: var(--navy-deep);
+      border-top: 1px solid rgba(184,150,46,0.1);
+    }
+
+    .iahub::before {
+      content: '';
+      position: absolute;
+      bottom: -180px;
+      left: -180px;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(184,150,46,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .hub-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: rgba(184,150,46,0.2);
+      border: 1px solid rgba(184,150,46,0.2);
+      margin-bottom: 3.5rem;
+    }
+
+    .hub-flow-item {
+      background: var(--navy-deep);
+      padding: 2rem 1.5rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+    }
+
+    .hub-flow-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hub-flow-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.2rem;
+      font-weight: 300;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 0.85rem;
+    }
+
+    .hub-flow-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ivory);
+      margin-bottom: 0.5rem;
+    }
+
+    .hub-flow-tools {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.85rem;
+    }
+
+    .hub-flow-desc {
+      font-size: 0.85rem;
+      color: var(--silver);
+      line-height: 1.6;
+    }
+
+    .hub-tools-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.25rem;
+    }
+
+    .hub-tools {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: rgba(184,150,46,0.15);
+      border: 1px solid rgba(184,150,46,0.15);
+    }
+
+    .hub-tool {
+      background: var(--navy-deep);
+      padding: 1.75rem 1.5rem;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all 0.5s ease;
+    }
+
+    .hub-tool.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hub-tool:hover {
+      background: rgba(184,150,46,0.05);
+    }
+
+    .hub-tool-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ivory);
+      margin-bottom: 0.6rem;
+    }
+
+    .hub-tool-desc {
+      font-size: 0.85rem;
+      color: var(--silver);
+      line-height: 1.6;
+    }
+
+    .hub-note {
+      margin-top: 2.5rem;
+      padding: 1.5rem 2rem;
+      border-left: 2px solid var(--gold);
+      background: rgba(184,150,46,0.04);
+      color: var(--silver);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      max-width: 760px;
+    }
+
     /* ─── PROGRAM STRUCTURE ─── */
     .structure {
       background: var(--navy-deep);
+      border-top: 1px solid rgba(184,150,46,0.1);
     }
 
     .blocks-grid {
@@ -1339,6 +1475,8 @@
       .section-inner { padding: 6rem 2.5rem; }
       .hero-right { padding: 7rem 3rem 6rem 3.5rem; }
       .valor-letters { grid-template-columns: repeat(3, 1fr); }
+      .hub-flow { grid-template-columns: repeat(2, 1fr); }
+      .hub-tools { grid-template-columns: repeat(2, 1fr); }
       .blocks-grid { grid-template-columns: repeat(2, 1fr); }
       .formats-grid { grid-template-columns: 1fr 1fr; }
       .mentor-inner { gap: 3.5rem; }
@@ -1423,6 +1561,8 @@
       }
       .cost-boxes { grid-template-columns: 1fr 1fr; }
       .valor-letters { grid-template-columns: 1fr 1fr; }
+      .hub-flow { grid-template-columns: 1fr 1fr; }
+      .hub-tools { grid-template-columns: 1fr 1fr; }
       .blocks-grid { grid-template-columns: 1fr 1fr; }
       .formats-grid { grid-template-columns: 1fr; }
       .dossie-section { grid-template-columns: 1fr; }
@@ -1454,6 +1594,9 @@
       .cost-boxes { grid-template-columns: 1fr; }
       .valor-letters { grid-template-columns: 1fr; }
       .valor-item { padding: 1.75rem 1.35rem; }
+      .hub-flow { grid-template-columns: 1fr; }
+      .hub-tools { grid-template-columns: 1fr; }
+      .hub-note { padding: 1.25rem 1.35rem; }
       .blocks-grid { grid-template-columns: 1fr; }
       .dossie-items { grid-template-columns: 1fr; }
       .mentor-name { font-size: 2.2rem; }
@@ -1621,6 +1764,77 @@
         <div class="valor-desc">Consolidação de todos os artefatos em um dossiê único, coerente e apresentável ao Conselho.</div>
         <div class="valor-deliverable">Dossiê Estratégico de IA</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- IA HUB -->
+<section class="iahub" id="iahub">
+  <div class="section-inner">
+    <div class="section-header" style="text-align:center; margin-bottom:3rem;">
+      <span class="label">O Workspace da Mentoria</span>
+      <div class="gold-divider" style="margin:1.5rem auto;"></div>
+      <h2 class="section-title display">IA Hub — ferramentas e <span class="gold">fluxo de trabalho</span></h2>
+      <p style="color:var(--silver); font-size:0.95rem; margin-top:1rem; max-width:640px; margin-left:auto; margin-right:auto; line-height:1.7;">O framework define o critério. O IA Hub é o workspace onde a organização produz os artefatos — da autoavaliação ao projeto — com rastreabilidade entre um encontro e o próximo.</p>
+    </div>
+
+    <div class="hub-flow">
+      <div class="hub-flow-item" data-reveal>
+        <div class="hub-flow-num">01</div>
+        <div class="hub-flow-title">Diagnosticar</div>
+        <div class="hub-flow-tools">Modelo de Maturidade</div>
+        <div class="hub-flow-desc">Onde a organização está nas dimensões de estratégia, dados, pessoas e governança — e o que precisa mudar para avançar.</div>
+      </div>
+      <div class="hub-flow-item" data-reveal style="transition-delay:0.1s">
+        <div class="hub-flow-num">02</div>
+        <div class="hub-flow-title">Posicionar</div>
+        <div class="hub-flow-tools">SWOT de IA + TOWS</div>
+        <div class="hub-flow-desc">O que sustenta a estratégia de IA — e o que exige fundação antes de escalar. Cruzamentos TOWS viram iniciativas.</div>
+      </div>
+      <div class="hub-flow-item" data-reveal style="transition-delay:0.2s">
+        <div class="hub-flow-num">03</div>
+        <div class="hub-flow-title">Priorizar</div>
+        <div class="hub-flow-tools">AI Canvas + OKR</div>
+        <div class="hub-flow-desc">Cada estratégia vira projeto no canvas (valor, dados, custo, riscos) e meta no ciclo de OKR.</div>
+      </div>
+      <div class="hub-flow-item" data-reveal style="transition-delay:0.3s">
+        <div class="hub-flow-num">04</div>
+        <div class="hub-flow-title">Governar</div>
+        <div class="hub-flow-tools">Mapa Estratégico + Governança</div>
+        <div class="hub-flow-desc">A árvore que liga cada projeto à evidência — e o gate de aprovação antes de ir para produção.</div>
+      </div>
+    </div>
+
+    <div class="hub-tools-label">As seis ferramentas</div>
+    <div class="hub-tools">
+      <div class="hub-tool" data-reveal>
+        <div class="hub-tool-name">Modelo de Maturidade</div>
+        <div class="hub-tool-desc">Autoavaliação organizacional em IA. Scorecards por dimensão e evidência que alimenta a SWOT.</div>
+      </div>
+      <div class="hub-tool" data-reveal style="transition-delay:0.08s">
+        <div class="hub-tool-name">SWOT de IA</div>
+        <div class="hub-tool-desc">Matriz e cruzamentos TOWS específicos de IA — não um SWOT genérico da empresa.</div>
+      </div>
+      <div class="hub-tool" data-reveal style="transition-delay:0.16s">
+        <div class="hub-tool-name">AI Canvas</div>
+        <div class="hub-tool-desc">Portfólio de oportunidades: valor, dados, custo e riscos de cada projeto de IA.</div>
+      </div>
+      <div class="hub-tool" data-reveal style="transition-delay:0.24s">
+        <div class="hub-tool-name">OKR</div>
+        <div class="hub-tool-desc">Ciclos de objetivos amarrados às estratégias que saíram da SWOT e do TOWS.</div>
+      </div>
+      <div class="hub-tool" data-reveal style="transition-delay:0.32s">
+        <div class="hub-tool-name">Mapa Estratégico</div>
+        <div class="hub-tool-desc">Rastreabilidade completa: maturidade → SWOT → TOWS → projetos e OKRs.</div>
+      </div>
+      <div class="hub-tool" data-reveal style="transition-delay:0.40s">
+        <div class="hub-tool-name">Governança de IA</div>
+        <div class="hub-tool-desc">Inventário de sistemas, classificação de risco e gates de aprovação para produção.</div>
+      </div>
+    </div>
+
+    <div class="hub-note">
+      O mentor conduz o critério nos encontros. O time continua o trabalho no mesmo workspace — os artefatos não ficam em slides soltos; evoluem de uma sessão para a outra.
     </div>
   </div>
 </section>
