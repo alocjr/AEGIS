@@ -84,14 +84,65 @@ O script simula o que o Claude faz ao adicionar um connector: discovery
 
 ## Tools (mentorado)
 
+Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
+
+### Maturidade
+
 | Tool | Descrição |
 |------|-----------|
-| `swot_get` / `swot_import` | Ler / importar SWOT de IA (`aegis.swot-ia`) |
-| `canvas_list` / `canvas_get` | Listar / ler projetos |
-| `canvas_import` / `canvas_import_into` | Importar oportunidades (lote / projeto aberto) |
-| `canvas_update` | Atualizar campos do canvas |
+| `maturity_model` | Questionário ativo |
+| `maturity_my_responses` | Lista autoavaliações |
+| `maturity_get` | Uma autoavaliação (respostas + resultado) |
+| `maturity_export` | Envelope `aegis.maturidade-ia` |
+| `maturity_save` | **Escrita** — cria/atualiza answers (1–5) e tier |
+
+### SWOT / TOWS
+
+| Tool | Descrição |
+|------|-----------|
+| `swot_get` / `swot_get_by_id` / `swot_list` / `swot_by_maturity` | Leitura |
+| `swot_import` | **Escrita** — substitui pela JSON `aegis.swot-ia` |
+| `swot_update` | **Escrita** — atualiza quadrantes, TOWS e veredito |
+| `swot_from_maturity` | **Escrita** — gera SWOT a partir da autoavaliação |
+| `tows_rebuild` | **Escrita** — recalcula FO/FA/FxO/FxA a partir dos itens com `tows=true` |
+
+### Canvas
+
+| Tool | Descrição |
+|------|-----------|
+| `canvas_list` / `canvas_get` | Leitura |
+| `canvas_create` | **Escrita** — projeto vazio |
+| `canvas_import` / `canvas_import_into` | **Escrita** — import `aegis.canvas-oportunidades` |
+| `canvas_update` | **Escrita** — campos do canvas |
+| `canvas_approve_portfolio` | **Escrita** — aprova e cria sistema no inventário |
+
+### OKR
+
+| Tool | Descrição |
+|------|-----------|
+| `okr_list` / `okr_get` / `okr_active` | Leitura |
+| `okr_create` | **Escrita** — ciclo em planejamento |
+| `okr_update` | **Escrita** — nome/período/objectives (full-replace da lista) |
+| `okr_activate` / `okr_archive` | **Escrita** — ciclo ativo único / encerrar |
+
+### Governança
+
+| Tool | Descrição |
+|------|-----------|
+| `governance_org_members` | Membros da org (RACI / aprovador) |
+| `governance_list_systems` / `governance_get_system` | Inventário |
+| `governance_create_system` / `governance_update_system` | **Escrita** — ficha do sistema |
+| `governance_create_assessment` | **Escrita** — avaliação de risco |
+| `governance_create_gate` / `governance_get_gate` | Gate go/no-go |
+| `governance_update_gate_item` | **Escrita** — item do checklist |
+| `governance_decide_gate` | **Escrita** — go / no-go / go condicional |
+
+### Outras
+
+| Tool | Descrição |
+|------|-----------|
 | `course_get` | Trilha + progresso |
-| `maturity_model` / `maturity_my_responses` | Modelo e respostas (leitura) |
+| `strategic_map` | Árvore maturidade → SWOT → TOWS → projetos |
 
 ## Tools (admin)
 

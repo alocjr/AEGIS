@@ -17,3 +17,4 @@
 - [x] T007 Tools admin (dashboard, users, progress, liberar)
 - [x] T008 Documentação `docs/mcp.md` + README
 - [x] T009 Validação manual conforme quickstart
+- [x] T010 Tools de escrita: Maturidade, SWOT/TOWS, OKR, Canvas (create/approve), Governança

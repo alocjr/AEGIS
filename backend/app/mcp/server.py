@@ -36,7 +36,13 @@ def create_mcp() -> FastMCP:
             "Servidor MCP da plataforma Valorian 4 Future (AEGIS). "
             "Conecte via Claude Connectors (OAuth: login Valorian no browser) "
             "ou Authorization: Bearer com JWT/OAuth token. "
-            "Tools de mentorado exigem email verificado; tools admin_* exigem is_admin."
+            "Tools de mentorado exigem email verificado e a ferramenta do AI Hub "
+            "liberada na conta (maturidade, SWOT/TOWS, OKR, canvas, governança). "
+            "Tools admin_* exigem is_admin. "
+            "Escrita: maturity_save; swot_update / swot_import / swot_from_maturity / tows_rebuild; "
+            "okr_create / okr_update / okr_activate; canvas_create / canvas_update / canvas_import; "
+            "governance_create_system / governance_update_system / governance_create_assessment / "
+            "governance_create_gate / governance_decide_gate."
         ),
         auth=auth,
     )

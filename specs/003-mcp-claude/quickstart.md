@@ -30,8 +30,11 @@ cp mcp-client/claude-code.mcp.json.example .mcp.json
 
 ## 3. Fluxos
 
-1. Mentorado: prompt `swot_gerar_json` → gerar JSON → tool `swot_import`
+1. Mentorado: prompt `swot_gerar_json` → gerar JSON → tool `swot_import` (ou `swot_update` / `tows_rebuild`)
 2. Mentorado: prompt `canvas_gerar_json` → `canvas_import`
-3. Admin: `admin_dashboard` / `admin_liberar_encontro`
-4. Token aluno em `admin_dashboard` → erro de permissão
-5. `GET /api/health` continua `ok`
+3. Mentorado: `maturity_save` com answers 1–5 → `swot_from_maturity`
+4. Mentorado: `okr_create` → `okr_update` (objectives) → `okr_activate`
+5. Mentorado: `governance_create_system` → `governance_create_assessment` → `governance_create_gate`
+6. Admin: `admin_dashboard` / `admin_liberar_encontro`
+7. Token aluno em `admin_dashboard` → erro de permissão
+8. `GET /api/health` continua `ok`
