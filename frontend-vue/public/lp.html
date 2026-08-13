@@ -834,7 +834,11 @@
       background: rgba(184,150,46,0.05);
     }
 
-    .hub-tool:hover .hub-shot-body {
+    .hub-tool:hover .hub-shot-body:not(.hub-shot-photo) {
+      transform: scale(1.03);
+    }
+
+    .hub-tool:hover .hub-shot-photo img {
       transform: scale(1.03);
     }
 
@@ -844,7 +848,7 @@
       border-radius: 6px;
       overflow: hidden;
       margin-bottom: 1.1rem;
-      aspect-ratio: 16 / 10.5;
+      aspect-ratio: 4 / 3;
       pointer-events: none;
       user-select: none;
     }
@@ -878,6 +882,20 @@
       transition: transform 0.4s ease;
     }
 
+    .hub-shot-photo {
+      padding: 0;
+    }
+
+    .hub-shot-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      transform-origin: center top;
+      transition: transform 0.4s ease;
+    }
+
     .shot-kicker {
       font-size: 7px;
       letter-spacing: 0.14em;
@@ -894,257 +912,6 @@
       line-height: 1.15;
       color: #0c2340;
     }
-
-    .shot-pill {
-      display: inline-block;
-      margin-top: 4px;
-      padding: 1px 6px;
-      border: 1px solid rgba(155,126,70,0.35);
-      background: rgba(155,126,70,0.1);
-      font-size: 7px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #9b7e46;
-      font-weight: 600;
-    }
-
-    /* Maturidade */
-    .shot-mat-top {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 7px;
-    }
-
-    .shot-ring {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: conic-gradient(#9b7e46 0 224deg, #e2e2e7 224deg);
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-    }
-
-    .shot-ring span {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      background: #f8f8f6;
-      display: grid;
-      place-items: center;
-      font-size: 8px;
-      font-weight: 700;
-      color: #0c2340;
-    }
-
-    .shot-bars { display: flex; flex-direction: column; gap: 4px; }
-
-    .shot-bar {
-      display: grid;
-      grid-template-columns: 62px 1fr;
-      align-items: center;
-      gap: 5px;
-      font-size: 7px;
-      color: #505050;
-    }
-
-    .shot-bar i {
-      display: block;
-      height: 4px;
-      background: linear-gradient(90deg, #0c2340, #9b7e46);
-      border-radius: 2px;
-    }
-
-    .shot-bar em {
-      display: block;
-      height: 4px;
-      background: #e2e2e7;
-      border-radius: 2px;
-    }
-
-    /* SWOT */
-    .shot-swot {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      height: 100%;
-    }
-
-    .shot-q {
-      background: #fff;
-      border: 1px solid #e0dbd2;
-      border-top: 2px solid #9b7e46;
-      padding: 5px 6px;
-      min-height: 0;
-    }
-
-    .shot-q.neg { border-top-color: #8b3a32; }
-
-    .shot-q b {
-      display: block;
-      font-size: 8px;
-      font-family: 'Palatino Linotype', Palatino, Georgia, serif;
-      margin-bottom: 3px;
-    }
-
-    .shot-q.neg b { color: #8b3a32; }
-
-    .shot-q span {
-      display: block;
-      font-size: 6.5px;
-      color: #505050;
-      line-height: 1.35;
-      padding-left: 6px;
-      position: relative;
-      margin-bottom: 2px;
-    }
-
-    .shot-q span::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 4px;
-      width: 3px;
-      height: 3px;
-      background: #9b7e46;
-      transform: rotate(45deg);
-    }
-
-    .shot-q.neg span::before { background: #8b3a32; }
-
-    /* Canvas */
-    .shot-can-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      height: calc(100% - 22px);
-    }
-
-    .shot-can-cell {
-      border-radius: 4px;
-      padding: 5px 6px;
-      font-size: 7px;
-      line-height: 1.3;
-      border: 1px solid #d8d2c6;
-      color: #3c525f;
-    }
-
-    .shot-can-cell b {
-      display: block;
-      font-size: 8px;
-      margin-bottom: 1px;
-    }
-
-    .shot-can-cell.go { background: #e1ebe9; border-color: #2f6e6a; color: #2f6e6a; }
-    .shot-can-cell.bet { background: #f3e7cc; }
-    .shot-can-cell.avoid { background: #f6e8e5; color: #9c3b2e; }
-    .shot-can-cell.inc { background: #e4ecee; }
-
-    /* OKR */
-    .shot-okr-card {
-      background: #fff;
-      border: 1px solid #e0dbd2;
-      border-left: 3px solid #9b7e46;
-      padding: 6px 7px;
-      margin-bottom: 5px;
-    }
-
-    .shot-okr-card strong {
-      display: block;
-      font-size: 8px;
-      margin-bottom: 4px;
-    }
-
-    .shot-kr {
-      display: grid;
-      grid-template-columns: 1fr 36px 22px;
-      gap: 4px;
-      align-items: center;
-      font-size: 6.5px;
-      color: #505050;
-      margin-top: 3px;
-    }
-
-    .shot-kr i {
-      display: block;
-      height: 3px;
-      background: #e2e2e7;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .shot-kr i::after {
-      content: '';
-      display: block;
-      height: 100%;
-      background: #9b7e46;
-      width: var(--p, 50%);
-    }
-
-    .shot-kr b { font-size: 7px; color: #0c2340; text-align: right; }
-
-    /* Mapa */
-    .shot-root {
-      background: #0c2340;
-      color: #fff;
-      border-radius: 4px;
-      padding: 5px 7px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-
-    .shot-root span {
-      font-size: 6px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      background: rgba(255,255,255,0.14);
-      padding: 1px 5px;
-      border-radius: 8px;
-    }
-
-    .shot-root b {
-      font-family: 'Palatino Linotype', Palatino, Georgia, serif;
-      font-size: 8px;
-      font-weight: 500;
-    }
-
-    .shot-tree { padding-left: 8px; border-left: 1px solid #e2e2e7; }
-
-    .shot-node {
-      font-size: 7px;
-      color: #0c2340;
-      padding: 2px 0 2px 8px;
-      position: relative;
-    }
-
-    .shot-node::before {
-      content: '';
-      position: absolute;
-      left: -8px;
-      top: 8px;
-      width: 8px;
-      height: 1px;
-      background: #e2e2e7;
-    }
-
-    .shot-tag {
-      display: inline-block;
-      font-size: 6px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 0 4px;
-      border-radius: 6px;
-      margin-right: 4px;
-      background: rgba(155,126,70,0.12);
-      color: #9b7e46;
-      font-weight: 600;
-    }
-
-    .shot-tag.sw { background: #e8f8ee; color: #1e8a4f; }
-    .shot-tag.pr { background: #e4ecee; color: #3d6fa8; }
 
     /* Governança */
     .shot-table {
@@ -2160,110 +1927,50 @@
     <div class="hub-tools-label">As seis ferramentas</div>
     <div class="hub-tools">
       <div class="hub-tool" data-reveal>
-        <div class="hub-shot" aria-hidden="true">
+        <div class="hub-shot">
           <div class="hub-shot-bar"><i></i><i></i><i></i></div>
-          <div class="hub-shot-body">
-            <div class="shot-mat-top">
-              <div class="shot-ring"><span>62%</span></div>
-              <div>
-                <div class="shot-kicker">Resultado · Maturidade em IA</div>
-                <div class="shot-h">Diagnóstico de Maturidade</div>
-                <div class="shot-pill">Prontidão</div>
-              </div>
-            </div>
-            <div class="shot-bars">
-              <div class="shot-bar">Estratégia <em><i style="width:72%"></i></em></div>
-              <div class="shot-bar">Dados <em><i style="width:58%"></i></em></div>
-              <div class="shot-bar">Pessoas <em><i style="width:64%"></i></em></div>
-              <div class="shot-bar">Governança <em><i style="width:41%"></i></em></div>
-            </div>
+          <div class="hub-shot-body hub-shot-photo">
+            <img src="/assets/hub-maturity.jpg" alt="Diagnóstico de Maturidade em IA" width="1024" height="933" loading="lazy" decoding="async">
           </div>
         </div>
         <div class="hub-tool-name">Modelo de Maturidade</div>
         <div class="hub-tool-desc">Autoavaliação organizacional em IA. Scorecards por dimensão e evidência que alimenta a SWOT.</div>
       </div>
       <div class="hub-tool" data-reveal style="transition-delay:0.08s">
-        <div class="hub-shot" aria-hidden="true">
+        <div class="hub-shot">
           <div class="hub-shot-bar"><i></i><i></i><i></i></div>
-          <div class="hub-shot-body">
-            <div class="shot-swot">
-              <div class="shot-q">
-                <b>F · Forças</b>
-                <span>Visão de IA ligada a OKRs</span>
-                <span>Base proprietária integrada</span>
-              </div>
-              <div class="shot-q">
-                <b>O · Oportunidades</b>
-                <span>Modelos mais baratos e maduros</span>
-                <span>Novos modelos de receita</span>
-              </div>
-              <div class="shot-q neg">
-                <b>f · Fraquezas</b>
-                <span>Pilotos sem escala nem dono</span>
-                <span>Dados em silos</span>
-              </div>
-              <div class="shot-q neg">
-                <b>A · Ameaças</b>
-                <span>Concorrentes mais rápidos</span>
-                <span>Pressão regulatória</span>
-              </div>
-            </div>
+          <div class="hub-shot-body hub-shot-photo">
+            <img src="/assets/hub-swot.jpg" alt="SWOT de IA" width="1024" height="933" loading="lazy" decoding="async">
           </div>
         </div>
         <div class="hub-tool-name">SWOT de IA</div>
         <div class="hub-tool-desc">Matriz e cruzamentos TOWS específicos de IA — não um SWOT genérico da empresa.</div>
       </div>
       <div class="hub-tool" data-reveal style="transition-delay:0.16s">
-        <div class="hub-shot" aria-hidden="true">
+        <div class="hub-shot">
           <div class="hub-shot-bar"><i></i><i></i><i></i></div>
-          <div class="hub-shot-body">
-            <div class="shot-kicker">Canvas de oportunidades</div>
-            <div class="shot-h" style="margin-bottom:6px;">Priorização de portfólio</div>
-            <div class="shot-can-grid">
-              <div class="shot-can-cell bet"><b>Aposta estratégica</b>Alto valor · baixa viab.</div>
-              <div class="shot-can-cell go"><b>Ganho rápido</b>Alto valor · alta viab.</div>
-              <div class="shot-can-cell avoid"><b>Evitar · vaidade</b>Baixo valor · baixa viab.</div>
-              <div class="shot-can-cell inc"><b>Incremental</b>Baixo valor · alta viab.</div>
-            </div>
+          <div class="hub-shot-body hub-shot-photo">
+            <img src="/assets/hub-canvas.jpg" alt="Canvas de oportunidades" width="1024" height="933" loading="lazy" decoding="async">
           </div>
         </div>
         <div class="hub-tool-name">AI Canvas</div>
         <div class="hub-tool-desc">Portfólio de oportunidades: valor, dados, custo e riscos de cada projeto de IA.</div>
       </div>
       <div class="hub-tool" data-reveal style="transition-delay:0.24s">
-        <div class="hub-shot" aria-hidden="true">
+        <div class="hub-shot">
           <div class="hub-shot-bar"><i></i><i></i><i></i></div>
-          <div class="hub-shot-body">
-            <div class="shot-kicker">Ciclo ativo · Q3 2026</div>
-            <div class="shot-h" style="margin-bottom:6px;">OKRs ligados à SWOT</div>
-            <div class="shot-okr-card">
-              <strong>Escalar IA no core do negócio</strong>
-              <div class="shot-kr">Casos em produção<i style="--p:72%"></i><b>72%</b></div>
-              <div class="shot-kr">Iniciativas TOWS<i style="--p:45%"></i><b>3/8</b></div>
-            </div>
-            <div class="shot-okr-card">
-              <strong>Fundar governança de dados</strong>
-              <div class="shot-kr">Política publicada<i style="--p:38%"></i><b>38%</b></div>
-            </div>
+          <div class="hub-shot-body hub-shot-photo">
+            <img src="/assets/hub-okr.jpg" alt="OKR — Da Prontidão à Escala" width="1024" height="933" loading="lazy" decoding="async">
           </div>
         </div>
         <div class="hub-tool-name">OKR</div>
         <div class="hub-tool-desc">Ciclos de objetivos amarrados às estratégias que saíram da SWOT e do TOWS.</div>
       </div>
       <div class="hub-tool" data-reveal style="transition-delay:0.32s">
-        <div class="hub-shot" aria-hidden="true">
+        <div class="hub-shot">
           <div class="hub-shot-bar"><i></i><i></i><i></i></div>
-          <div class="hub-shot-body">
-            <div class="shot-root">
-              <span>Maturidade</span>
-              <b>Diagnóstico de Maturidade em IA</b>
-            </div>
-            <div class="shot-tree">
-              <div class="shot-node"><span class="shot-tag">EV</span>Estratégia e Visão</div>
-              <div class="shot-node"><span class="shot-tag sw">SWOT</span>Visão ligada a OKRs</div>
-              <div class="shot-node"><span class="shot-tag">TOWS</span>Priorizar 3 casos com ROI</div>
-              <div class="shot-node"><span class="shot-tag pr">Projeto</span>Canvas · Ganho rápido</div>
-            </div>
+          <div class="hub-shot-body hub-shot-photo">
+            <img src="/assets/hub-mapa.jpg" alt="Mapa Estratégico" width="1024" height="933" loading="lazy" decoding="async">
           </div>
         </div>
         <div class="hub-tool-name">Mapa Estratégico</div>
