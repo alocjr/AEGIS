@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -224,6 +224,12 @@ def tutorial_tokens_agentes_js():
     return _public_static_file("tutorial-tokens-agentes.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/401.png")
+def unauthorized_png():
+    """Ilustração da página HTTP 401 (public/401.png → dist/401.png no build)."""
+    return _public_static_file("401.png", "image/png")
+
+
 @app.get("/robots.txt")
 def robots_txt():
     return _public_static_file("robots.txt", "text/plain; charset=utf-8")
@@ -341,6 +347,10 @@ if USE_VUE_UI:
     def login_page():
         return _vue_index()
 
+    @app.get("/401")
+    def unauthorized_page():
+        return _vue_index()
+
     @app.get("/quiz/{encontro_id:int}")
     def quiz_page(encontro_id: int):
         return _vue_index()
@@ -387,3 +397,25 @@ else:
         def login_no_vue():
             """Sem Vue UI: redireciona para a landing; o login exige o app Vue."""
             return RedirectResponse(url="/", status_code=302)
+
+        @app.get("/401")
+        def unauthorized_no_vue():
+            """Sem Vue UI: página 401 só com a ilustração."""
+            return HTMLResponse(
+                """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acesso não autorizado · Valorian 4 Future</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #0c1827; }
+    img { display: block; width: 100%; max-height: 100vh; object-fit: contain; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <img src="/401.png" alt="Erro HTTP 401 — Acesso não autorizado">
+</body>
+</html>""",
+                headers=NO_CACHE_HEADERS,
+            )

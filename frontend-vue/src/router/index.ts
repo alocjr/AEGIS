@@ -78,6 +78,12 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/401',
+    name: 'Unauthorized',
+    component: () => import('@/views/UnauthorizedView.vue'),
+    meta: { title: 'Acesso não autorizado' },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/LoginView.vue'),
@@ -116,7 +122,11 @@ router.beforeEach(async (to, _from, next) => {
 
   const isAdminRoute = to.path === adminPathPrefix || to.path.startsWith(adminPathPrefix + '/')
   if (isAdminRoute) {
-    if (!auth.isLoggedIn || !auth.isAdmin) {
+    if (!auth.isLoggedIn) {
+      next({ name: 'Unauthorized' })
+      return
+    }
+    if (!auth.isAdmin) {
       next('/')
       return
     }
@@ -124,7 +134,11 @@ router.beforeEach(async (to, _from, next) => {
 
   const isOrgAdminRoute = to.path === orgAdminPathPrefix || to.path.startsWith(orgAdminPathPrefix + '/')
   if (isOrgAdminRoute) {
-    if (!auth.isLoggedIn || !(auth.isOrgAdmin || auth.isAdmin)) {
+    if (!auth.isLoggedIn) {
+      next({ name: 'Unauthorized' })
+      return
+    }
+    if (!(auth.isOrgAdmin || auth.isAdmin)) {
       next('/')
       return
     }
@@ -142,7 +156,7 @@ router.beforeEach(async (to, _from, next) => {
       to.path.startsWith('/organizacao')
   )
   if (isProtected && !auth.isLoggedIn) {
-    next('/')
+    next({ name: 'Unauthorized' })
     return
   }
   if (isProtected && auth.user?.email_verified === false) {

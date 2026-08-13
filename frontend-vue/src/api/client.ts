@@ -6,19 +6,24 @@
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? ''
 
+/** Rotas em que 401 é esperado (sonda de sessão, login inválido) — não redirecionam. */
+const AUTH_PROBE_PATHS = new Set(['/api/auth/me', '/api/auth/login', '/api/auth/logout'])
+
 /** Erro de API — `code` vem preenchido quando o backend usa o formato
  * `detail: { code, message }` (erros de validação de negócio com código estável). */
 export class ApiError extends Error {
   code?: string
+  status?: number
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, status?: number) {
     super(message)
     this.name = 'ApiError'
     this.code = code
+    this.status = status
   }
 }
 
-function parseErrorBody(text: string, fallback: string): ApiError {
+function parseErrorBody(text: string, fallback: string, status?: number): ApiError {
   try {
     const json = JSON.parse(text) as {
       detail?: string | unknown[] | { code?: string; message?: string }
@@ -26,16 +31,51 @@ function parseErrorBody(text: string, fallback: string): ApiError {
     const detail = json.detail
     if (Array.isArray(detail)) {
       const message = detail.map((d: unknown) => (d as { msg?: string }).msg ?? String(d)).join(', ')
-      return new ApiError(message || fallback)
+      return new ApiError(message || fallback, undefined, status)
     }
     if (detail && typeof detail === 'object') {
       const d = detail as { code?: string; message?: string }
-      return new ApiError(d.message || fallback, d.code)
+      return new ApiError(d.message || fallback, d.code, status)
     }
-    return new ApiError((detail as string) || fallback)
+    return new ApiError((detail as string) || fallback, undefined, status)
   } catch {
-    return new ApiError(text || fallback)
+    return new ApiError(text || fallback, undefined, status)
   }
+}
+
+function requestPathname(url: string): string {
+  if (url.startsWith('http')) {
+    try {
+      return new URL(url).pathname
+    } catch {
+      return url
+    }
+  }
+  return url.split('?')[0] ?? url
+}
+
+function shouldRedirectToUnauthorized(url: string): boolean {
+  return !AUTH_PROBE_PATHS.has(requestPathname(url))
+}
+
+async function redirectToUnauthorizedPage(): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (window.location.pathname === '/401') return
+  try {
+    await fetch(`${baseURL}/api/auth/logout`, { method: 'POST', credentials: 'include' })
+  } catch {
+    // Cookie inválido ou rede; a navegação para /401 segue mesmo assim.
+  }
+  window.location.assign('/401')
+}
+
+async function throwIfNotOk(res: Response, url: string): Promise<void> {
+  if (res.ok) return
+  const text = await res.text()
+  if (res.status === 401 && shouldRedirectToUnauthorized(url)) {
+    await redirectToUnauthorizedPage()
+  }
+  throw parseErrorBody(text, res.statusText, res.status)
 }
 
 export async function apiRequest<T>(
@@ -51,10 +91,7 @@ export async function apiRequest<T>(
     },
     credentials: 'include',
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw parseErrorBody(text, res.statusText)
-  }
+  await throwIfNotOk(res, url)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
@@ -71,10 +108,7 @@ export async function postFormData<T>(path: string, formData: FormData): Promise
     body: formData,
     credentials: 'include',
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw parseErrorBody(text, res.statusText)
-  }
+  await throwIfNotOk(res, url)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
