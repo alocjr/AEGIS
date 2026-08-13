@@ -35,8 +35,12 @@ Cada tool de ferramenta exige o id correspondente em `users.tools` (`maturity`, 
 | `okr_list` | — | `{ items }` |
 | `okr_get` | `cycle_id` | cycle |
 | `okr_active` | — | active cycle |
-| `okr_create` | `ano`, `tipo?`, `trimestre?`, `nome?` | cycle |
-| `okr_update` | `cycle_id`, `fields` | cycle |
+| `okr_create` | `ano`, `tipo?`, `trimestre?`, `nome?`, `objectives?` | cycle |
+| `okr_update` | `cycle_id`, `fields` | cycle (full-replace se `objectives`) |
+| `okr_create_objective` | `objective`, `cycle_id?` | cycle (default: ativo) |
+| `okr_update_objective` | `objective_id`, `fields`, `cycle_id?` | cycle |
+| `okr_create_key_result` | `objective_id`, `key_result`, `cycle_id?` | cycle |
+| `okr_update_key_result` | `objective_id`, `kr_id`, `fields`, `cycle_id?` | cycle |
 | `okr_activate` | `cycle_id` | cycle |
 | `okr_archive` | `cycle_id` | cycle |
 | `governance_org_members` | — | `{ items }` |

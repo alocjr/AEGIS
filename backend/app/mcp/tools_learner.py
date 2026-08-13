@@ -17,7 +17,7 @@ from app.governance.schemas import (
     RiskAssessmentCreateRequest,
 )
 from app.mcp.auth import require_tool_access, require_verified_user
-from app.mcp.util import call_route, parse_json_object, validate_model
+from app.mcp.util import call_route, parse_json_list, parse_json_object, validate_model
 from app.routes import canvas_projects as canvas_routes
 from app.routes import course as course_routes
 from app.routes import governance as gov_routes
@@ -57,6 +57,60 @@ def _org_id(user: dict):
     if not org_id:
         raise ToolError("Usuario sem organizacao atribuida. Contate o suporte.")
     return org_id
+
+
+_OBJ_KEYS = (
+    "id",
+    "titulo",
+    "descricao",
+    "dono",
+    "pilar",
+    "swot_id",
+    "swot_item_ids",
+    "tows_ids",
+    "key_results",
+)
+_KR_KEYS = (
+    "id",
+    "titulo",
+    "descricao",
+    "unidade",
+    "baseline",
+    "current",
+    "target",
+    "direction",
+    "dono",
+)
+
+
+def _strip_kr(kr: dict) -> dict:
+    return {k: kr[k] for k in _KR_KEYS if k in kr}
+
+
+def _strip_objective(obj: dict) -> dict:
+    out = {k: obj[k] for k in _OBJ_KEYS if k in obj and k != "key_results"}
+    out["key_results"] = [_strip_kr(kr) for kr in (obj.get("key_results") or []) if isinstance(kr, dict)]
+    return out
+
+
+def _cycle_objectives(cycle: dict) -> list[dict]:
+    return [_strip_objective(o) for o in (cycle.get("objectives") or []) if isinstance(o, dict)]
+
+
+def _find_objective(objectives: list[dict], objective_id: str) -> tuple[int, dict]:
+    oid = (objective_id or "").strip()
+    for i, obj in enumerate(objectives):
+        if str(obj.get("id") or "") == oid:
+            return i, obj
+    raise ToolError(f"Objective '{oid}' nao encontrado neste ciclo.")
+
+
+def _find_kr(key_results: list[dict], kr_id: str) -> tuple[int, dict]:
+    kid = (kr_id or "").strip()
+    for i, kr in enumerate(key_results):
+        if str(kr.get("id") or "") == kid:
+            return i, kr
+    raise ToolError(f"Key Result '{kid}' nao encontrado neste objective.")
 
 
 def register_learner_tools(mcp) -> None:
@@ -395,14 +449,41 @@ def register_learner_tools(mcp) -> None:
             db=get_db(),
         )
 
+    def _okr_load(user: dict, cycle_id: str | None) -> tuple[str, dict]:
+        org_id = _org_id(user)
+        db = get_db()
+        if cycle_id:
+            cycle = call_route(
+                okr_routes.get_cycle, cycle_id=cycle_id, user=user, org_id=org_id, db=db
+            )
+            return cycle_id, cycle
+        cycle = call_route(okr_routes.get_active_cycle, user=user, org_id=org_id, db=db)
+        return str(cycle["id"]), cycle
+
+    def _okr_put_objectives(user: dict, cycle_id: str, objectives: list[dict]) -> dict:
+        body = validate_model(OkrCycleUpdateRequest, {"objectives": objectives})
+        return call_route(
+            okr_routes.update_cycle,
+            cycle_id=cycle_id,
+            body=body,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+
     @mcp.tool
     def okr_create(
         ano: int,
         tipo: str = "trimestre",
         trimestre: int | None = None,
         nome: str | None = None,
+        objectives: list[dict[str, Any]] | str | None = None,
     ) -> dict:
-        """Cria um ciclo OKR vazio em planejamento (não altera o ciclo ativo)."""
+        """Cria um ciclo OKR em planejamento. Opcional: já incluir objectives (com key_results).
+
+        Cada objective: titulo, descricao?, dono?, pilar?, swot_id?, swot_item_ids?, tows_ids?,
+        key_results? (titulo, unidade?, baseline?, current?, target?, direction?, dono?).
+        """
         user = _okr_user()
         payload: dict[str, Any] = {"ano": ano, "tipo": tipo}
         if trimestre is not None:
@@ -410,17 +491,21 @@ def register_learner_tools(mcp) -> None:
         if nome is not None:
             payload["nome"] = nome
         body = validate_model(OkrCycleCreateRequest, payload)
-        return call_route(
+        created = call_route(
             okr_routes.create_cycle, body=body, user=user, org_id=_org_id(user), db=get_db()
         )
+        if objectives is None:
+            return created
+        raw = parse_json_list(objectives, label="objectives")
+        return _okr_put_objectives(user, str(created["id"]), raw)
 
     @mcp.tool
     def okr_update(cycle_id: str, fields: dict[str, Any] | str) -> dict:
-        """Atualiza um ciclo OKR. Informe objectives para substituir a lista (full-replace).
+        """Atualiza metadados do ciclo. Se enviar `objectives`, substitui a lista inteira.
 
-        Campos: nome, tipo, ano, trimestre, objectives (cada um com titulo, descricao, dono,
-        pilar, swot_id, swot_item_ids, tows_ids, key_results).
-        Status só muda via okr_activate / okr_archive.
+        Para criar/editar um Objective ou KR sem apagar os outros, use okr_create_objective,
+        okr_update_objective, okr_create_key_result ou okr_update_key_result.
+        Campos de ciclo: nome, tipo, ano, trimestre.
         """
         user = _okr_user()
         raw = parse_json_object(fields, label="fields")
@@ -433,6 +518,88 @@ def register_learner_tools(mcp) -> None:
             org_id=_org_id(user),
             db=get_db(),
         )
+
+    @mcp.tool
+    def okr_create_objective(
+        objective: dict[str, Any] | str,
+        cycle_id: str | None = None,
+    ) -> dict:
+        """Cria um Objective (e KRs opcionais) no ciclo. Sem cycle_id, usa o ciclo ativo."""
+        user = _okr_user()
+        cid, cycle = _okr_load(user, cycle_id)
+        objectives = _cycle_objectives(cycle)
+        if len(objectives) >= 20:
+            raise ToolError("Limite de 20 objectives por ciclo.")
+        objectives.append(parse_json_object(objective, label="objective"))
+        return _okr_put_objectives(user, cid, objectives)
+
+    @mcp.tool
+    def okr_update_objective(
+        objective_id: str,
+        fields: dict[str, Any] | str,
+        cycle_id: str | None = None,
+    ) -> dict:
+        """Atualiza um Objective existente (merge). Sem cycle_id, usa o ciclo ativo.
+
+        Campos: titulo, descricao, dono, pilar, swot_id, swot_item_ids, tows_ids.
+        Se enviar key_results, substitui só os KRs deste objective.
+        """
+        user = _okr_user()
+        cid, cycle = _okr_load(user, cycle_id)
+        objectives = _cycle_objectives(cycle)
+        idx, current = _find_objective(objectives, objective_id)
+        patch = parse_json_object(fields, label="fields")
+        patch.pop("id", None)
+        if "key_results" in patch:
+            krs = patch["key_results"]
+            if not isinstance(krs, list):
+                raise ToolError("key_results deve ser um array.")
+            current["key_results"] = [_strip_kr(kr) if isinstance(kr, dict) else kr for kr in krs]
+            patch = {k: v for k, v in patch.items() if k != "key_results"}
+        current.update({k: v for k, v in patch.items() if k in _OBJ_KEYS})
+        objectives[idx] = current
+        return _okr_put_objectives(user, cid, objectives)
+
+    @mcp.tool
+    def okr_create_key_result(
+        objective_id: str,
+        key_result: dict[str, Any] | str,
+        cycle_id: str | None = None,
+    ) -> dict:
+        """Cria um Key Result em um Objective. Sem cycle_id, usa o ciclo ativo."""
+        user = _okr_user()
+        cid, cycle = _okr_load(user, cycle_id)
+        objectives = _cycle_objectives(cycle)
+        idx, obj = _find_objective(objectives, objective_id)
+        krs = list(obj.get("key_results") or [])
+        if len(krs) >= 20:
+            raise ToolError("Limite de 20 key results por objective.")
+        krs.append(parse_json_object(key_result, label="key_result"))
+        obj["key_results"] = krs
+        objectives[idx] = obj
+        return _okr_put_objectives(user, cid, objectives)
+
+    @mcp.tool
+    def okr_update_key_result(
+        objective_id: str,
+        kr_id: str,
+        fields: dict[str, Any] | str,
+        cycle_id: str | None = None,
+    ) -> dict:
+        """Atualiza um Key Result (merge: current, target, titulo…). Sem cycle_id, usa o ciclo ativo."""
+        user = _okr_user()
+        cid, cycle = _okr_load(user, cycle_id)
+        objectives = _cycle_objectives(cycle)
+        obj_idx, obj = _find_objective(objectives, objective_id)
+        krs = list(obj.get("key_results") or [])
+        kr_idx, kr = _find_kr(krs, kr_id)
+        patch = parse_json_object(fields, label="fields")
+        patch.pop("id", None)
+        kr.update({k: v for k, v in patch.items() if k in _KR_KEYS})
+        krs[kr_idx] = kr
+        obj["key_results"] = krs
+        objectives[obj_idx] = obj
+        return _okr_put_objectives(user, cid, objectives)
 
     @mcp.tool
     def okr_activate(cycle_id: str) -> dict:

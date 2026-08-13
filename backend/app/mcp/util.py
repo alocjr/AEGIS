@@ -43,6 +43,18 @@ def parse_json_object(value: Any, *, label: str = "document") -> dict:
     return value
 
 
+def parse_json_list(value: Any, *, label: str = "items") -> list:
+    """Aceita list ou string JSON; exige array."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ToolError(f"{label} nao e JSON valido: {exc}") from exc
+    if not isinstance(value, list):
+        raise ToolError(f"{label} deve ser um array JSON.")
+    return value
+
+
 def validate_model(model_cls, data: dict):
     try:
         return model_cls.model_validate(data)

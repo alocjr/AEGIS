@@ -121,8 +121,12 @@ Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
 | Tool | Descrição |
 |------|-----------|
 | `okr_list` / `okr_get` / `okr_active` | Leitura |
-| `okr_create` | **Escrita** — ciclo em planejamento |
-| `okr_update` | **Escrita** — nome/período/objectives (full-replace da lista) |
+| `okr_create` | **Escrita** — ciclo (opcionalmente já com objectives) |
+| `okr_create_objective` | **Escrita** — adiciona um Objective (e KRs) sem apagar os outros |
+| `okr_update_objective` | **Escrita** — atualiza um Objective por id (merge) |
+| `okr_create_key_result` | **Escrita** — adiciona um Key Result a um Objective |
+| `okr_update_key_result` | **Escrita** — atualiza um Key Result (current, target, título…) |
+| `okr_update` | **Escrita** — metadados do ciclo; `objectives` substitui a lista inteira |
 | `okr_activate` / `okr_archive` | **Escrita** — ciclo ativo único / encerrar |
 
 ### Governança
