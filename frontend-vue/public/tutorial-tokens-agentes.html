@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tokens em Agentes — Tutorial Interativo · Valorian</title>
+<meta name="description" content="Tutorial interativo: veja ao vivo como o ciclo ReAct de um agente e a orquestração de sistemas multiagentes multiplicam o consumo de tokens — e o custo — da sua IA.">
+<meta name="theme-color" content="#0A1728">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A1728;--navy2:#14304F;--panel:#1B3050;--marfim:#FBF8F1;--paper:#FFFFFF;--marf2:#F1EADB;
+--gold:#C7A566;--goldd:#A9832B;--cream:#F4EFE4;--ink:#14304F;--muted:#6E6A62;--line:#E8E0CE;
+--c-sys:#9FB0C4;--c-user:#E0C97A;--c-doc:#2E6E6A;--c-out:#8A5A2B;--c-orc:#3E6AA5;--c-sub:#6E4F9E;
+--navh:64px;--summh:96px;--appH:100vh;--bottomh:160px;color-scheme:dark;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background-color:#0A1728}
+html,body{height:var(--appH);overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;background-color:#0A1728}
+@supports (height:100dvh){:root{--appH:100dvh}}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--cream);-webkit-text-size-adjust:100%}
+/* Safari ignora radial-gradient com var() e não pinta o fundo de body position:fixed — camada própria com hex. */
+body::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-color:#0A1728;
+  background-image:radial-gradient(ellipse at 75% 12%, #14304F 0%, #0A1728 60%)}
+
+.progresswrap{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(199,165,102,.15);z-index:41}
+.progressbar{height:100%;background:var(--gold);width:10%;transition:width .35s ease}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:12px 16px;background:linear-gradient(180deg, rgba(10,23,40,.96), rgba(10,23,40,.75) 70%, rgba(10,23,40,0))}
+.brand{font-weight:700;letter-spacing:4px;color:var(--gold);font-size:11px}
+.topright{display:flex;align-items:center;gap:12px}
+.stepno{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:11px;color:#8ca0bd}
+.skip{background:none;border:none;color:#8ca0bd;font-size:11.5px;cursor:pointer;font-family:'Inter'}
+
+.bottomstack{position:fixed;left:0;top:0;width:100%;height:var(--appH);z-index:40;
+  display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none}
+.bottomstack > *{pointer-events:auto}
+.summary{position:relative;z-index:38;
+  background:rgba(20,38,66,.96);border-top:1px solid rgba(199,165,102,.3);
+  padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px));transition:opacity .3s}
+.sumtop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.sumtitle{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:#8ca0bd;font-weight:700}
+.sumcost{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-weight:700;font-size:14px;color:var(--gold);white-space:nowrap}
+.sumcost small{display:block;font-family:'Inter';font-size:9px;color:#8ca0bd;font-weight:600;letter-spacing:.4px;text-align:right;margin-top:1px}
+.sumbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.08);margin-bottom:8px}
+.sumbar span{height:100%;transition:width .3s ease}
+.sumitems{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sumit{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sumit .sl{display:flex;align-items:center;gap:4px;font-size:9.5px;color:#9fb0c4;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumit .sdot{width:7px;height:7px;border-radius:2px;flex:none}
+.sumit .sv{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:12px;font-weight:700;color:var(--cream)}
+.sumit .sp{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:9.5px;color:var(--gold)}
+.summary.hide{opacity:0;pointer-events:none}
+.sumcompare{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(199,165,102,.25);display:none;flex-direction:column;gap:4px}
+.sumcompare .sccmp{display:flex;align-items:center;gap:6px;font-size:10px}
+.sumcompare .cdot{width:6px;height:6px;border-radius:2px;flex:none}
+.sumcompare .cl{flex:1;color:#9fb0c4;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumcompare .cv{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--cream);font-weight:700;white-space:nowrap}
+.sumcompare .cx{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--gold);font-size:9px;min-width:34px;text-align:right}
+
+.track{position:absolute;top:0;left:0;height:var(--appH);display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1);will-change:transform}
+.slide{width:100vw;height:var(--appH);flex:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:58px 16px calc(var(--bottomh) + 14px)}
+.slide.nosumm{padding-bottom:calc(var(--bottomh) + 14px)}
+.slideinner{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.slideinner.center-only{text-align:center;max-width:680px}
+
+.kick{font-size:10px;letter-spacing:2.4px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:7px}
+h2{font-family:'Fraunces',Georgia,serif;font-size:22px;font-weight:600;line-height:1.2;color:var(--cream);margin-bottom:9px}
+p.lead{font-size:13.5px;line-height:1.55;color:#c3ccdb}
+p.lead b{color:var(--cream);font-weight:600}
+p.lead + p.lead{margin-top:8px}
+
+.sliderwrap{margin-top:14px}
+.sliderwrap label{display:flex;justify-content:space-between;font-size:12.5px;color:#c3ccdb;margin-bottom:6px}
+.sliderwrap label b{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--gold);height:26px}
+
+.mock{background:var(--paper);border-radius:13px;padding:15px 16px;color:var(--ink);
+  box-shadow:0 0 0 1px rgba(199,165,102,.3), 0 0 0 5px rgba(199,165,102,.08), 0 14px 36px rgba(0,0,0,.4)}
+.mocklabel{font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--goldd);font-weight:700;margin-bottom:8px}
+.mockchip{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:8px;background:var(--marf2);
+  border-radius:7px;padding:7px 11px;font-size:11.5px}
+.mockchip .n{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-weight:700;color:var(--goldd);font-size:13.5px;white-space:nowrap}
+.mocknote{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4}
+.mocknote b{color:var(--ink)}
+
+.kvline{display:flex;justify-content:space-between;gap:10px;margin:6px 0;font-size:12px;padding-bottom:6px;border-bottom:1px dashed var(--line)}
+.kvline b{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--ink);white-space:nowrap}
+.kvline:last-child{border-bottom:none}
+.bignum{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-weight:700;font-size:26px;color:var(--goldd);line-height:1.1}
+.bigsub{font-size:11px;color:var(--muted);margin-top:3px}
+
+.flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.flowbox{background:var(--paper);color:var(--ink);border-radius:9px;padding:9px 12px;font-size:11.5px;font-weight:600;
+  box-shadow:0 6px 18px rgba(0,0,0,.3);text-align:center}
+.flowbox.loop{border:1.5px dashed var(--goldd)}
+.flowarrow{color:var(--gold);font-size:15px;font-weight:700}
+.loopnote{font-size:10.5px;color:var(--gold);font-weight:700;text-align:center;margin-top:2px;letter-spacing:.3px}
+
+/* escada de tokens (ladder) */
+.ladder{display:flex;flex-direction:column;gap:7px;margin-top:4px;max-height:230px;overflow:auto}
+.ladderrow{display:flex;align-items:center;gap:8px}
+.laddlabel{width:96px;font-size:10px;color:var(--muted);flex:none;line-height:1.25}
+.laddbarwrap{flex:1;background:var(--marfim);border:1px solid var(--line);border-radius:6px;height:22px;position:relative;overflow:hidden}
+.laddbar{height:100%;border-radius:6px 0 0 6px;transition:width .25s ease}
+.laddbar.in{background:linear-gradient(90deg,#cdd8e8,var(--c-sys))}
+.laddbar.out{background:linear-gradient(90deg,#e8dcae,var(--c-user))}
+.laddval{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:10px;color:var(--ink);font-weight:700}
+
+/* diagrama orquestrador/subagentes */
+.orcdiag{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:14px}
+.orcbox{background:var(--paper);color:var(--ink);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:700;
+  box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.orcbox.orc{border:2px solid var(--gold)}
+.subrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.subbox{background:var(--marfim);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:11px;font-weight:600}
+.orcarrow{color:var(--gold);font-size:13px}
+
+.filebtn{display:block;width:100%;text-align:center;font-family:'Inter';font-weight:700;font-size:12.5px;
+  color:var(--cream);background:rgba(255,255,255,.05);border:1px dashed rgba(199,165,102,.55);
+  border-radius:11px;padding:16px 12px;cursor:pointer;margin-top:12px}
+.filebtn:active{background:rgba(199,165,102,.14)}
+input[type=file]{display:none}
+.fileinfo{margin-top:9px;font-size:12px;color:#c3ccdb;display:none}
+.fileinfo.on{display:block}
+.fileinfo b{color:var(--cream)}
+.rmfile{color:#e0a0a0;background:none;border:none;font-size:11.5px;text-decoration:underline;cursor:pointer;margin-left:6px;font-family:'Inter'}
+.memcard{background:var(--marf2);border:1px solid rgba(199,165,102,.5);border-radius:11px;padding:12px 14px;margin-top:14px}
+.memcard.off{background:var(--marfim);border-color:var(--line)}
+.memcard .mt{font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--goldd);font-weight:700;margin-bottom:5px}
+.memcard.off .mt{color:var(--muted)}
+.memcard p{font-size:12px;color:var(--muted);line-height:1.5}
+.memcard p b{color:var(--ink)}
+
+.modellist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.modelrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 11px;border-radius:8px;
+  background:var(--marfim);border:1px solid var(--line);font-size:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.modelrow.sel{background:var(--marf2);border-color:var(--gold);font-weight:700}
+.modelrow .p{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--goldd);font-weight:700;white-space:nowrap}
+
+.cmptable{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.cmprow{display:grid;grid-template-columns:1.3fr .8fr .8fr .7fr;gap:6px;align-items:center;font-size:11px;padding:8px 10px;
+  border-radius:9px;background:var(--marfim);border:1px solid var(--line)}
+.cmprow.hd{background:transparent;border:none;color:var(--muted);font-weight:700;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;padding:0 10px}
+.cmprow.hl{border-color:var(--gold);background:var(--marf2)}
+.cmprow b{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--ink)}
+.cmprow .mult{color:var(--goldd);font-weight:700}
+
+.recap{margin-top:10px;list-style:none;text-align:left}
+.recap li{display:flex;gap:8px;align-items:baseline;font-size:12px;color:#c3ccdb;margin:5px 0}
+.recap li b{color:var(--cream)}
+.recap li .n{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;color:var(--gold);font-weight:700}
+.ctabtn{display:block;text-align:center;margin-top:14px;background:var(--gold);color:var(--navy);font-weight:700;
+  font-size:13.5px;padding:13px 20px;border-radius:22px;text-decoration:none}
+.restart{display:block;width:100%;margin-top:9px;background:none;border:1px solid rgba(199,165,102,.4);
+  color:#c3ccdb;font-family:'Inter';font-weight:600;font-size:12.5px;border-radius:20px;padding:11px 16px;cursor:pointer}
+
+.navbar{position:relative;z-index:40;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));height:var(--navh);
+  background:rgba(10,23,40,.97);border-top:1px solid rgba(199,165,102,.18)}
+.navbtn{font-family:'Inter';font-weight:700;font-size:12.5px;color:var(--cream);background:rgba(255,255,255,.06);
+  border:1px solid rgba(199,165,102,.35);border-radius:20px;padding:10px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.navbtn.primary{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.navbtn:disabled{opacity:.3;pointer-events:none}
+.dots{display:flex;gap:5px;flex:1;justify-content:center;flex-wrap:wrap}
+.dotx{width:6px;height:6px;border-radius:50%;background:rgba(199,165,102,.3);cursor:pointer}
+.dotx.on{background:var(--gold);transform:scale(1.35)}
+
+@media(min-width:820px){
+  :root{--navh:74px;--summh:0px;}
+  .topbar{padding:15px 26px}
+  .brand{font-size:13px;letter-spacing:5px}
+  .stepno{font-size:12px}
+  .slide{padding:92px 6vw calc(var(--navh) + 20px);display:flex;align-items:center;justify-content:center}
+  .slideinner{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;width:100%}
+  .slideinner.center-only{display:block;text-align:center;max-width:700px}
+  h2{font-size:28px}
+  p.lead{font-size:14.5px;max-width:460px}
+  .center-only p.lead{max-width:600px;margin-left:auto;margin-right:auto}
+  .mock{padding:20px 22px}
+  .bignum{font-size:30px}
+  .summary{position:fixed;left:auto;right:22px;top:52px;bottom:auto;width:330px;border-radius:13px;
+    border:1px solid rgba(199,165,102,.32);padding:12px 15px}
+  .navbar{justify-content:center;gap:18px;border-top:none;background:linear-gradient(0deg, rgba(10,23,40,.95), rgba(10,23,40,0))}
+  .dots{flex:0 0 auto;flex-wrap:nowrap}
+  .ctabtn{display:inline-block;margin-top:16px}
+  .restart{display:inline-block;width:auto;margin-left:10px;margin-top:0}
+  .cmprow{font-size:12px}
+}
+@media(min-width:820px) and (max-height:820px){
+  .slide{padding:84px 6vw calc(var(--navh) + 12px)}
+  h2{font-size:24px}
+  .summary{top:48px;padding:10px 13px}
+}
+</style>
+</head>
+<body>
+
+<div class="progresswrap"><div class="progressbar" id="progressbar"></div></div>
+<div class="topbar">
+  <span class="brand">VALORIAN</span>
+  <div class="topright">
+    <span class="stepno" id="topStep">1 / 11</span>
+    <button class="skip" id="skipBtn">Resultado ✕</button>
+  </div>
+</div>
+
+<div class="track" id="track">
+
+  <!-- 0 -->
+  <div class="slide"><div class="slideinner center-only">
+    <div class="kick">TUTORIAL INTERATIVO</div>
+    <h2>Quando a IA vira agente, os tokens saem do controle.</h2>
+    <p class="lead">Uma pergunta simples paga uma chamada. Um <b>agente</b> paga várias — e cada uma delas reenvia tudo o que já foi pensado até ali. Neste tutorial você vê, ao vivo, o efeito do ciclo <b>ReAct</b> em um único agente e o que muda quando vários agentes trabalham juntos.</p>
+    <div class="flow">
+      <div class="flowbox">Pergunta</div><div class="flowarrow">→</div><div class="flowbox">Resposta</div>
+    </div>
+    <div class="loopnote">pergunta simples · 1 chamada</div>
+    <div class="flow" style="margin-top:14px">
+      <div class="flowbox">Pergunta</div><div class="flowarrow">→</div>
+      <div class="flowbox loop">Pensa</div><div class="flowarrow">→</div>
+      <div class="flowbox loop">Age</div><div class="flowarrow">→</div>
+      <div class="flowbox loop">Observa</div><div class="flowarrow">→</div>
+      <div class="flowbox">Resposta</div>
+    </div>
+    <div class="loopnote">agente · o ciclo se repete N vezes</div>
+  </div></div>
+
+  <!-- 1 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">I · Ciclo ReAct — O que é</div>
+      <h2>Pensa, age, observa — e repete</h2>
+      <p class="lead">Um agente não responde de cara. A cada rodada ele faz três coisas: <b>pensa</b> (raciocina em texto o que fazer), <b>age</b> (chama uma ferramenta ou MCP) e <b>observa</b> (lê o resultado que voltou). Só então decide se responde ou se dá mais uma volta no ciclo.</p>
+      <p class="lead">Cada uma dessas três partes é gerada ou processada pelo modelo — e cada uma <b>é tokens</b>.</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Um passo do ciclo ReAct</div>
+      <div class="kvline"><span>💭 Pensamento</span><b>"Preciso da receita do 3T — vou consultar o ERP"</b></div>
+      <div class="kvline"><span>⚙️ Ação</span><b>consultar_erp(periodo="3T")</b></div>
+      <div class="kvline"><span>👁 Observação</span><b>{receita: 48200000, ...}</b></div>
+      <div class="mocknote">As três partes voltam para dentro do contexto — a próxima rodada começa lendo tudo isso de novo.</div>
+    </div>
+  </div></div>
+
+  <!-- 2 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">I · Ciclo ReAct — Memória do agente</div>
+      <h2>O contexto é a única memória que o agente tem</h2>
+      <p class="lead">O modelo não guarda nada entre uma chamada e outra — cada chamada é <b>independente</b>, como se fosse a primeira vez. Se uma informação não estiver dentro do contexto enviado <b>agora</b>, para o modelo ela simplesmente não existe.</p>
+      <p class="lead">É por isso que o histórico do ciclo ReAct precisa ser reenviado inteiro a cada passo: não é redundância, é a única forma do agente "lembrar" do que pensou, fez e observou até ali.</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Memória = o que está no contexto agora</div>
+      <div class="memcard">
+        <div class="mt">🧠 Dentro do contexto</div>
+        <p>System prompt, ferramentas, pergunta, histórico do ciclo, arquivos anexados — tudo isso <b>é</b> a memória do agente nesta chamada.</p>
+      </div>
+      <div class="memcard off" style="margin-top:10px">
+        <div class="mt">🚫 Fora do contexto</div>
+        <p>Qualquer coisa que não caiba ou não seja reenviada — <b>deixa de existir</b> para a próxima chamada. O agente "esquece".</p>
+      </div>
+      <div class="mocknote">Todo o resto deste tutorial é, na prática, sobre o preço de manter essa memória viva a cada passo.</div>
+    </div>
+  </div></div>
+
+  <!-- 3 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">I · Ciclo ReAct — Arquivo no contexto</div>
+      <h2>Anexe um arquivo à memória do agente</h2>
+      <p class="lead">Um relatório, uma planilha, uma base de conhecimento — quando um arquivo entra no contexto, ele também vira <b>memória</b>. E, como toda memória do agente, ele precisa ser <b>reenviado a cada passo do ciclo</b>, não só uma vez.</p>
+      <button class="filebtn" id="fileBtn">📎 Anexar arquivo (.txt, .docx, .xlsx, .pptx, .md, .csv)</button>
+      <input type="file" id="fileInput" accept=".txt,.md,.csv,.json,.xml,.html,.docx,.xlsx,.pptx,.pdf">
+      <div class="fileinfo" id="fileInfo"><span id="fileInfoText"></span> <button class="rmfile" id="rmFileBtn">remover</button></div>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Arquivo anexado</div>
+      <div class="kvline"><span>Tokens do arquivo</span><b id="mkFileTok">0 tk (nenhum arquivo)</b></div>
+      <div class="mocknote" id="mkFileNote">Sem arquivo anexado, o ciclo segue só com system prompt, ferramentas, pergunta e histórico.</div>
+    </div>
+  </div></div>
+
+  <!-- 4 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">I · Ciclo ReAct — Quantos passos</div>
+      <h2>Escolha quantas voltas o agente dá</h2>
+      <p class="lead">Cada passo do ciclo é <b>uma chamada inteira ao modelo</b> — com todo o histórico de novo como entrada. Mais passos não significa só "mais uma ação": significa reprocessar tudo que já veio antes, de novo.</p>
+      <div class="sliderwrap">
+        <label>Passos do ciclo ReAct <b id="stepsVal">3</b></label>
+        <input type="range" id="stepsRange" min="1" max="6" step="1" value="3">
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Escada de tokens — entrada de cada chamada</div>
+      <div class="ladder" id="reactLadder"></div>
+      <div class="mocknote" id="reactLadderNote"></div>
+    </div>
+  </div></div>
+
+  <!-- 5 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">I · Ciclo ReAct — Por que cresce</div>
+      <h2>O contexto nunca reseta</h2>
+      <p class="lead">Não existe "chamada leve" no meio do ciclo. Toda vez que o agente pensa de novo, o modelo recebe: o <b>system prompt</b>, a <b>definição das ferramentas</b>, a <b>pergunta original</b> — e o <b>histórico acumulado</b> de tudo que já foi pensado, feito e observado até aquele ponto.</p>
+      <p class="lead">É por isso que o último passo de um ciclo longo custa muito mais que o primeiro, mesmo sendo, na prática, "só mais uma pergunta ao modelo".</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel" id="lastCallLabel">Composição da última chamada</div>
+      <div class="kvline"><span>System prompt do agente</span><b id="cSys">—</b></div>
+      <div class="kvline"><span>Definição das ferramentas</span><b id="cTools">—</b></div>
+      <div class="kvline"><span>Pergunta original</span><b id="cQuestion">—</b></div>
+      <div class="kvline" id="cFileRow" style="display:none"><span>Arquivo anexado (memória)</span><b id="cFile">—</b></div>
+      <div class="kvline"><span style="font-weight:700;color:var(--ink)">Histórico acumulado (passos anteriores)</span><b id="cHist" style="color:var(--goldd)">—</b></div>
+      <div class="mocknote" id="cHistNote"></div>
+    </div>
+  </div></div>
+
+  <!-- 6 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">II · Resultado do agente único</div>
+      <h2>O que o ciclo custou, no total</h2>
+      <p class="lead">Somando todas as chamadas do ciclo — não só a última — chegamos ao custo real da interação. É esse número que compara com uma pergunta simples, de uma chamada só.</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Total do ciclo ReAct</div>
+      <div class="kvline"><span>Tokens de entrada (somados)</span><b id="rTotIn">—</b></div>
+      <div class="kvline"><span>Tokens de saída (somados)</span><b id="rTotOut">—</b></div>
+      <div class="kvline"><span>Custo do ciclo</span><b id="rTotCost">—</b></div>
+      <div style="margin-top:12px">
+        <div class="bignum" id="rMult">—</div>
+        <div class="bigsub">mais caro que uma pergunta simples de 1 chamada</div>
+      </div>
+      <div class="mocknote">Baseline: o mesmo cenário "Pergunta simples" do tutorial de tokens original — system prompt <b>Equilibrado</b> (112 tk) + pergunta <b>Direta</b> (14 tk) + resposta curta (33 tk).</div>
+    </div>
+  </div></div>
+
+  <!-- 7 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">III · Sistemas multiagentes — O que muda</div>
+      <h2>Um orquestrador, vários agentes</h2>
+      <p class="lead">Em vez de um agente fazendo tudo, um <b>orquestrador</b> recebe a tarefa e a divide entre <b>subagentes especializados</b> — cada um com seu próprio system prompt, suas próprias ferramentas e seu próprio ciclo ReAct interno.</p>
+      <p class="lead">O orquestrador não vê o raciocínio interno de cada subagente — só recebe o <b>resumo do resultado</b>. Mas para cada subagente, aquele ciclo interno inteiro aconteceu, e foi pago.</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Arquitetura multiagente</div>
+      <div class="orcdiag">
+        <div class="orcbox orc">Orquestrador</div>
+        <div class="orcarrow">↓ delega ↓</div>
+        <div class="subrow">
+          <div class="subbox">Subagente 1<br><span style="font-weight:400;color:var(--muted)">próprio ciclo ReAct</span></div>
+          <div class="subbox">Subagente 2<br><span style="font-weight:400;color:var(--muted)">próprio ciclo ReAct</span></div>
+          <div class="subbox">Subagente 3<br><span style="font-weight:400;color:var(--muted)">próprio ciclo ReAct</span></div>
+        </div>
+        <div class="orcarrow">↑ retorna resumo ↑</div>
+        <div class="orcbox orc">Síntese final</div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- 8 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">III · Sistemas multiagentes — Quantos subagentes</div>
+      <h2>Escolha quantos subagentes entram</h2>
+      <p class="lead">Cada subagente que você adiciona soma seu próprio ciclo completo — não é uma fração do custo do agente único, é um agente inteiro a mais. O cálculo aqui assume <b>delegação sequencial</b> (o orquestrador aciona um subagente, recebe a resposta, aciona o próximo): é o padrão mais comum quando uma tarefa depende do resultado da anterior — e também o mais caro, porque o orquestrador reprocessa seu próprio histórico de delegações a cada acionamento.</p>
+      <div class="sliderwrap">
+        <label>Subagentes <b id="agentsVal">3</b></label>
+        <input type="range" id="agentsRange" min="1" max="6" step="1" value="3">
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Escada de tokens — orquestrador + subagentes</div>
+      <div class="ladder" id="multiLadder"></div>
+      <div class="mocknote" id="multiLadderNote"></div>
+    </div>
+  </div></div>
+
+  <!-- 9 -->
+  <div class="slide"><div class="slideinner">
+    <div>
+      <div class="kick">III · Sistemas multiagentes — De onde vem o custo</div>
+      <h2>Orquestrador vs. subagentes</h2>
+      <p class="lead">O orquestrador sozinho já cresce como um agente único — ele reprocessa seu próprio histórico de delegações a cada chamada. Mas a maior fatia do custo, normalmente, está no <b>trabalho interno de cada subagente</b>.</p>
+      <p class="lead">Se a delegação fosse paralela — 1 chamada despachando todos os subagentes, 1 chamada recebendo todos os retornos — o overhead do orquestrador cairia bastante. O custo de cada subagente, porém, não muda: o ciclo interno de cada um é pago do mesmo jeito.</p>
+    </div>
+    <div class="mock">
+      <div class="mocklabel">Composição total</div>
+      <div class="sumbar" id="mkCompBar" style="height:22px;border-radius:6px;background:#eee"></div>
+      <div id="mkCompLeg" style="margin-top:10px"></div>
+    </div>
+  </div></div>
+
+  <!-- 10 -->
+  <div class="slide nosumm"><div class="slideinner center-only">
+    <div class="kick">IV · Resultado — Sua conta</div>
+    <h2>Do chat simples ao sistema multiagente</h2>
+    <div class="mock" style="text-align:left">
+      <div class="mocklabel">Modelo usado na comparação</div>
+      <div class="modellist" id="modelList"></div>
+    </div>
+    <div class="mock" style="text-align:left;margin-top:12px">
+      <div class="mocklabel">Volume de uso</div>
+      <div class="sliderwrap" style="margin-top:0">
+        <label style="color:var(--muted)">Interações por dia <b id="rpdVal" style="color:var(--goldd)">500</b></label>
+        <input type="range" id="rpdRange" min="10" max="20000" step="10" value="500">
+      </div>
+      <div class="mocknote">Cada cenário abaixo é multiplicado pelo volume escolhido — <b>30 dias por mês</b> — para mostrar quanto essa escolha pesa no orçamento.</div>
+    </div>
+    <div class="mock" style="text-align:left;margin-top:12px">
+      <div class="cmprow hd"><span>Cenário</span><span>Entrada</span><span>Saída</span><span>Por interação / mês</span></div>
+      <div class="cmptable" id="cmpTable"></div>
+    </div>
+    <ul class="recap">
+      <li><span class="n">01</span><span><b>Cada passo do ReAct</b> reprocessa tudo que já aconteceu — o histórico nunca some.</span></li>
+      <li><span class="n">02</span><span><b>Mais ferramentas e MCPs</b> significam mais definição e mais observação em cada chamada.</span></li>
+      <li><span class="n">03</span><span><b>Cada subagente</b> é um agente inteiro a mais, com seu próprio ciclo completo.</span></li>
+      <li><span class="n">04</span><span><b>Orquestração</b> soma custo de coordenação por cima do custo de cada subagente.</span></li>
+      <li><span class="n">05</span><span><b>Arquivos anexados são memória</b> — assim como o histórico, eles são reenviados em toda chamada, não só uma vez.</span></li>
+    </ul>
+    <a class="ctabtn" href="calc.html" target="_blank">Abrir a Calculadora de Tokens →</a>
+    <button class="restart" id="restartBtn">Refazer o tutorial</button>
+  </div></div>
+
+</div>
+
+<div class="bottomstack" id="bottomstack">
+<div class="summary" id="summary">
+  <div class="sumtop">
+    <span class="sumtitle" id="sumTitle">Referência · pergunta simples</span>
+    <span class="sumcost"><span id="sumCost">—</span><small id="sumMonth">custo da interação</small></span>
+  </div>
+  <div class="sumbar" id="sumBar"><span style="width:60%;background:var(--c-sys)"></span><span style="width:40%;background:var(--c-user)"></span></div>
+  <div class="sumitems" id="sumItems"></div>
+  <div class="sumcompare" id="sumCompare"></div>
+</div>
+
+<div class="navbar">
+  <button class="navbtn" id="backBtn">←</button>
+  <div class="dots" id="dots"></div>
+  <button class="navbtn primary" id="nextBtn">Próximo →</button>
+</div>
+</div>
+
+<script src="/tutorial-tokens-agentes.js"></script>
+
+</body>
+</html>

@@ -212,6 +212,18 @@ def tutorial_tokens_js():
     return _public_static_file("tutorial-tokens.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/tutorial-tokens-agentes.html")
+@app.get("/tutorial-tokens-agentes")
+def tutorial_tokens_agentes_html():
+    """Tutorial interativo de tokens em agentes (HTML estático em public/)."""
+    return _public_static_file("tutorial-tokens-agentes.html", "text/html; charset=utf-8")
+
+
+@app.get("/tutorial-tokens-agentes.js")
+def tutorial_tokens_agentes_js():
+    return _public_static_file("tutorial-tokens-agentes.js", "application/javascript; charset=utf-8")
+
+
 @app.get("/robots.txt")
 def robots_txt():
     return _public_static_file("robots.txt", "text/plain; charset=utf-8")
