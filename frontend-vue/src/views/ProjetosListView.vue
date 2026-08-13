@@ -43,6 +43,10 @@ type PlotPoint = {
   quadrant: Exclude<CanvasQuadrant, null>
   score_valor: number
   score_viabilidade: number
+  area_negocio: string
+  responsavel: string
+  objetivo_estrategico: string
+  proximo_passo: string
 }
 
 const scoredItems = computed(() =>
@@ -80,6 +84,10 @@ const plotPoints = computed<PlotPoint[]>(() => {
         quadrant: item.quadrant as Exclude<CanvasQuadrant, null>,
         score_valor: val,
         score_viabilidade: v,
+        area_negocio: item.area_negocio || '',
+        responsavel: item.responsavel || '',
+        objetivo_estrategico: item.objetivo_estrategico || '',
+        proximo_passo: item.proximo_passo || '',
       })
     })
   }
@@ -106,21 +114,42 @@ function formatDate(iso: string | null): string {
 }
 
 function openProject(id: string) {
+  hideChartTooltip()
   void router.push(`/projetos/${id}`)
 }
 
-function chartTitle(title: string): string {
-  const t = (title || 'Novo projeto').trim()
-  if (t.length <= 34) return t
-  return `${t.slice(0, 32)}…`
+function clipText(text: string, max = 180): string {
+  const t = text.trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, max - 1)}…`
 }
 
-function labelAnchor(p: PlotPoint): 'start' | 'end' {
-  return p.cx >= PLOT.x + PLOT.w / 2 ? 'end' : 'start'
+const hoverPoint = ref<PlotPoint | null>(null)
+const tooltipPos = ref({ x: 0, y: 0 })
+const tooltipRef = ref<HTMLElement | null>(null)
+const TOOLTIP_GAP = 14
+
+function showChartTooltip(ev: MouseEvent, p: PlotPoint) {
+  hoverPoint.value = p
+  placeChartTooltip(ev)
 }
 
-function labelX(p: PlotPoint): number {
-  return p.cx + (p.cx >= PLOT.x + PLOT.w / 2 ? -18 : 18)
+function placeChartTooltip(ev: MouseEvent) {
+  if (!hoverPoint.value) return
+  const rect = tooltipRef.value?.getBoundingClientRect()
+  let left = ev.clientX + TOOLTIP_GAP
+  let top = ev.clientY + TOOLTIP_GAP
+  if (rect?.width) {
+    if (left + rect.width > window.innerWidth - 8) left = ev.clientX - rect.width - TOOLTIP_GAP
+    if (left < 8) left = 8
+    if (top + rect.height > window.innerHeight - 8) top = ev.clientY - rect.height - TOOLTIP_GAP
+    if (top < 8) top = 8
+  }
+  tooltipPos.value = { x: left, y: top }
+}
+
+function hideChartTooltip() {
+  hoverPoint.value = null
 }
 
 async function refresh() {
@@ -385,12 +414,16 @@ onMounted(async () => {
               v-for="p in plotPoints"
               :key="p.id"
               class="dot-group"
-              role="button"
+              role="link"
               tabindex="0"
+              :aria-label="`${p.title}. ${QUADRANT_LABEL[p.quadrant]}. Valor ${p.score_valor}, Viabilidade ${p.score_viabilidade}. Abrir canvas.`"
               @click="openProject(p.id)"
-              @keydown.enter="openProject(p.id)"
+              @keydown.enter.prevent="openProject(p.id)"
+              @keydown.space.prevent="openProject(p.id)"
+              @mouseenter="showChartTooltip($event, p)"
+              @mousemove="placeChartTooltip($event)"
+              @mouseleave="hideChartTooltip"
             >
-              <title>{{ p.title }} — Valor {{ p.score_valor }}, Viabilidade {{ p.score_viabilidade }} ({{ QUADRANT_LABEL[p.quadrant] }})</title>
               <circle
                 :cx="p.cx"
                 :cy="p.cy"
@@ -404,13 +437,6 @@ onMounted(async () => {
                 class="dot-label"
                 text-anchor="middle"
               >{{ p.title.slice(0, 1).toUpperCase() }}</text>
-              <text
-                class="dot-name"
-                :text-anchor="labelAnchor(p)"
-                dominant-baseline="middle"
-                :x="labelX(p)"
-                :y="p.cy"
-              >{{ chartTitle(p.title) }}</text>
             </g>
           </svg>
 
@@ -519,6 +545,50 @@ onMounted(async () => {
       </ul>
       <p v-if="approveError" class="error-msg">{{ approveError }}</p>
     </template>
+
+    <Teleport to="body">
+      <div
+        ref="tooltipRef"
+        class="chart-tooltip"
+        :class="{ visible: !!hoverPoint }"
+        :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
+        role="tooltip"
+      >
+        <template v-if="hoverPoint">
+          <div class="chart-tooltip-title">{{ hoverPoint.title }}</div>
+          <div class="chart-tooltip-quad" :data-q="hoverPoint.quadrant">
+            {{ QUADRANT_LABEL[hoverPoint.quadrant] }}
+          </div>
+          <dl class="chart-tooltip-dl">
+            <div>
+              <dt>Valor</dt>
+              <dd>{{ hoverPoint.score_valor }} / 5</dd>
+            </div>
+            <div>
+              <dt>Viabilidade</dt>
+              <dd>{{ hoverPoint.score_viabilidade }} / 5</dd>
+            </div>
+            <div v-if="hoverPoint.area_negocio">
+              <dt>Área</dt>
+              <dd>{{ hoverPoint.area_negocio }}</dd>
+            </div>
+            <div v-if="hoverPoint.responsavel">
+              <dt>Responsável</dt>
+              <dd>{{ hoverPoint.responsavel }}</dd>
+            </div>
+            <div v-if="hoverPoint.objetivo_estrategico" class="chart-tooltip-wide">
+              <dt>Objetivo estratégico</dt>
+              <dd>{{ clipText(hoverPoint.objetivo_estrategico) }}</dd>
+            </div>
+            <div v-if="hoverPoint.proximo_passo" class="chart-tooltip-wide">
+              <dt>Próximo passo</dt>
+              <dd>{{ clipText(hoverPoint.proximo_passo) }}</dd>
+            </div>
+          </dl>
+          <p class="chart-tooltip-hint">Clique para abrir o canvas</p>
+        </template>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div v-if="deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
@@ -680,15 +750,87 @@ onMounted(async () => {
   font-weight: 700;
   pointer-events: none;
 }
-.dot-name {
-  fill: #0d1b24;
-  font-size: 13px;
-  font-weight: 700;
+.chart-tooltip {
+  position: fixed;
+  z-index: 500;
+  max-width: 340px;
+  min-width: 220px;
+  background: var(--k0);
+  color: var(--wh);
+  padding: 16px 18px 14px;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
   pointer-events: none;
-  paint-order: stroke fill;
-  stroke: #fff;
-  stroke-width: 5px;
-  stroke-linejoin: round;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+.chart-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+.chart-tooltip-title {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.3;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.chart-tooltip-quad {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+.chart-tooltip-quad[data-q='ganho_rapido'] {
+  background: #2f6e4a;
+  color: #fff;
+}
+.chart-tooltip-quad[data-q='aposta_estrategica'] {
+  background: #c48a26;
+  color: #fff;
+}
+.chart-tooltip-quad[data-q='incremental'] {
+  background: #5b7a86;
+  color: #fff;
+}
+.chart-tooltip-quad[data-q='evitar'] {
+  background: #9c3b2e;
+  color: #fff;
+}
+.chart-tooltip-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+.chart-tooltip-dl .chart-tooltip-wide {
+  grid-column: 1 / -1;
+}
+.chart-tooltip-dl dt {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.chart-tooltip-dl dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.92);
+}
+.chart-tooltip-hint {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
 }
 .chart-empty {
   font-size: 13px;
@@ -896,10 +1038,6 @@ onMounted(async () => {
   }
   .list-arrow {
     display: none;
-  }
-  .dot-name {
-    font-size: 12px;
-    stroke-width: 4px;
   }
 }
 .list-actions {
