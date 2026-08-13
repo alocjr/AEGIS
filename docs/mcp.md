@@ -78,6 +78,7 @@ O script simula o que o Claude faz ao adicionar um connector: discovery
 | `POST /mcp` → **401** mesmo com token válido | O `AuthenticationMiddleware`/`AuthContextMiddleware` do FastMCP se perde ao levantar só as rotas; o `RequireAuthMiddleware` lê `scope["user"]` | `apply_mcp_auth_middleware()` reaplica o stack em cada rota |
 | `Task group is not initialized` | Lifespan do FastMCP não repassado | `async with mcp_asgi.lifespan(app)` no lifespan do FastAPI |
 | Claude conecta e cai no login errado | `MCP_PUBLIC_URL` apontando para localhost | `MCP_PUBLIC_URL=https://mentoria.valorian.com.br` no `.env` de produção |
+| Claude não vê tools novas (`maturity_answer`, `okr_create_objective`, …) | Cache de `tools/list` no Claude (URL/nome do connector). `notifications/tools/list_changed` é ignorado. Settings pode listar as tools enquanto o **modelo** ainda usa o catálogo antigo. | 1. Confirme o deploy: `python util/aegis_mcp_check.py https://mentoria.valorian.com.br --email voce@empresa.com` deve listar as tools novas. 2. No connector, **Allow always** nas tools novas. 3. **Remova e recoloque** o connector (mesma URL). 4. Abra um **chat novo**. 5. Claude Code: `claude mcp remove aegis` e adicione com outro nome (`aegis-hub`), ou `MCP_DISCOVERY_CACHE=0`. |
 
 > Discovery e DCR só funcionam sobre **HTTPS público**: a nuvem da Anthropic é
 > quem chama o servidor, não o seu desktop.
@@ -85,6 +86,9 @@ O script simula o que o Claude faz ao adicionar um connector: discovery
 ## Tools (mentorado)
 
 Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
+
+Catálogo versionado em `TOOLS_CATALOG_VERSION` (`backend/app/mcp/server.py`). Bump
+esse valor sempre que adicionar ou mudar tools — o Claude cacheia `tools/list`.
 
 ### Maturidade
 

@@ -31,6 +31,9 @@ def conectar_claude_page():
     li {{ margin: 0.5rem 0; }}
     .muted {{ color: #57534e; font-size: 0.95rem; }}
     button {{ font: inherit; padding: 0.4rem 0.75rem; cursor: pointer; }}
+    .callout {{ background: #fff; border: 1px solid #d6d3d1; border-left: 4px solid #b45309;
+      padding: 0.85rem 1rem; border-radius: 6px; margin: 1.5rem 0; }}
+    .callout h2 {{ font-size: 1.15rem; margin: 0 0 0.5rem; }}
   </style>
 </head>
 <body>
@@ -41,15 +44,27 @@ def conectar_claude_page():
   <h2>Claude Desktop / claude.ai</h2>
   <ol>
     <li>Abra <strong>Settings → Connectors → Add custom connector</strong>.</li>
-    <li>Cole a URL acima e confirme.</li>
+    <li>Cole a URL acima e confirme. Nome só com letras ASCII, sem espaços.</li>
     <li>Clique em <strong>Connect</strong> — o navegador abre o login Valorian.</li>
-    <li>Entre com email e senha. Pronto: as tools AEGIS ficam disponíveis.</li>
+    <li>Entre com email e senha.</li>
+    <li>No connector, <strong>Tool access</strong>: marque as tools novas como <strong>Allow always</strong>.</li>
   </ol>
   <h2>Claude Code</h2>
   <ol>
     <li><code>claude mcp add --transport http aegis {mcp_url}</code></li>
     <li>Na sessão, <code>/mcp</code> → autentique no browser.</li>
   </ol>
+  <div class="callout">
+    <h2>As tools novas não aparecem?</h2>
+    <p>O Claude cacheia a lista de tools. O servidor já as anuncia; o chat antigo continua com o catálogo velho.</p>
+    <ol>
+      <li>Confirme o deploy (a URL acima precisa estar no ar com o código novo).</li>
+      <li>No connector: habilite as tools novas (<strong>Allow always</strong>).</li>
+      <li><strong>Remova o connector e adicione de novo</strong> (mesma URL). Só desconectar não basta.</li>
+      <li>Abra um <strong>chat novo</strong> — conversas antigas não atualizam o catálogo.</li>
+      <li>Claude Code: <code>claude mcp remove aegis</code> e adicione com outro nome, por exemplo <code>aegis-hub</code>. Ou <code>MCP_DISCOVERY_CACHE=0</code>.</li>
+    </ol>
+  </div>
   <p class="muted">Em produção a URL precisa ser HTTPS público (a nuvem da Anthropic acessa o servidor).</p>
 </body>
 </html>"""

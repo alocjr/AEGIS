@@ -32,7 +32,8 @@ const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
 }
 
 /** Área do plot SVG (eixo valor × viabilidade, scores 1–5) */
-const PLOT = { x: 56, y: 28, w: 320, h: 280 }
+const PLOT = { x: 64, y: 40, w: 520, h: 440 }
+const VIEWBOX = { w: 720, h: 560 }
 
 type PlotPoint = {
   id: string
@@ -70,7 +71,7 @@ const plotPoints = computed<PlotPoint[]>(() => {
       const baseX = PLOT.x + ((v - 1) / 4) * PLOT.w
       const baseY = PLOT.y + PLOT.h - ((val - 1) / 4) * PLOT.h
       const angle = group.length === 1 ? 0 : (idx / group.length) * Math.PI * 2
-      const radius = group.length === 1 ? 0 : 10 + Math.min(idx, 3) * 2
+      const radius = group.length === 1 ? 0 : 14 + Math.min(idx, 3) * 3
       points.push({
         id: item.id,
         title: item.title || 'Novo projeto',
@@ -110,8 +111,16 @@ function openProject(id: string) {
 
 function chartTitle(title: string): string {
   const t = (title || 'Novo projeto').trim()
-  if (t.length <= 22) return t
-  return `${t.slice(0, 20)}…`
+  if (t.length <= 34) return t
+  return `${t.slice(0, 32)}…`
+}
+
+function labelAnchor(p: PlotPoint): 'start' | 'end' {
+  return p.cx >= PLOT.x + PLOT.w / 2 ? 'end' : 'start'
+}
+
+function labelX(p: PlotPoint): number {
+  return p.cx + (p.cx >= PLOT.x + PLOT.w / 2 ? -18 : 18)
 }
 
 async function refresh() {
@@ -259,7 +268,7 @@ onMounted(async () => {
         <div class="chart-body">
           <svg
             class="quad-svg"
-            viewBox="0 0 480 360"
+            :viewBox="`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`"
             role="img"
             aria-label="Matriz de valor versus viabilidade com os projetos pontuados"
           >
@@ -294,25 +303,25 @@ onMounted(async () => {
 
             <text
               :x="PLOT.x + PLOT.w / 4"
-              :y="PLOT.y + 18"
+              :y="PLOT.y + 22"
               class="qlabel qlabel-bet"
               text-anchor="middle"
             >Aposta estratégica</text>
             <text
               :x="PLOT.x + (PLOT.w * 3) / 4"
-              :y="PLOT.y + 18"
+              :y="PLOT.y + 22"
               class="qlabel qlabel-go"
               text-anchor="middle"
             >Ganho rápido</text>
             <text
               :x="PLOT.x + PLOT.w / 4"
-              :y="PLOT.y + PLOT.h / 2 + 18"
+              :y="PLOT.y + PLOT.h / 2 + 22"
               class="qlabel qlabel-avoid"
               text-anchor="middle"
             >Evitar · vaidade</text>
             <text
               :x="PLOT.x + (PLOT.w * 3) / 4"
-              :y="PLOT.y + PLOT.h / 2 + 18"
+              :y="PLOT.y + PLOT.h / 2 + 22"
               class="qlabel qlabel-inc"
               text-anchor="middle"
             >Incremental</text>
@@ -343,29 +352,29 @@ onMounted(async () => {
 
             <text
               :x="PLOT.x + PLOT.w / 2"
-              :y="PLOT.y + PLOT.h + 22"
+              :y="PLOT.y + PLOT.h + 38"
               class="axis-caption"
               text-anchor="middle"
             >Viabilidade →</text>
             <text
-              :x="18"
+              :x="20"
               :y="PLOT.y + PLOT.h / 2"
               class="axis-caption"
               text-anchor="middle"
-              transform="rotate(-90, 18, 168)"
+              :transform="`rotate(-90, 20, ${PLOT.y + PLOT.h / 2})`"
             >Valor →</text>
 
             <g v-for="n in 5" :key="'tx' + n">
               <text
                 :x="PLOT.x + ((n - 1) / 4) * PLOT.w"
-                :y="PLOT.y + PLOT.h + 12"
+                :y="PLOT.y + PLOT.h + 16"
                 class="tick"
                 text-anchor="middle"
               >{{ n }}</text>
             </g>
             <g v-for="n in 5" :key="'ty' + n">
               <text
-                :x="PLOT.x - 10"
+                :x="PLOT.x - 12"
                 :y="PLOT.y + PLOT.h - ((n - 1) / 4) * PLOT.h + 4"
                 class="tick"
                 text-anchor="end"
@@ -385,21 +394,22 @@ onMounted(async () => {
               <circle
                 :cx="p.cx"
                 :cy="p.cy"
-                r="11"
+                r="13"
                 class="dot"
                 :data-q="p.quadrant"
               />
               <text
                 :x="p.cx"
-                :y="p.cy + 3.5"
+                :y="p.cy + 4"
                 class="dot-label"
                 text-anchor="middle"
               >{{ p.title.slice(0, 1).toUpperCase() }}</text>
               <text
                 class="dot-name"
-                text-anchor="start"
+                :text-anchor="labelAnchor(p)"
                 dominant-baseline="middle"
-                :transform="`translate(${p.cx + 14}, ${p.cy}) rotate(-45)`"
+                :x="labelX(p)"
+                :y="p.cy"
               >{{ chartTitle(p.title) }}</text>
             </g>
           </svg>
@@ -530,7 +540,7 @@ onMounted(async () => {
 
 <style scoped>
 .wrap {
-  max-width: 860px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 28px 20px 60px;
 }
@@ -560,7 +570,7 @@ onMounted(async () => {
   color: #8f2b2b;
 }
 .card-chart {
-  padding: 20px 20px 12px;
+  padding: 22px 22px 16px;
 }
 .chart-head {
   margin-bottom: 12px;
@@ -583,7 +593,8 @@ onMounted(async () => {
   align-items: center;
 }
 .quad-svg {
-  width: min(100%, 480px);
+  width: 100%;
+  max-width: 100%;
   height: auto;
   display: block;
 }
@@ -600,9 +611,9 @@ onMounted(async () => {
   fill: #e4ecee;
 }
 .qlabel {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   pointer-events: none;
 }
 .qlabel-bet {
@@ -627,13 +638,13 @@ onMounted(async () => {
   stroke-width: 1.25;
 }
 .axis-caption {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   fill: #3c525f;
 }
 .tick {
-  font-size: 9px;
+  font-size: 11px;
   fill: #6b7e9a;
 }
 .dot-group {
@@ -665,18 +676,18 @@ onMounted(async () => {
 }
 .dot-label {
   fill: #fff;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   pointer-events: none;
 }
 .dot-name {
-  fill: #12232e;
-  font-size: 10px;
-  font-weight: 600;
+  fill: #0d1b24;
+  font-size: 13px;
+  font-weight: 700;
   pointer-events: none;
-  paint-order: stroke;
-  stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: 3px;
+  paint-order: stroke fill;
+  stroke: #fff;
+  stroke-width: 5px;
   stroke-linejoin: round;
 }
 .chart-empty {
@@ -886,6 +897,10 @@ onMounted(async () => {
   .list-arrow {
     display: none;
   }
+  .dot-name {
+    font-size: 12px;
+    stroke-width: 4px;
+  }
 }
 .list-actions {
   display: flex;
@@ -980,11 +995,5 @@ onMounted(async () => {
 .btn-danger {
   background: #8f2b2b;
   color: #fff;
-}
-
-@media (max-width: 520px) {
-  .quad-svg {
-    width: 100%;
-  }
 }
 </style>

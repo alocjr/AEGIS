@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Estratégico — Etapa VI · Atlântica Seguros · Valorian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/valorian.css">
+<style>
+.toolrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+/* panorama */
+.pan{display:none;margin-top:14px}
+body.lens-pan .pan{display:block}
+body.lens-pan #map-sec{display:none}
+.pan-grid{display:grid;gap:12px;margin-top:12px}
+@media (min-width:980px){.pan-grid{grid-template-columns:repeat(3,1fr)}}
+.aposta{padding:16px 18px;display:flex;flex-direction:column;gap:8px;border-top:3px solid var(--gold-strong)}
+.aposta .ak{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--gold-strong)}
+.aposta h3{font-family:var(--serif);font-weight:600;font-size:18px;color:var(--panel);line-height:1.3}
+.aposta p{font-size:12.5px;color:var(--muted)}
+.aposta .st{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:10px}
+.pan-alert{border-left:3px solid var(--risk);background:var(--risk-tint);border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;margin-top:12px;font-size:12.5px}
+.pan-alert .pa-ic{font-family:var(--mono);font-weight:700;color:var(--risk);flex:none}
+/* mapa */
+.map-wrap{overflow-x:auto;padding-bottom:6px}
+.map{position:relative;display:grid;grid-template-columns:repeat(5,minmax(168px,1fr));gap:26px;min-width:920px;padding:16px}
+.map svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mcol-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:10px;display:flex;gap:8px;align-items:baseline}
+.mcol-h .rn{font-family:var(--serif);font-size:15px;color:var(--panel)}
+.map>div:not(.svgbox){display:flex;flex-direction:column;gap:10px;position:relative;z-index:1}
+.mnode{position:relative;z-index:1}
+.mn-strategy{border-left-color:var(--dim-strategy)}
+.mn-data{border-left-color:var(--dim-data)}
+.mn-people{border-left-color:var(--dim-people)}
+.mn-gov{border-left-color:var(--dim-gov)}
+.mn-s{border-left-color:var(--s)}.mn-w{border-left-color:var(--w)}.mn-o{border-left-color:var(--o)}.mn-t{border-left-color:var(--t)}.mn-a{border-left-color:var(--a)}
+.mnode .sd{position:absolute;top:10px;right:10px}
+.only-lin{display:none}
+body.lens-lin .only-lin{display:block}
+.map-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:12px 16px;border-top:1px solid var(--hairline-light)}
+.map-legend span{display:inline-flex;gap:6px;align-items:center}
+/* dossiê */
+.dock{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);transform:translateX(105%);transition:transform var(--t-slow) var(--ease);z-index:70;overflow:auto;border-radius:0;border-top:none;border-bottom:none}
+.dock.open{transform:none}
+/* palco */
+.stage-bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);color:var(--paper);padding:14px 18px;z-index:75;display:none;box-shadow:0 -10px 30px rgba(14,27,51,.3)}
+.stage-bar.on{display:block}
+.stage-bar .st-t{font-family:var(--serif);font-size:16px;font-weight:600}
+.stage-bar .st-t em{color:var(--gold);font-style:italic}
+.stage-bar p{font-size:12.5px;color:var(--muted-inv);max-width:760px;margin-top:4px}
+.stage-ctl{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.sbtn{border:1px solid var(--hairline);border-radius:var(--radius);padding:7px 12px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--paper)}
+.sbtn:hover{border-color:var(--gold)}
+.mobile-note{margin-top:12px;font-size:12px;color:var(--muted);display:none}
+@media (max-width:979px){.mobile-note{display:block}}
+</style>
+</head>
+<body class="lens-ges">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="menu.html"><span class="eyebrow">Valorian · Etapa VI</span><span class="bname">Mapa Estratégico</span></a>
+    <div class="top-ctx">Cliente · ciclo<b>Atlântica Seguros · 2026 · 2º sem</b></div>
+    <nav class="top-nav"><a href="menu.html">Painel</a><span class="avatar" title="Clara Duarte">CD</span></nav>
+  </div>
+  <nav class="steps" aria-label="Etapas do ciclo">
+    <a class="step done" href="diagnostico.html"><span class="sk">I · Assessment</span><span class="sv">Concluído</span><span class="sn">28/31 respostas</span></a>
+    <a class="step done" href="swot.html"><span class="sk">II · Posições</span><span class="sv">Concluído</span><span class="sn">12 posições</span></a>
+    <a class="step done" href="tows.html"><span class="sk">III · Estratégias</span><span class="sv">Concluído</span><span class="sn">10 · 4 apostas</span></a>
+    <a class="step done" href="okrs.html"><span class="sk">IV · Compromissos</span><span class="sv">Em curso</span><span class="sn">3 obj · 32%</span></a>
+    <a class="step done" href="projetos.html"><span class="sk">V · Projetos</span><span class="sv">Em curso</span><span class="sn">5 · 1 em risco</span></a>
+    <a class="step on" href="mapa.html"><span class="sk">VI · Mapa</span><span class="sv">Vivo</span><span class="sn">atualizado hoje</span></a>
+  </nav>
+</header>
+
+<main class="wrap" style="padding-top:4px;padding-bottom:60px">
+
+  <div class="toolrow">
+    <div class="seg" id="lens-seg" role="tablist" aria-label="Lentes de leitura">
+      <button data-lens="pan">Panorama · Conselho</button>
+      <button data-lens="ges" class="on">Gestão · Diretoria</button>
+      <button data-lens="lin">Linhagem · Auditoria</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="clear-focus">Limpar foco</button>
+      <button class="btn primary" id="present">Modo apresentação</button>
+    </div>
+  </div>
+  <p class="mobile-note">O mapa é otimizado para telas grandes — no celular, deslize horizontalmente ou use a lente Panorama.</p>
+
+  <!-- ═══════ PANORAMA ═══════ -->
+  <section class="pan" id="pan">
+    <div class="card pad" style="border-left:3px solid var(--gold-strong)">
+      <span class="eyebrow-p">Leitura em 30 segundos</span>
+      <p style="font-size:13.5px;max-width:760px;margin-top:6px"><strong>Onde estamos:</strong> maturidade 2,6 — governança em 1,7 é o ponto crítico. <strong>O que decidimos:</strong> três apostas em execução, lideradas pela defesa. <strong>O alerta:</strong> a aposta defensiva depende de uma contratação parada há três semanas.</p>
+    </div>
+    <div class="pan-grid">
+      <div class="card aposta" style="border-top-color:var(--risk)">
+        <span class="ak">Aposta defensiva · prio 1</span>
+        <h3>Proteger a operação: IA sob governança auditável.</h3>
+        <p>Política com enforcement, monitoramento de Shadow AI e riscos na pauta do Conselho.</p>
+        <span class="st"><span class="dot st-risk"></span>29% · 1 KR em risco · Diretoria de Riscos</span>
+      </div>
+      <div class="card aposta" style="border-top-color:var(--warn)">
+        <span class="ak">Aposta estrutural · prio 2</span>
+        <h3>Construir a base: dados prontos para IA.</h3>
+        <p>Centralizar domínios críticos, modernizar a arquitetura e priorizar o investimento.</p>
+        <span class="st"><span class="dot st-warn"></span>35% · atenção · CDO</span>
+      </div>
+      <div class="card aposta" style="border-top-color:var(--ok)">
+        <span class="ak">Aposta ofensiva · prio 4</span>
+        <h3>Capturar mercado: receita assistida por IA.</h3>
+        <p>Casos de uso de maior retorno alimentados pela cultura de experimentação.</p>
+        <span class="st"><span class="dot st-ok"></span>33% · no ritmo · Presidência</span>
+      </div>
+    </div>
+    <div class="pan-alert"><span class="pa-ic">!</span><div><b>O fio crítico do semestre.</b><p style="margin-top:4px">A nota 1,7 em governança virou a aposta defensiva do ciclo — e ela depende de uma decisão que está na mesa: a contratação da ferramenta de monitoramento. Adiar mantém a companhia exposta a vazamento de dados por ferramentas não homologadas.</p></div></div>
+    <p class="lede" style="margin-top:12px">Esta é a leitura de Conselho. Para os nove resultados-chave e os cinco projetos, mude a lente para <b>Gestão</b>; para auditar a origem de cada item, use <b>Linhagem</b>.</p>
+  </section>
+
+  <!-- ═══════ MAPA ═══════ -->
+  <section id="map-sec" style="margin-top:14px">
+    <div class="card">
+      <div class="map-wrap">
+        <div class="map" id="map">
+          <svg id="map-svg" aria-hidden="true"></svg>
+          <div>
+            <div class="mcol-h"><span class="rn">I</span> Diagnóstico</div>
+            <button class="node mnode mn-strategy" id="m-p1"><b>Estratégia e Visão</b><span class="mv">3,0 / 5,0 · acima da média</span></button>
+            <button class="node mnode mn-data" id="m-p2"><b>Dados e Infraestrutura</b><span class="mv">2,3 / 5,0 · limita a escala</span></button>
+            <button class="node mnode mn-people" id="m-p3"><b>Pessoas e Cultura</b><span class="mv">3,3 / 5,0 · melhor pilar</span></button>
+            <button class="node mnode mn-gov" id="m-p4"><b>Governança e Risco</b><span class="mv">1,7 / 5,0 · crítico</span><span class="sd dot st-risk"></span></button>
+          </div>
+          <div>
+            <div class="mcol-h"><span class="rn">II</span> Posições</div>
+            <button class="node mnode mn-s" id="m-f"><b>Forças</b><span class="mv">2 itens · F-01, F-02</span></button>
+            <button class="node mnode mn-w" id="m-w"><b>Fraquezas</b><span class="mv">6 itens · 3 em governança</span></button>
+            <button class="node mnode mn-o" id="m-o"><b>Oportunidade</b><span class="mv">1 item · janela de mercado</span></button>
+            <button class="node mnode mn-t" id="m-t"><b>Ameaças</b><span class="mv">3 itens · todas de governança</span></button>
+            <button class="node mnode mn-a only-lin" id="m-a"><b>Em atenção</b><span class="mv">4 itens · notas 3</span></button>
+          </div>
+          <div>
+            <div class="mcol-h"><span class="rn">III</span> Estratégias</div>
+            <button class="node mnode mn-t" id="m-wt"><b>Proteger a operação</b><span class="mv">W×T · 3 estratégias · prio 1</span></button>
+            <button class="node mnode mn-a" id="m-wo"><b>Construir a base</b><span class="mv">W×O · 3 estratégias · prio 2</span></button>
+            <button class="node mnode mn-o" id="m-st"><b>Defender a posição</b><span class="mv">F×T · 2 estratégias · prio 3</span></button>
+            <button class="node mnode mn-s" id="m-so"><b>Capturar mercado</b><span class="mv">F×O · 2 estratégias · prio 4</span></button>
+          </div>
+          <div>
+            <div class="mcol-h"><span class="rn">IV</span> Compromissos</div>
+            <button class="node mnode" id="m-ob1"><b>OBJ-01 · Governança auditável</b><span class="mv">3 KRs · 29% · 1 em risco</span><span class="sd dot st-risk"></span></button>
+            <button class="node mnode" id="m-ob2"><b>OBJ-02 · Dados prontos</b><span class="mv">3 KRs · 35% · atenção</span><span class="sd dot st-warn"></span></button>
+            <button class="node mnode" id="m-ob3"><b>OBJ-03 · Receita com IA</b><span class="mv">3 KRs · 33% · no ritmo</span><span class="sd dot st-ok"></span></button>
+          </div>
+          <div>
+            <div class="mcol-h"><span class="rn">V</span> Entrega</div>
+            <button class="node mnode" id="m-pr1"><b>P-01 · Política Viva de IA</b><span class="mv">44% · no ritmo</span><span class="sd dot st-ok"></span></button>
+            <button class="node mnode mn-w" id="m-pr2"><b>P-02 · Sentinela</b><span class="mv">15% · bloqueado</span><span class="sd dot st-risk"></span></button>
+            <button class="node mnode mn-a" id="m-pr3"><b>P-03 · Fundação de Dados</b><span class="mv">28% · atenção</span><span class="sd dot st-warn"></span></button>
+            <button class="node mnode" id="m-pr4"><b>P-04 · Comitê de Investimento</b><span class="mv">55% · no ritmo</span><span class="sd dot st-ok"></span></button>
+            <button class="node mnode" id="m-pr5"><b>P-05 · Fábrica de Casos de Uso</b><span class="mv">34% · no ritmo</span><span class="sd dot st-ok"></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="map-legend">
+        <span><i style="width:22px;height:1.5px;background:var(--gold-strong);display:inline-block"></i> fio da linhagem</span>
+        <span><i style="width:22px;height:1.5px;background:var(--risk);display:inline-block"></i> fio crítico do semestre</span>
+        <span><span class="dot st-ok"></span> no ritmo</span>
+        <span><span class="dot st-warn"></span> atenção</span>
+        <span><span class="dot st-risk"></span> em risco</span>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:10px"><b>Modo foco:</b> clique em qualquer nó para iluminar o fio — origem e consequência — e abrir o dossiê. Esc limpa.</p>
+  </section>
+
+  <div class="save-seal"><span>atualizado · hoje 14:32</span><span>Exportável em imagem/PDF com a marca da consultoria</span></div>
+</main>
+
+<!-- dossiê -->
+<aside class="drawer dock" id="dock" aria-label="Dossiê do nó">
+  <div class="dh"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span class="tag-id" id="d-id">—</span><span class="tag" id="d-st">—</span></div><b id="d-t">—</b></div><button class="btn quiet" id="d-close">Esc</button></div>
+  <div class="dblock"><span class="dk">O que este nó diz</span><p id="d-body">—</p></div>
+  <div class="dblock"><span class="dk">Fio da linhagem</span><span class="chain" id="d-trail">—</span></div>
+  <div class="dblock"><span class="dk">Próximo movimento</span><p id="d-next">—</p></div>
+  <div class="dblock ask"><span class="dk">A pergunta para a sala</span><p id="d-ask">—</p></div>
+</aside>
+
+<!-- palco -->
+<div class="stage-bar" id="stage">
+  <div class="st-t" id="st-t">Ato I · <em>O ponto de partida</em></div>
+  <p id="st-cap">—</p>
+  <div class="stage-ctl">
+    <button class="sbtn" id="st-prev">← Anterior</button>
+    <button class="sbtn" id="st-next">Avançar →</button>
+    <button class="sbtn" id="st-close">Encerrar</button>
+  </div>
+</div>
+
+<script>
+/* ═══ dados dos nós (linhagem completa) ═══ */
+const NODES={
+ 'm-p1':{id:'PILAR I',t:'Estratégia e Visão — 3,0',st:['ok','Acima da média'],body:'A liderança conecta IA a OKRs e receita (EV1·4). O roadmap existe, mas aguarda validação do Conselho (EV2·3), e o investimento ainda é decidido caso a caso (EV3·2).',trail:'EV1·4 → F-01 / O-01 · EV2·3 → A-01 · EV3·2 → W-01',next:'Levar o roadmap à pauta do Conselho junto com a revisão de riscos (KR-1.3).',ask:'O roadmap de IA entra na pauta de agosto do Conselho?'},
+ 'm-p2':{id:'PILAR II',t:'Dados e Infraestrutura — 2,3',st:['warn','Limita a escala'],body:'Dados dispersos em silos (DI1·2) e arquitetura legada (DI2·2) impedem os casos de maior valor. A governança LGPD está em definição (DI3·3).',trail:'DI1·2 → W-02 · DI2·2 → W-03 · DI3·3 → A-02',next:'Migração dos 3 primeiros domínios críticos (P-03, marco 29 ago).',ask:'Qual domínio de dados, destravado primeiro, gera mais valor?'},
+ 'm-p3':{id:'PILAR III',t:'Pessoas e Cultura — 3,3',st:['ok','Melhor pilar'],body:'Cultura de experimentação ativa com incentivo da gestão (PC1·4). Capacitação (PC2·3) e comunicação (PC3·3) ainda em desenho.',trail:'PC1·4 → F-02 · PC2·3 / PC3·3 → A-03 / A-04',next:'Canalizar experimentos da ponta para o funil oficial (KR-3.3).',ask:'Como transformar a experimentação espontânea em pipeline de casos?'},
+ 'm-p4':{id:'PILAR IV',t:'Governança e Risco — 1,7',st:['risk','Ponto crítico'],body:'Sem política formal (GR1·2), sem rastreio de Shadow AI (GR2·1) e sem o tema na pauta do Conselho (GR3·2). É o pilar que origina a aposta defensiva.',trail:'GR1·2 → W-04/T-01 · GR2·1 → W-05/T-02 · GR3·2 → W-06/T-03',next:'Todo o pilar converge para OBJ-01 — três frentes em execução.',ask:'Quem responde por IA perante o Conselho hoje?'},
+ 'm-f':{id:'FORÇAS',t:'2 forças mapeadas',st:['ok','Ativos do ciclo'],body:'F-01 · Liderança com visão clara do impacto da IA em receita. F-02 · Cultura de experimentação ativa. São o combustível das apostas ofensiva e de defesa.',trail:'EV1·4 → F-01 · PC1·4 → F-02',next:'Colocadas a serviço de OBJ-03 e da defesa em OBJ-01.',ask:'Estamos usando as forças — ou apenas as celebrando?'},
+ 'm-w':{id:'FRAQUEZAS',t:'6 fraquezas mapeadas',st:['risk','3 em governança'],body:'Investimento ad hoc, dados em silos, arquitetura legada — e três lacunas de governança. Metade das fraquezas está em um único pilar.',trail:'EV3, DI1, DI2, GR1, GR2, GR3 → W-01…W-06',next:'W-04/05/06 na aposta defensiva; W-01/02/03 na estrutural.',ask:'Qual fraqueza, se nada for feito, custa mais caro em 12 meses?'},
+ 'm-o':{id:'OPORTUNIDADE',t:'1 oportunidade de mercado',st:['ok','Janela aberta'],body:'O-01 · Capturar valor com IA antes dos concorrentes. É a única oportunidade da matriz — tudo o que constrói base serve a ela.',trail:'EV1·4 → O-01',next:'Orienta as apostas 2 e 4 do ciclo.',ask:'Quanto vale essa janela — e por quanto tempo fica aberta?'},
+ 'm-t':{id:'AMEAÇAS',t:'3 ameaças ativas',st:['risk','Origem: governança'],body:'Dano reputacional e legal (T-01), vazamento via Shadow AI (T-02) e exposição sem supervisão do Conselho (T-03). Todas nascem da governança.',trail:'GR1 → T-01 · GR2 → T-02 · GR3 → T-03',next:'Mitigação integral via OBJ-01; T-02 depende de P-02.',ask:'Qual dessas ameaças a companhia menos toleraria ver no noticiário?'},
+ 'm-a':{id:'ATENÇÃO',t:'4 pontos em maturação',st:['warn','Notas 3'],body:'Roadmap no Conselho, LGPD, capacitação e comunicação — fora da matriz por ora; viram força ou fraqueza no próximo ciclo.',trail:'EV2 · DI3 · PC2 · PC3 → A-01…A-04',next:'Reavaliar na reaplicação do diagnóstico (dez 2026).',ask:'Qual destes quatro merece virar meta já neste ciclo?'},
+ 'm-wt':{id:'WT · PRIO 1',t:'Proteger a operação',st:['risk','Urgência máxima'],body:'Três estratégias de sobrevivência: política de uso ético, monitoramento de Shadow AI e riscos de IA na pauta do Conselho.',trail:'W-04×T-01 → WT-1 · W-05×T-02 → WT-2 · W-06×T-03 → WT-3 → OBJ-01',next:'Integralmente promovida a OBJ-01, com dono nomeado.',ask:'O que precisa ser verdade até outubro para este risco sair de crítico?'},
+ 'm-wo':{id:'WO · PRIO 2',t:'Construir a base',st:['warn','Estrutural'],body:'Corrigir o que impede a captura da oportunidade: centralizar dados, modernizar a arquitetura e instituir critérios de investimento.',trail:'W-02/03/01 × O-01 → WO-1/2/3 → OBJ-02',next:'Promovida a OBJ-02 (CDO).',ask:'A base que estamos construindo serve ao caso de uso nº 1?'},
+ 'm-st':{id:'ST · PRIO 3',t:'Defender a posição',st:['ok','Absorvida'],body:'Usar as forças contra as ameaças: canalizar a experimentação para ferramentas homologadas e responder rápido a concorrentes.',trail:'F-02×T-02 → ST-1 · F-01×T-01 → ST-2 → absorvida em OBJ-01',next:'ST-1 vira requisito do catálogo homologado do projeto Sentinela.',ask:'A experimentação da ponta já tem para onde ir com segurança?'},
+ 'm-so':{id:'SO · PRIO 4',t:'Capturar mercado',st:['ok','Ofensiva'],body:'Usar a visão de receita para priorizar casos de maior retorno e a cultura de experimentação para alimentar o funil.',trail:'F-01×O-01 → SO-1 · F-02×O-01 → SO-2 → OBJ-03',next:'Promovida a OBJ-03 (Presidência).',ask:'Qual caso de uso conta a melhor história de receita até dezembro?'},
+ 'm-ob1':{id:'OBJ-01',t:'IA sob governança auditável',st:['risk','29% · 1 KR em risco'],body:'Dona: Diretoria de Riscos. KR-1.1 política treinada (40%), KR-1.2 monitoramento ≥95% (15%, em risco), KR-1.3 três revisões no Conselho (1/3).',trail:'Governança 1,7 → W/T → WT prio 1 → OBJ-01 → P-01 · P-02',next:'Destravar a contratação do DLP nesta reunião — caminho crítico do KR-1.2.',ask:'Aprovamos hoje a contratação que destrava o KR-1.2?'},
+ 'm-ob2':{id:'OBJ-02',t:'Dados prontos para IA',st:['warn','35% · atenção'],body:'Dona: CDO. KR-2.1 domínios centralizados (30%), KR-2.2 preparação 6 sem → 10 dias (20%), KR-2.3 investimento via framework (55%).',trail:'Dados 2,3 → W-02/03 → WO prio 2 → OBJ-02 → P-03 · P-04',next:'Marco de 3 domínios migrados em 29 ago define a confiança do trimestre.',ask:'O cronograma da migração resiste ao pico de sinistros de setembro?'},
+ 'm-ob3':{id:'OBJ-03',t:'Receita assistida por IA',st:['ok','33% · no ritmo'],body:'Dona: Presidência. KR-3.1 três casos em produção (1/3), KR-3.2 receita ≥4% do prêmio (1,2%), KR-3.3 vinte experimentos (7/20).',trail:'F-01/F-02 → SO prio 4 → OBJ-03 → P-05',next:'Caso de uso nº 2 em produção previsto para 05 set.',ask:'O que a receita de 1,2% já nos ensinou sobre onde dobrar a aposta?'},
+ 'm-pr1':{id:'P-01',t:'Política Viva de IA',st:['ok','No ritmo · 44%'],body:'Entrega KR-1.1 e KR-1.3. Política em revisão jurídica; trilha de treinamento pronta para a diretoria.',trail:'GR1·2 → W-04×T-01 → WT-1 → KR-1.1/1.3 → P-01',next:'Treinamento da diretoria em 15 ago.',ask:'A política nasce com enforcement — ou só com boa intenção?'},
+ 'm-pr2':{id:'P-02',t:'Sentinela — Shadow AI',st:['risk','Em risco · 15%'],body:'Entrega KR-1.2. Inventário concluído; contratação do monitoramento bloqueada em suprimentos há 3 semanas. Plano B: controles nativos parciais.',trail:'GR2·1 → W-05×T-02 → WT-2 → KR-1.2 → P-02',next:'Decisão de contratação pendente — cada semana adia a meta de 95%.',ask:'Assumimos o plano B parcial ou destravamos a contratação agora?'},
+ 'm-pr3':{id:'P-03',t:'Fundação de Dados Atlântica',st:['warn','Atenção · 28%'],body:'Entrega KR-2.1 e KR-2.2. Dois domínios em migração; time de TI disputado com o legado.',trail:'DI1/DI2 → W-02/03 → WO-1/2 → KR-2.1/2.2 → P-03',next:'Três domínios migrados até 29 ago.',ask:'A alocação do time resiste até o marco — ou precisamos blindá-la?'},
+ 'm-pr4':{id:'P-04',t:'Comitê de Investimento em IA',st:['ok','No ritmo · 55%'],body:'Entrega KR-2.3. Primeiro ciclo de priorização concluído com o framework impacto × viabilidade.',trail:'EV3·2 → W-01 → WO-3 → KR-2.3 → P-04',next:'Segundo ciclo de priorização em 22 ago.',ask:'O comitê já disse não a algum projeto? Se não, está funcionando?'},
+ 'm-pr5':{id:'P-05',t:'Fábrica de Casos de Uso',st:['ok','No ritmo · 34%'],body:'Entrega KR-3.1 a 3.3. Caso nº 1 em produção com retorno medido; caso nº 2 em homologação.',trail:'EV1/PC1 → F-01/F-02 → SO-1/2 → KR-3.x → P-05',next:'Caso nº 2 em produção em 05 set.',ask:'O retorno do caso nº 1 já virou argumento de venda interna?'}
+};
+const EDGES=[
+ ['m-p1','m-f','sec'],['m-p1','m-w','sec'],['m-p1','m-o','sec'],['m-p1','m-a','sec'],
+ ['m-p2','m-w','sec'],['m-p2','m-a','sec'],
+ ['m-p3','m-f','sec'],['m-p3','m-a','sec'],
+ ['m-p4','m-w','hot'],['m-p4','m-t','hot'],
+ ['m-w','m-wt','hot'],['m-t','m-wt','hot'],
+ ['m-w','m-wo'],['m-o','m-wo'],
+ ['m-f','m-st'],['m-t','m-st','sec'],
+ ['m-f','m-so'],['m-o','m-so'],
+ ['m-wt','m-ob1','hot'],['m-st','m-ob1','dash'],['m-wo','m-ob2'],['m-so','m-ob3'],
+ ['m-ob1','m-pr1'],['m-ob1','m-pr2','hot'],['m-ob2','m-pr3'],['m-ob2','m-pr4'],['m-ob3','m-pr5']
+];
+
+/* ═══ lentes ═══ */
+let lens='ges';
+const seg=document.getElementById('lens-seg');
+function setLens(l){
+  lens=l;
+  seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.lens===l));
+  document.body.className='lens-'+l;
+  clearFocus();
+  if(l!=='pan')requestAnimationFrame(drawMap);
+}
+seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setLens(b.dataset.lens)));
+if(location.hash==='#pan')setLens('pan');
+if(location.hash==='#lin')setLens('lin');
+
+/* ═══ fios ═══ */
+let focusSet=null;
+function visibleEdges(){
+  return EDGES.filter(e=>{
+    if(lens==='ges'&&e[2]==='sec')return false;
+    if(lens!=='lin'&&(e[0]==='m-a'||e[1]==='m-a'))return false;
+    return true;
+  });
+}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function drawMap(){
+  const map=document.getElementById('map'),svg=document.getElementById('map-svg');
+  if(!map||!svg)return;
+  const box=map.getBoundingClientRect();
+  svg.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+  svg.innerHTML='';
+  visibleEdges().forEach(([a,b,kind])=>{
+    const ea=document.getElementById(a),eb=document.getElementById(b);
+    if(!ea||!eb||ea.offsetParent===null||eb.offsetParent===null)return;
+    const ra=ea.getBoundingClientRect(),rb=eb.getBoundingClientRect();
+    const x1=ra.right-box.left,y1=ra.top-box.top+ra.height/2;
+    const x2=rb.left-box.left,y2=rb.top-box.top+rb.height/2;
+    const dx=(x2-x1)*.55;
+    const inFocus=!focusSet||(focusSet.has(a)&&focusSet.has(b));
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d','M '+x1+' '+y1+' C '+(x1+dx)+' '+y1+', '+(x2-dx)+' '+y2+', '+x2+' '+y2);
+    p.setAttribute('fill','none');
+    let stroke=css('--gold-strong'),wd=1.3,op=.5;
+    if(kind==='hot'){stroke=css('--risk');wd=2;op=.8}
+    if(kind==='dash'){p.setAttribute('stroke-dasharray','4 4')}
+    if(focusSet&&!inFocus)op=.06;
+    p.setAttribute('stroke',stroke);p.setAttribute('stroke-width',wd);p.setAttribute('opacity',op);
+    svg.appendChild(p);
+  });
+}
+window.addEventListener('resize',()=>{if(lens!=='pan')drawMap()});
+
+/* ═══ foco + dossiê ═══ */
+function neighbors(id){
+  /* ancestrais e descendentes por varredura de arestas */
+  const anc=new Set([id]),des=new Set([id]);
+  let ch=true;
+  while(ch){ch=false;EDGES.forEach(([a,b])=>{if(anc.has(b)&&!anc.has(a)){anc.add(a);ch=true}})}
+  ch=true;
+  while(ch){ch=false;EDGES.forEach(([a,b])=>{if(des.has(a)&&!des.has(b)){des.add(b);ch=true}})}
+  return new Set([...anc,...des]);
+}
+function focusNode(id){
+  focusSet=neighbors(id);
+  document.querySelectorAll('.mnode').forEach(n=>{
+    n.classList.remove('lit','dim');
+    if(n.id===id)n.classList.add('lit');
+    else if(!focusSet.has(n.id))n.classList.add('dim');
+  });
+  drawMap();
+  const d=NODES[id];
+  if(d){
+    document.getElementById('d-id').textContent=d.id;
+    const st=document.getElementById('d-st');
+    st.textContent=d.st[1];st.className='tag tag--'+d.st[0];
+    document.getElementById('d-t').textContent=d.t;
+    document.getElementById('d-body').textContent=d.body;
+    document.getElementById('d-trail').textContent=d.trail;
+    document.getElementById('d-next').textContent=d.next;
+    document.getElementById('d-ask').textContent=d.ask;
+    document.getElementById('dock').classList.add('open');
+  }
+}
+function clearFocus(){
+  focusSet=null;
+  document.querySelectorAll('.mnode').forEach(n=>n.classList.remove('lit','dim'));
+  document.getElementById('dock').classList.remove('open');
+  if(lens!=='pan')drawMap();
+}
+document.querySelectorAll('.mnode').forEach(n=>n.addEventListener('click',()=>focusNode(n.id)));
+document.getElementById('clear-focus').addEventListener('click',clearFocus);
+document.getElementById('d-close').addEventListener('click',clearFocus);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){clearFocus();stopStage()}});
+
+/* ═══ apresentação ═══ */
+const ACTS=[
+ {t:'Ato I · <em>O ponto de partida</em>',cap:'Maturidade 2,6 — o diagnóstico mostrou um pilar crítico: Governança e Risco em 1,7, com a pior nota do ciclo no rastreio de Shadow AI.',focus:'m-p4'},
+ {t:'Ato II · <em>O que o diagnóstico revelou</em>',cap:'Metade das fraquezas nasce da governança — e todas as três ameaças também. A matriz concentra a leitura.',focus:'m-w'},
+ {t:'Ato III · <em>A decisão</em>',cap:'A aposta defensiva "Proteger a operação" tem urgência máxima: política, monitoramento e Conselho.',focus:'m-wt'},
+ {t:'Ato IV · <em>Os compromissos</em>',cap:'OBJ-01 carrega a defesa do ciclo — 29%, com o KR-1.2 em risco.',focus:'m-ob1'},
+ {t:'Ato V · <em>A pergunta desta sala</em>',cap:'P-02 Sentinela está bloqueado há 3 semanas. Aprovamos hoje a contratação que destrava o KR-1.2?',focus:'m-pr2'}
+];
+let act=0,staging=false;
+function showAct(){
+  const a=ACTS[act];
+  document.getElementById('st-t').innerHTML=a.t;
+  document.getElementById('st-cap').textContent=a.cap;
+  focusNode(a.focus);
+  document.getElementById('dock').classList.remove('open');
+}
+document.getElementById('present').addEventListener('click',()=>{
+  staging=true;act=0;
+  if(lens==='pan')setLens('ges');
+  document.getElementById('stage').classList.add('on');
+  showAct();
+});
+document.getElementById('st-prev').addEventListener('click',()=>{if(act>0){act--;showAct()}});
+document.getElementById('st-next').addEventListener('click',()=>{if(act<ACTS.length-1){act++;showAct()}});
+function stopStage(){staging=false;document.getElementById('stage').classList.remove('on');clearFocus()}
+document.getElementById('st-close').addEventListener('click',stopStage);
+
+requestAnimationFrame(drawMap);
+</script>
+</body>
+</html>

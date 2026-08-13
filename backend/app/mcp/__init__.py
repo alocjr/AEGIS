@@ -2,6 +2,7 @@
 
 from app.mcp.server import (
     MCP_PATH,
+    TOOLS_CATALOG_VERSION,
     apply_mcp_auth_middleware,
     create_mcp,
     get_auth,
@@ -14,6 +15,7 @@ from app.mcp.server import (
 
 __all__ = [
     "MCP_PATH",
+    "TOOLS_CATALOG_VERSION",
     "apply_mcp_auth_middleware",
     "create_mcp",
     "get_auth",

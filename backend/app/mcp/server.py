@@ -14,6 +14,10 @@ from app.mcp.tools_learner import register_learner_tools
 _mcp: FastMCP | None = None
 _auth: AegisOAuthProvider | None = None
 MCP_PATH = "/mcp"
+# Bump quando o catálogo de tools mudar. O Claude cacheia tools/list por URL/nome
+# do connector e ignora notifications/tools/list_changed; serverInfo.version
+# diferente ajuda alguns clientes a tratar o catálogo como novo.
+TOOLS_CATALOG_VERSION = "2026.08.12"
 
 
 def get_auth() -> AegisOAuthProvider:
@@ -32,8 +36,10 @@ def create_mcp() -> FastMCP:
     auth = get_auth()
     mcp = FastMCP(
         name="aegis",
+        version=TOOLS_CATALOG_VERSION,
         instructions=(
-            "Servidor MCP da plataforma Valorian 4 Future (AEGIS). "
+            f"Servidor MCP da plataforma Valorian 4 Future (AEGIS). "
+            f"Catálogo de tools versão {TOOLS_CATALOG_VERSION}. "
             "Conecte via Claude Connectors (OAuth: login Valorian no browser) "
             "ou Authorization: Bearer com JWT/OAuth token. "
             "Tools de mentorado exigem email verificado e a ferramenta do AI Hub "
@@ -44,7 +50,9 @@ def create_mcp() -> FastMCP:
             "okr_create_key_result / okr_update_key_result / okr_activate; "
             "canvas_create / canvas_update / canvas_import; "
             "governance_create_system / governance_update_system / governance_create_assessment / "
-            "governance_create_gate / governance_decide_gate."
+            "governance_create_gate / governance_decide_gate. "
+            "Se o cliente ainda listar um catálogo antigo (sem maturity_answer / "
+            "okr_create_objective), remova e recoloque o connector e abra um chat novo."
         ),
         auth=auth,
     )
@@ -93,7 +101,16 @@ def wrap_asgi_endpoint(app, name: str = "mcp_asgi"):
     """Dá __name__/__module__ ao ASGI app: o SlowAPI lê `route.endpoint.__name__`."""
 
     async def endpoint(scope, receive, send):
-        await app(scope, receive, send)
+        async def send_no_store(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers") or [])
+                # Claude e CDNs às vezes cacheiam tools/list; o catálogo muda entre deploys.
+                headers.append((b"cache-control", b"no-store, no-cache, must-revalidate"))
+                headers.append((b"pragma", b"no-cache"))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await app(scope, receive, send_no_store)
 
     endpoint.__name__ = name
     endpoint.__module__ = "app.mcp"
@@ -121,6 +138,7 @@ def install_mcp_routes(fastapi_app, mcp_asgi) -> None:
 
 __all__ = [
     "MCP_PATH",
+    "TOOLS_CATALOG_VERSION",
     "apply_mcp_auth_middleware",
     "create_mcp",
     "get_auth",

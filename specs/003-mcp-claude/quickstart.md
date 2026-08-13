@@ -28,6 +28,12 @@ python util/aegis_mcp_token.py --email SEU_EMAIL --print-env
 cp mcp-client/claude-code.mcp.json.example .mcp.json
 ```
 
+Se o Claude não listar tools novas depois de um deploy: o cliente cacheia
+`tools/list`. Confirme o catálogo com `python util/aegis_mcp_check.py … --email`,
+habilite as tools no connector (**Allow always**), **remova e recoloque** o
+connector e abra um **chat novo**. No Claude Code, mude o nome do servidor
+(`aegis` → `aegis-hub`) ou use `MCP_DISCOVERY_CACHE=0`. Detalhes: `docs/mcp.md`.
+
 ## 3. Fluxos
 
 1. Mentorado: prompt `swot_gerar_json` → gerar JSON → tool `swot_import` (ou `swot_update` / `tows_rebuild`)

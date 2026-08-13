@@ -37,6 +37,18 @@ WARN = "\033[33mAVISO\033[0m"
 
 CLAUDE_REDIRECT = "https://claude.ai/api/mcp/auth_callback"
 
+# Tools adicionadas depois do catálogo inicial. Se tools/list não as tiver,
+# o deploy está atrasado — não é cache do Claude.
+EXPECTED_NEW_TOOLS = (
+    "maturity_questionnaire",
+    "maturity_answer",
+    "okr_create_objective",
+    "okr_update_objective",
+    "okr_create_key_result",
+    "okr_update_key_result",
+    "governance_create_assessment",
+)
+
 
 def _json_or_none(resp: httpx.Response) -> dict | None:
     ctype = resp.headers.get("content-type", "")
@@ -141,6 +153,19 @@ def check_authenticated_session(base: str, email: str, password: str) -> int:
     else:
         names = [t["name"] for t in data.get("result", {}).get("tools", [])]
         print(f"{OK} POST /mcp tools/list — {len(names)} tools: {names}")
+        missing = [n for n in EXPECTED_NEW_TOOLS if n not in names]
+        if missing:
+            print(
+                f"{FAIL} catálogo incompleto — faltam {missing}. "
+                "O código novo ainda não está neste host (rebuild + redeploy). "
+                "Não é cache do Claude."
+            )
+            failures += 1
+        else:
+            print(
+                f"{OK} catálogo inclui tools novas ({', '.join(EXPECTED_NEW_TOOLS)}). "
+                "Se o Claude não as vê: remova e recoloque o connector e abra um chat novo."
+            )
 
     print()
     return failures

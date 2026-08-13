@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   fetchStrategicMap,
@@ -8,7 +8,6 @@ import {
   type StrategicMapInitiative,
   type StrategicMapItem,
   type StrategicMapQuestion,
-  type StrategicMapObjective,
 } from '@/api/strategicMap'
 import {
   createCanvasProject,
@@ -18,6 +17,15 @@ import {
   type CanvasProjectSummary,
 } from '@/api/canvasProjects'
 import { createSwotFromMaturity, type SwotListField, type SwotTowsField } from '@/api/swotAnalysis'
+import {
+  buildStrategicMapGraph,
+  lineageOf,
+  visibleEdges,
+  type MapEdge,
+  type MapLens,
+  type MapNode,
+  type StrategicMapGraph,
+} from '@/lib/strategicMapGraph'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,26 +37,24 @@ const busy = ref(false)
 const map = ref<StrategicMap | null>(null)
 const projects = ref<CanvasProjectSummary[]>([])
 
-const openKeys = ref<Set<string>>(new Set())
+const lens = ref<MapLens>('ges')
+const focusId = ref<string | null>(null)
+const dockOpen = ref(false)
+const staging = ref(false)
+const actIndex = ref(0)
 const linkPanel = ref<string | null>(null)
 
-const dimFilter = ref('')
-const onlyWithTows = ref(true)
-const onlyWithProjects = ref(false)
-const query = ref('')
-const quadOn = reactive<Record<SwotListField, boolean>>({
-  forcas: true,
-  oportunidades: true,
-  fraquezas: true,
-  ameacas: true,
-})
+const mapEl = ref<HTMLElement | null>(null)
+const paths = ref<DrawnPath[]>([])
+let resizeObserver: ResizeObserver | null = null
 
-const QUADRANTS: { field: SwotListField; label: string; letter: string; negative: boolean }[] = [
-  { field: 'forcas', label: 'Forças', letter: 'F', negative: false },
-  { field: 'oportunidades', label: 'Oportunidades', letter: 'O', negative: false },
-  { field: 'fraquezas', label: 'Fraquezas', letter: 'f', negative: true },
-  { field: 'ameacas', label: 'Ameaças', letter: 'A', negative: true },
-]
+type DrawnPath = {
+  d: string
+  stroke: string
+  width: number
+  opacity: number
+  dash: string
+}
 
 const QUADRANT_LABEL: Record<SwotListField, string> = {
   forcas: 'Força',
@@ -64,27 +70,9 @@ const TOWS_LABEL: Record<SwotTowsField, string> = {
   tows_fxa: 'f × A · Sobrevivência',
 }
 
-const CANVAS_QUADRANT_LABEL: Record<string, string> = {
-  ganho_rapido: 'Ganho rápido',
-  aposta_estrategica: 'Aposta estratégica',
-  incremental: 'Incremental',
-  evitar: 'Evitar',
-}
-
-const DIMENSION_ACCENT: Record<string, string> = {
-  strategy: '#7a5aa3',
-  data_infra: '#3d6fa8',
-  people_culture: '#b9822f',
-  gov_risk: '#a3453f',
-}
-
 function clip(text: string, max: number): string {
   const value = (text || '').trim()
   return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`
-}
-
-function accentFor(dimId: string): string {
-  return DIMENSION_ACCENT[dimId] || 'var(--gold)'
 }
 
 function formatDate(iso: string | null): string {
@@ -100,74 +88,20 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function dimKey(dim: StrategicMapDimension): string {
-  return `d:${dim.id}`
-}
-function questionKey(dim: StrategicMapDimension, question: StrategicMapQuestion): string {
-  return `q:${dim.id}/${question.id}`
-}
-function itemKey(item: StrategicMapItem): string {
-  return `i:${item.id}`
-}
-function towsKey(initiative: StrategicMapInitiative): string {
-  return `t:${initiative.id}`
-}
-function objKey(objective: StrategicMapObjective): string {
-  return `obj:${objective.id}`
-}
-
-function isOpen(key: string): boolean {
-  return openKeys.value.has(key)
-}
-
-function toggle(key: string) {
-  const next = new Set(openKeys.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  openKeys.value = next
-}
-
-/** Abre até o nível dos itens SWOT; estratégias TOWS ficam recolhidas. */
-function openDefault(doc: StrategicMap) {
-  const keys = new Set<string>()
-  for (const dim of doc.dimensions) {
-    keys.add(dimKey(dim))
-    for (const question of dim.questions) {
-      keys.add(questionKey(dim, question))
-      for (const item of question.items) keys.add(itemKey(item))
-    }
-  }
-  keys.add('x:unlinked')
-  openKeys.value = keys
-}
-
-function expandAll() {
-  const doc = map.value
-  if (!doc) return
-  const keys = new Set<string>(['x:unlinked'])
-  const walkItems = (items: StrategicMapItem[]) => {
-    for (const item of items) {
-      keys.add(itemKey(item))
-      for (const initiative of item.initiatives) keys.add(towsKey(initiative))
-    }
-  }
-  for (const dim of doc.dimensions) {
-    keys.add(dimKey(dim))
-    for (const question of dim.questions) {
-      keys.add(questionKey(dim, question))
-      walkItems(question.items)
-    }
-  }
-  walkItems(doc.unlinked.swot_items)
-  openKeys.value = keys
-}
-
-function collapseAll() {
-  openKeys.value = new Set()
-}
-
+const graph = computed<StrategicMapGraph>(() => buildStrategicMapGraph(map.value))
 const stats = computed(() => map.value?.stats ?? null)
 const head = computed(() => map.value?.source ?? null)
+const focusSet = computed(() => {
+  if (!focusId.value) return null
+  return lineageOf(focusId.value, graph.value.edges)
+})
+const focusedNode = computed<MapNode | null>(() => {
+  if (!focusId.value) return null
+  return graph.value.nodeById.get(focusId.value) ?? null
+})
+const visibleColumns = computed(() => graph.value.columns)
+const acts = computed(() => graph.value.acts)
+const currentAct = computed(() => acts.value[actIndex.value] ?? null)
 
 const sourceOptions = computed(() =>
   (map.value?.sources ?? []).map((source) => {
@@ -190,100 +124,151 @@ const selectedSource = computed(() => {
   return current.maturity_response_id ? `mr:${current.maturity_response_id}` : ''
 })
 
-function matches(text: string | null | undefined): boolean {
-  const term = query.value.trim().toLowerCase()
-  if (!term) return true
-  return (text || '').toLowerCase().includes(term)
-}
-
-function initiativeProjectCount(item: StrategicMapItem): number {
-  return item.initiatives.reduce((total, initiative) => total + initiative.projects.length, 0)
-}
-
-function itemProjectCount(item: StrategicMapItem): number {
-  return item.projects.length + initiativeProjectCount(item)
-}
-
-function itemMatchesSearch(item: StrategicMapItem): boolean {
-  if (matches(item.texto) || matches(item.evidencia)) return true
-  return item.initiatives.some(
-    (initiative) =>
-      matches(initiative.acao) ||
-      initiative.projects.some((project) => matches(project.title))
-  ) || item.projects.some((project) => matches(project.title))
-}
-
-/** Item entrou no TOWS como lado interno (tem estratégias) ou como contraparte externa. */
-function hasTows(item: StrategicMapItem): boolean {
-  return item.initiatives.length > 0 || item.used_in > 0
-}
-
-function visibleItems(question: StrategicMapQuestion, questionMatched: boolean): StrategicMapItem[] {
-  return question.items.filter((item) => {
-    if (!quadOn[item.quadrant]) return false
-    if (onlyWithTows.value && !hasTows(item)) return false
-    if (onlyWithProjects.value && itemProjectCount(item) === 0) return false
-    return questionMatched || itemMatchesSearch(item)
-  })
-}
-
-const filteredDimensions = computed<StrategicMapDimension[]>(() => {
+const unlinkedSummary = computed(() => {
   const doc = map.value
-  if (!doc) return []
-  return doc.dimensions
-    .filter((dim) => !dimFilter.value || dim.id === dimFilter.value)
-    .map((dim) => {
-      const questions = dim.questions
-        .map((question) => {
-          const questionMatched = matches(question.text) || matches(question.id)
-          const items = visibleItems(question, questionMatched)
-          // Pontos de atenção (nota 3) ficam fora do SWOT/TOWS por definição
-          const watchlist =
-            onlyWithTows.value || onlyWithProjects.value || !questionMatched
-              ? []
-              : question.watchlist
-          return { ...question, items, watchlist }
-        })
-        .filter((question) => question.items.length > 0 || question.watchlist.length > 0)
-      return { ...dim, questions }
+  if (!doc) return null
+  const counts = {
+    items: doc.unlinked.swot_items.length,
+    initiatives: doc.unlinked.initiatives.length,
+    projects: doc.unlinked.projects.length,
+    objectives: doc.unlinked.objectives.length,
+    krs: doc.unlinked.key_results.length,
+  }
+  if (!Object.values(counts).some(Boolean)) return null
+  return counts
+})
+
+function cssVar(name: string, fallback: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
+function edgeStyle(kind: MapEdge['kind']): { stroke: string; width: number; opacity: number; dash: string } {
+  if (kind === 'hot') return { stroke: cssVar('--low', '#b63737'), width: 2, opacity: 0.8, dash: '' }
+  if (kind === 'dash') {
+    return { stroke: cssVar('--gold', '#9b7e46'), width: 1.3, opacity: 0.55, dash: '4 4' }
+  }
+  if (kind === 'sec') {
+    return { stroke: cssVar('--gold2', '#b8975a'), width: 1.1, opacity: 0.35, dash: '' }
+  }
+  return { stroke: cssVar('--gold', '#9b7e46'), width: 1.4, opacity: 0.55, dash: '' }
+}
+
+function redraw() {
+  const root = mapEl.value
+  if (!root || lens.value === 'pan') {
+    paths.value = []
+    return
+  }
+  const box = root.getBoundingClientRect()
+  if (box.width < 8 || box.height < 8) {
+    paths.value = []
+    return
+  }
+  const next: DrawnPath[] = []
+  const focused = focusSet.value
+  for (const edge of visibleEdges(graph.value.edges, lens.value)) {
+    const fromEl = root.querySelector<HTMLElement>(`[data-nid="${edge.from}"]`)
+    const toEl = root.querySelector<HTMLElement>(`[data-nid="${edge.to}"]`)
+    if (!fromEl || !toEl || fromEl.offsetParent === null || toEl.offsetParent === null) continue
+    const a = fromEl.getBoundingClientRect()
+    const b = toEl.getBoundingClientRect()
+    const x1 = a.right - box.left
+    const y1 = a.top - box.top + a.height / 2
+    const x2 = b.left - box.left
+    const y2 = b.top - box.top + b.height / 2
+    const dx = (x2 - x1) * 0.55
+    const inFocus = !focused || (focused.has(edge.from) && focused.has(edge.to))
+    const style = edgeStyle(edge.kind)
+    next.push({
+      d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`,
+      stroke: style.stroke,
+      width: style.width,
+      opacity: focused && !inFocus ? 0.06 : style.opacity,
+      dash: style.dash,
     })
-    .filter((dim) => dim.questions.length > 0)
-})
+  }
+  paths.value = next
+}
 
-const hiddenCount = computed(() => {
-  const doc = map.value
-  if (!doc) return 0
-  const shown = filteredDimensions.value.reduce(
-    (total, dim) =>
-      total + dim.questions.reduce((sum, question) => sum + question.items.length, 0),
-    0
-  )
-  const linkedTotal = doc.dimensions.reduce(
-    (total, dim) =>
-      total + dim.questions.reduce((sum, question) => sum + question.items.length, 0),
-    0
-  )
-  return Math.max(0, linkedTotal - shown)
-})
+function scheduleDraw() {
+  void nextTick(() => requestAnimationFrame(redraw))
+}
 
-const unlinkedItems = computed<StrategicMapItem[]>(() => {
-  const items = map.value?.unlinked.swot_items ?? []
-  return onlyWithTows.value ? items.filter(hasTows) : items
-})
+function nodeClass(node: MapNode): Record<string, boolean> {
+  const focused = focusSet.value
+  return {
+    [node.accent]: !!node.accent,
+    lit: focusId.value === node.id,
+    dim: !!focused && !focused.has(node.id),
+    'only-lin': node.kind === 'watch',
+  }
+}
 
-const hasUnlinked = computed(() => {
-  const doc = map.value
-  if (!doc) return false
-  return (
-    unlinkedItems.value.length > 0 ||
-    doc.unlinked.projects.length > 0 ||
-    doc.unlinked.objectives.length > 0 ||
-    doc.unlinked.key_results.length > 0
-  )
-})
+function setLens(next: MapLens) {
+  lens.value = next
+  if (next === 'pan') {
+    dockOpen.value = false
+    if (!staging.value) focusId.value = null
+  } else if (focusId.value && graph.value.nodeById.get(focusId.value)?.kind === 'watch' && next !== 'lin') {
+    clearFocus()
+  }
+  scheduleDraw()
+}
 
-function projectById(id: string): CanvasProjectSummary | undefined {
-  return projects.value.find((project) => project.id === id)
+function focusNode(id: string, openDock = true) {
+  if (!graph.value.nodeById.has(id)) return
+  if (lens.value === 'pan') lens.value = 'ges'
+  focusId.value = id
+  dockOpen.value = openDock
+  linkPanel.value = null
+  scheduleDraw()
+}
+
+function clearFocus() {
+  focusId.value = null
+  dockOpen.value = false
+  linkPanel.value = null
+  scheduleDraw()
+}
+
+function startStage() {
+  if (!acts.value.length) return
+  staging.value = true
+  actIndex.value = 0
+  if (lens.value === 'pan') lens.value = 'ges'
+  showAct()
+}
+
+function showAct() {
+  const act = acts.value[actIndex.value]
+  if (!act) return
+  focusNode(act.focusId, false)
+  dockOpen.value = false
+}
+
+function stopStage() {
+  staging.value = false
+  clearFocus()
+}
+
+function prevAct() {
+  if (actIndex.value > 0) {
+    actIndex.value -= 1
+    showAct()
+  }
+}
+
+function nextAct() {
+  if (actIndex.value < acts.value.length - 1) {
+    actIndex.value += 1
+    showAct()
+  }
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  if (staging.value) stopStage()
+  else clearFocus()
 }
 
 function isLinked(project: CanvasProjectSummary, kind: 'item' | 'tows', refId: string): boolean {
@@ -295,11 +280,92 @@ function togglePanel(key: string) {
   linkPanel.value = linkPanel.value === key ? null : key
 }
 
-/** Mantém o mapa na mesma fonte após uma alteração de vínculo. */
 function currentParams(): { maturityResponseId?: string | null; swotId?: string | null } {
   const current = head.value
   if (current?.swot_id) return { swotId: current.swot_id }
   return { maturityResponseId: current?.maturity_response_id ?? null }
+}
+
+function originContext(dim: StrategicMapDimension, question: StrategicMapQuestion): string[] {
+  const answer = `Resposta: nota ${question.answer}/5`
+  return [
+    clip(`Origem: ${dim.name} · ${question.id} — ${question.text}`, 400),
+    clip(question.answer_text ? `${answer} — ${question.answer_text}` : answer, 400),
+  ]
+}
+
+function findItemContext(itemId: string): {
+  dim: StrategicMapDimension
+  question: StrategicMapQuestion
+  item: StrategicMapItem
+} | null {
+  const doc = map.value
+  if (!doc) return null
+  for (const dim of doc.dimensions) {
+    for (const question of dim.questions) {
+      const item = question.items.find((entry) => entry.id === itemId)
+      if (item) return { dim, question, item }
+    }
+  }
+  return null
+}
+
+function findInitiative(id: string): { initiative: StrategicMapInitiative; item: StrategicMapItem | null } | null {
+  const doc = map.value
+  if (!doc) return null
+  for (const dim of doc.dimensions) {
+    for (const question of dim.questions) {
+      for (const item of question.items) {
+        const initiative = item.initiatives.find((entry) => entry.id === id)
+        if (initiative) return { initiative, item }
+      }
+    }
+  }
+  const orphan = doc.unlinked.initiatives.find((entry) => entry.id === id)
+  if (orphan) return { initiative: orphan, item: null }
+  return null
+}
+
+function itemPrefill(item: StrategicMapItem, dim?: StrategicMapDimension, question?: StrategicMapQuestion): CanvasProjectPayload {
+  const negative = item.quadrant === 'fraquezas' || item.quadrant === 'ameacas'
+  return {
+    title: clip(item.texto || `${QUADRANT_LABEL[item.quadrant]}`, 200),
+    objetivo_estrategico: clip(head.value?.optica || '', 2000),
+    contexto: dim && question ? originContext(dim, question) : [],
+    dores: negative ? [clip(item.texto, 400)] : [],
+    oportunidade: negative ? [] : [clip(item.texto, 400)],
+    swot_id: head.value?.swot_id ?? null,
+    swot_item_ids: [item.id],
+    tows_ids: [],
+  }
+}
+
+function initiativePrefill(initiative: StrategicMapInitiative, item: StrategicMapItem | null): CanvasProjectPayload {
+  const ctx = item ? findItemContext(item.id) : null
+  const negative = item?.quadrant === 'fraquezas' || item?.quadrant === 'ameacas'
+  const opportunities = initiative.counterparts
+    .filter((counterpart) => counterpart.quadrant === 'oportunidades')
+    .map((counterpart) => clip(counterpart.texto, 400))
+    .filter(Boolean)
+  const threats = initiative.counterparts
+    .filter((counterpart) => counterpart.quadrant === 'ameacas')
+    .map((counterpart) => clip(counterpart.texto, 400))
+    .filter(Boolean)
+  return {
+    title: clip(initiative.acao || TOWS_LABEL[initiative.field], 200),
+    objetivo_estrategico: clip(initiative.acao || head.value?.optica || '', 2000),
+    contexto: [
+      ...(ctx ? originContext(ctx.dim, ctx.question) : []),
+      item ? clip(`Estratégia ${TOWS_LABEL[initiative.field]} sobre «${item.texto}»`, 400) : '',
+    ].filter(Boolean),
+    dores: negative && item ? [clip(item.texto, 400)] : [],
+    oportunidade: opportunities.length ? opportunities : item ? [clip(item.texto, 400)] : [],
+    riscos: threats,
+    proximo_passo: clip(initiative.acao, 4000),
+    swot_id: head.value?.swot_id ?? null,
+    swot_item_ids: item ? [item.id] : [],
+    tows_ids: [initiative.id],
+  }
 }
 
 async function reload(params?: { maturityResponseId?: string | null; swotId?: string | null }) {
@@ -313,8 +379,8 @@ async function load(params?: { maturityResponseId?: string | null; swotId?: stri
   loading.value = true
   error.value = null
   try {
-    const doc = await reload(params)
-    openDefault(doc)
+    await reload(params)
+    scheduleDraw()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Falha ao carregar o mapa estratégico.'
   } finally {
@@ -328,8 +394,8 @@ async function onSelectSource(event: Event) {
   if (!id) return
   linkPanel.value = null
   notice.value = null
-  const params =
-    kind === 'sw' ? { swotId: id } : { maturityResponseId: id }
+  clearFocus()
+  const params = kind === 'sw' ? { swotId: id } : { maturityResponseId: id }
   await router.replace({
     query: kind === 'sw' ? { swot: id } : { maturidade: id },
   })
@@ -343,9 +409,9 @@ async function generateSwot() {
   notice.value = null
   try {
     const created = await createSwotFromMaturity(responseId)
-    const doc = await reload({ swotId: created.id })
-    openDefault(doc)
+    await reload({ swotId: created.id })
     notice.value = 'SWOT gerada a partir da autoavaliação.'
+    scheduleDraw()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Falha ao gerar a SWOT.'
   } finally {
@@ -376,68 +442,11 @@ async function applyLink(
     })
     await reload(currentParams())
     notice.value = link ? 'Projeto vinculado ao mapa.' : 'Vínculo removido.'
+    scheduleDraw()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Falha ao atualizar o vínculo.'
   } finally {
     busy.value = false
-  }
-}
-
-function originContext(dim: StrategicMapDimension, question: StrategicMapQuestion): string[] {
-  const answer = `Resposta: nota ${question.answer}/5`
-  return [
-    clip(`Origem: ${dim.name} · ${question.id} — ${question.text}`, 400),
-    clip(question.answer_text ? `${answer} — ${question.answer_text}` : answer, 400),
-  ]
-}
-
-function itemPrefill(
-  dim: StrategicMapDimension,
-  question: StrategicMapQuestion,
-  item: StrategicMapItem
-): CanvasProjectPayload {
-  const negative = item.quadrant === 'fraquezas' || item.quadrant === 'ameacas'
-  return {
-    title: clip(item.texto || `${QUADRANT_LABEL[item.quadrant]} · ${question.id}`, 200),
-    objetivo_estrategico: clip(head.value?.optica || '', 2000),
-    contexto: originContext(dim, question),
-    dores: negative ? [clip(item.texto, 400)] : [],
-    oportunidade: negative ? [] : [clip(item.texto, 400)],
-    swot_id: head.value?.swot_id ?? null,
-    swot_item_ids: [item.id],
-    tows_ids: [],
-  }
-}
-
-function initiativePrefill(
-  dim: StrategicMapDimension,
-  question: StrategicMapQuestion,
-  item: StrategicMapItem,
-  initiative: StrategicMapInitiative
-): CanvasProjectPayload {
-  const negative = item.quadrant === 'fraquezas' || item.quadrant === 'ameacas'
-  const opportunities = initiative.counterparts
-    .filter((counterpart) => counterpart.quadrant === 'oportunidades')
-    .map((counterpart) => clip(counterpart.texto, 400))
-    .filter(Boolean)
-  const threats = initiative.counterparts
-    .filter((counterpart) => counterpart.quadrant === 'ameacas')
-    .map((counterpart) => clip(counterpart.texto, 400))
-    .filter(Boolean)
-  return {
-    title: clip(initiative.acao || `${TOWS_LABEL[initiative.field]} · ${question.id}`, 200),
-    objetivo_estrategico: clip(initiative.acao || head.value?.optica || '', 2000),
-    contexto: [
-      ...originContext(dim, question),
-      clip(`Estratégia ${TOWS_LABEL[initiative.field]} sobre «${item.texto}»`, 400),
-    ],
-    dores: negative ? [clip(item.texto, 400)] : [],
-    oportunidade: opportunities.length ? opportunities : [clip(item.texto, 400)],
-    riscos: threats,
-    proximo_passo: clip(initiative.acao, 4000),
-    swot_id: head.value?.swot_id ?? null,
-    swot_item_ids: [item.id],
-    tows_ids: [initiative.id],
   }
 }
 
@@ -451,6 +460,7 @@ async function createProject(prefill: CanvasProjectPayload) {
     await reload(currentParams())
     linkPanel.value = null
     notice.value = 'Projeto criado a partir do mapa — complete o canvas em Projetos.'
+    scheduleDraw()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Falha ao criar o projeto.'
   } finally {
@@ -458,21 +468,72 @@ async function createProject(prefill: CanvasProjectPayload) {
   }
 }
 
+function dockInitiatives(node: MapNode): StrategicMapInitiative[] {
+  if (node.kind !== 'tows' || !node.towsField) return []
+  return node.initiativeIds
+    .map((id) => findInitiative(id)?.initiative)
+    .filter((init): init is StrategicMapInitiative => !!init)
+}
+
+function dockItems(node: MapNode): StrategicMapItem[] {
+  if (node.kind !== 'quad') return []
+  const doc = map.value
+  if (!doc || !node.quadrant) return []
+  const byId = new Map<string, StrategicMapItem>()
+  for (const dim of doc.dimensions) {
+    for (const question of dim.questions) {
+      for (const item of question.items) {
+        if (item.quadrant === node.quadrant) byId.set(item.id, item)
+      }
+    }
+  }
+  for (const item of doc.unlinked.swot_items) {
+    if (item.quadrant === node.quadrant) byId.set(item.id, item)
+  }
+  return node.itemIds.map((id) => byId.get(id)).filter((item): item is StrategicMapItem => !!item)
+}
+
+function emptyHint(columnTitle: string, roman: string): string {
+  if (roman === 'I') return 'Sem diagnóstico de origem.'
+  if (roman === 'II') return head.value?.swot_id ? 'Sem posições nesta SWOT.' : 'Gere a SWOT para ver as posições.'
+  if (roman === 'III') return 'Sem cruzamento TOWS ainda.'
+  if (roman === 'IV') return map.value?.okr_cycle ? 'Objectives ainda sem origem no mapa.' : 'Ative um ciclo OKR.'
+  if (roman === 'V') return 'Sem projetos vinculados à árvore.'
+  return `Sem nós em ${columnTitle}.`
+}
+
 onMounted(() => {
   const swot = (route.query.swot as string) || null
   const maturity = (route.query.maturidade as string) || null
+  const hash = location.hash.replace('#', '')
+  if (hash === 'pan' || hash === 'lin' || hash === 'ges') lens.value = hash
+  document.addEventListener('keydown', onKeydown)
   void load(swot ? { swotId: swot } : maturity ? { maturityResponseId: maturity } : undefined)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+  resizeObserver?.disconnect()
+})
+
+watch(mapEl, (el) => {
+  resizeObserver?.disconnect()
+  if (!el || typeof ResizeObserver === 'undefined') return
+  resizeObserver = new ResizeObserver(() => scheduleDraw())
+  resizeObserver.observe(el)
+})
+
+watch([lens, graph, focusId], () => scheduleDraw())
 </script>
 
 <template>
-  <div class="wrap">
+  <div class="wrap" :class="[`lens-${lens}`, { staging }]">
     <header class="page-header">
-      <p class="eyebrow">Rastreabilidade da estratégia</p>
+      <p class="eyebrow">Etapa VI · leitura viva da estratégia</p>
       <h1 class="page-title">Mapa Estratégico</h1>
       <p class="page-lead">
-        Cada resposta do Modelo de Maturidade virou item da SWOT, cada item virou estratégia TOWS
-        e cada estratégia pode virar projeto. Esta é a árvore que liga as três camadas.
+        Diagnóstico → posições → apostas → compromissos → entrega. Clique em um nó para iluminar o
+        fio — origem e consequência — e abrir o dossiê.
       </p>
     </header>
 
@@ -484,17 +545,16 @@ onMounted(() => {
       <div v-if="!head?.maturity_response_id && !head?.swot_id" class="state-card">
         <p class="empty-title">Ainda não há o que mapear</p>
         <p class="empty-text">
-          Responda o Modelo de Maturidade e gere a SWOT para ver a árvore de rastreabilidade.
+          Responda o Modelo de Maturidade e gere a SWOT para ver o mapa de rastreabilidade.
         </p>
-        <RouterLink to="/ai-maturity" class="btn-primary">Abrir Modelo de Maturidade</RouterLink>
+        <RouterLink to="/ai-maturity" class="btn primary">Abrir Modelo de Maturidade</RouterLink>
       </div>
 
       <template v-else>
-        <!-- Cabeçalho da fonte -->
         <section class="card source-card">
           <div class="source-main">
             <div class="source-field">
-              <label class="field-label" for="source-select">Autoavaliação de origem</label>
+              <label class="field-label" for="source-select">Ciclo de origem</label>
               <select
                 id="source-select"
                 class="select"
@@ -508,12 +568,14 @@ onMounted(() => {
             </div>
             <div class="source-meta">
               <span v-if="head?.tier_label" class="meta-pill">{{ head.tier_label }}</span>
-              <span v-if="head?.result?.level_label" class="meta-pill">
-                {{ head.result.level_label }}
-              </span>
+              <span v-if="head?.result?.level_label" class="meta-pill">{{ head.result.level_label }}</span>
               <span v-if="head?.result" class="meta-item">
                 {{ head.result.total_score }}/{{ head.result.max_score }} pts ·
                 {{ Math.round(head.result.percent_score) }}%
+              </span>
+              <span v-if="map?.okr_cycle" class="meta-item">
+                OKR
+                <RouterLink :to="`/okrs/${map.okr_cycle.id}`" class="link">{{ map.okr_cycle.label }}</RouterLink>
               </span>
             </div>
           </div>
@@ -522,484 +584,368 @@ onMounted(() => {
             <RouterLink
               v-if="head?.maturity_response_id"
               :to="`/ai-maturity/${head.maturity_response_id}`"
-              class="btn-ghost"
-            >Ver autoavaliação</RouterLink>
-            <RouterLink v-if="head?.swot_id" :to="`/swot/${head.swot_id}`" class="btn-ghost">
-              Abrir SWOT
-            </RouterLink>
+              class="btn"
+            >Ver diagnóstico</RouterLink>
+            <RouterLink v-if="head?.swot_id" :to="`/swot/${head.swot_id}`" class="btn">Abrir SWOT</RouterLink>
             <button
               v-else-if="head?.maturity_response_id"
               type="button"
-              class="btn-primary"
+              class="btn primary"
               :disabled="busy"
               @click="generateSwot"
             >{{ busy ? 'Gerando…' : 'Gerar SWOT' }}</button>
-            <RouterLink to="/projetos" class="btn-ghost">Projetos</RouterLink>
+            <RouterLink to="/okrs" class="btn">OKR</RouterLink>
+            <RouterLink to="/projetos" class="btn">Projetos</RouterLink>
           </div>
           <p v-if="notice" class="notice">{{ notice }}</p>
-          <p v-if="!map?.okr_cycle" class="notice">
-            Nenhum ciclo OKR ativo — Objectives e Key Results não aparecem na árvore.
+          <p v-if="!map?.okr_cycle" class="notice warn-note">
+            Nenhum ciclo OKR ativo — a coluna de compromissos fica vazia.
             <RouterLink to="/okrs" class="link">Abrir painel de OKR</RouterLink>
           </p>
-          <p v-else class="source-optica">
-            Ciclo OKR ativo: <RouterLink :to="`/okrs/${map.okr_cycle.id}`" class="link">{{ map.okr_cycle.label }}</RouterLink>
-          </p>
         </section>
 
-        <!-- Indicadores -->
         <section v-if="stats" class="kpi-grid">
           <div class="kpi-card">
-            <div class="kpi-label">Perguntas</div>
-            <div class="kpi-value">{{ stats.questions }}</div>
-            <div class="kpi-sub">respondidas na abrangência</div>
+            <div class="kpi-label">Pilares</div>
+            <div class="kpi-value">{{ stats.dimensions }}</div>
+            <div class="kpi-sub">{{ stats.questions }} pergunta(s)</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Itens SWOT</div>
+            <div class="kpi-label">Posições</div>
             <div class="kpi-value">{{ stats.swot_items }}</div>
-            <div class="kpi-sub">{{ stats.watchlist }} ponto(s) de atenção</div>
+            <div class="kpi-sub">{{ stats.watchlist }} em atenção</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Estratégias TOWS</div>
+            <div class="kpi-label">Apostas</div>
             <div class="kpi-value">{{ stats.initiatives }}</div>
-            <div class="kpi-sub">cruzamentos gerados</div>
+            <div class="kpi-sub">estratégias TOWS</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Objectives</div>
+            <div class="kpi-label">Compromissos</div>
             <div class="kpi-value">{{ stats.objectives_linked }}</div>
-            <div class="kpi-sub">de {{ stats.objectives }} vinculados à árvore</div>
+            <div class="kpi-sub">de {{ stats.objectives }} objectives</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">Key Results</div>
-            <div class="kpi-value">{{ stats.key_results_linked }}</div>
-            <div class="kpi-sub">de {{ stats.key_results }} com projeto vinculado</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Projetos</div>
+            <div class="kpi-label">Entrega</div>
             <div class="kpi-value gold">{{ stats.projects_linked }}</div>
-            <div class="kpi-sub">de {{ stats.projects_total }} vinculados à árvore</div>
+            <div class="kpi-sub">de {{ stats.projects_total }} projetos</div>
           </div>
         </section>
 
-        <!-- Controles -->
-        <section class="card toolbar">
-          <div class="toolbar-row">
-            <input
-              v-model="query"
-              type="search"
-              class="input"
-              placeholder="Buscar pergunta, item, estratégia ou projeto…"
-            />
-            <select v-model="dimFilter" class="select select--dim">
-              <option value="">Todas as dimensões</option>
-              <option v-for="dim in map?.dimensions ?? []" :key="dim.id" :value="dim.id">
-                {{ dim.name }}
-              </option>
-            </select>
+        <div class="toolrow">
+          <div class="seg" role="tablist" aria-label="Lentes de leitura">
+            <button type="button" :class="{ on: lens === 'pan' }" @click="setLens('pan')">
+              Panorama · Conselho
+            </button>
+            <button type="button" :class="{ on: lens === 'ges' }" @click="setLens('ges')">
+              Gestão · Diretoria
+            </button>
+            <button type="button" :class="{ on: lens === 'lin' }" @click="setLens('lin')">
+              Linhagem · Auditoria
+            </button>
           </div>
-          <div class="toolbar-row">
-            <div class="quad-chips">
-              <button
-                v-for="quadrant in QUADRANTS"
-                :key="quadrant.field"
-                type="button"
-                class="quad-chip"
-                :class="[`quad-chip--${quadrant.field}`, { 'is-off': !quadOn[quadrant.field] }]"
-                :aria-pressed="quadOn[quadrant.field]"
-                @click="quadOn[quadrant.field] = !quadOn[quadrant.field]"
-              >
-                <span class="quad-letter">{{ quadrant.letter }}</span>
-                {{ quadrant.label }}
-              </button>
-            </div>
-            <label class="check">
-              <input v-model="onlyWithTows" type="checkbox" />
-              Só com estratégia TOWS
-            </label>
-            <label class="check">
-              <input v-model="onlyWithProjects" type="checkbox" />
-              Só ramos com projeto
-            </label>
-            <div class="toolbar-actions">
-              <button type="button" class="btn-mini" @click="expandAll">Expandir tudo</button>
-              <button type="button" class="btn-mini" @click="collapseAll">Recolher tudo</button>
-            </div>
+          <div class="tool-actions">
+            <button type="button" class="btn" @click="clearFocus">Limpar foco</button>
+            <button type="button" class="btn primary" :disabled="!acts.length" @click="startStage">
+              Modo apresentação
+            </button>
           </div>
-        </section>
+        </div>
+        <p class="mobile-note">
+          O mapa é otimizado para telas grandes — no celular, deslize horizontalmente ou use a lente
+          Panorama.
+        </p>
 
-        <!-- Árvore -->
-        <section class="card tree-card">
-          <div class="tree-root">
-            <span class="root-badge">Maturidade</span>
-            <span class="root-title">
-              {{ head?.assessment_title || 'Diagnóstico de Maturidade em IA' }}
-            </span>
-            <span v-if="head?.veredito_titulo" class="root-veredito">
-              {{ head.veredito_titulo }}
-            </span>
+        <section v-if="lens === 'pan'" class="pan">
+          <div v-if="graph.panorama" class="card reading">
+            <span class="eyebrow-p">Leitura em 30 segundos</span>
+            <p>{{ graph.panorama.reading }}</p>
           </div>
-
-          <p v-if="!filteredDimensions.length" class="tree-empty">
-            Nenhum ramo corresponde aos filtros atuais.
+          <div v-if="graph.panorama?.apostas.length" class="pan-grid">
+            <div
+              v-for="aposta in graph.panorama.apostas"
+              :key="aposta.towsField"
+              class="card aposta"
+              :class="`tone-${aposta.tone}`"
+            >
+              <span class="ak">{{ aposta.kindLabel }}</span>
+              <h3>{{ aposta.title }}</h3>
+              <p>{{ aposta.blurb }}</p>
+              <span class="st">
+                <span class="dot" :class="`st-${aposta.tone}`" />
+                {{ aposta.meta }}
+              </span>
+            </div>
+          </div>
+          <div v-if="graph.panorama" class="pan-alert">
+            <span class="pa-ic">!</span>
+            <div>
+              <b>{{ graph.panorama.alertTitle }}</b>
+              <p>{{ graph.panorama.alertBody }}</p>
+            </div>
+          </div>
+          <p class="lede">
+            Esta é a leitura de Conselho. Para os resultados-chave e os projetos, mude a lente para
+            <b>Gestão</b>; para auditar a origem de cada item, use <b>Linhagem</b>.
           </p>
+        </section>
 
-          <ul v-else class="tree">
-            <li v-for="dim in filteredDimensions" :key="dim.id" class="node">
-              <div class="row row--dim" :style="{ '--accent': accentFor(dim.id) }">
-                <button
-                  type="button"
-                  class="twist"
-                  :aria-expanded="isOpen(dimKey(dim))"
-                  @click="toggle(dimKey(dim))"
-                >{{ isOpen(dimKey(dim)) ? '−' : '+' }}</button>
-                <span class="row-accent" aria-hidden="true" />
-                <span class="row-title">{{ dim.name }}</span>
-                <span class="row-tags">
-                  <span class="tag">{{ dim.score.pct }}%</span>
-                  <span class="tag muted">{{ dim.score.score }}/{{ dim.score.max }} pts</span>
-                  <span class="tag muted">{{ dim.questions.length }} pergunta(s)</span>
-                </span>
-              </div>
-
-              <ul v-if="isOpen(dimKey(dim))" class="branch">
-                <li v-for="question in dim.questions" :key="question.id" class="node">
-                  <div class="row row--question">
-                    <button
-                      type="button"
-                      class="twist"
-                      :aria-expanded="isOpen(questionKey(dim, question))"
-                      @click="toggle(questionKey(dim, question))"
-                    >{{ isOpen(questionKey(dim, question)) ? '−' : '+' }}</button>
-                    <span class="code">{{ question.id }}</span>
-                    <span class="score-pill" :class="`score-pill--${question.answer}`">
-                      {{ question.answer }}/5
-                    </span>
-                    <span class="row-title">{{ question.text }}</span>
+        <section v-else id="map-sec" class="map-sec">
+          <div class="card map-card">
+            <div class="map-wrap">
+              <div
+                ref="mapEl"
+                class="map"
+                :style="{ '--cols': Math.max(visibleColumns.length, 1) }"
+              >
+                <svg class="map-svg" aria-hidden="true">
+                  <path
+                    v-for="(path, index) in paths"
+                    :key="index"
+                    :d="path.d"
+                    fill="none"
+                    :stroke="path.stroke"
+                    :stroke-width="path.width"
+                    :opacity="path.opacity"
+                    :stroke-dasharray="path.dash || undefined"
+                  />
+                </svg>
+                <div v-for="column in visibleColumns" :key="column.roman" class="mcol">
+                  <div class="mcol-h">
+                    <span class="rn">{{ column.roman }}</span>
+                    {{ column.title }}
                   </div>
+                  <p v-if="!column.nodes.length" class="m-empty">{{ emptyHint(column.title, column.roman) }}</p>
+                  <button
+                    v-for="node in column.nodes"
+                    :key="node.id"
+                    type="button"
+                    class="mnode"
+                    :class="nodeClass(node)"
+                    :data-nid="node.id"
+                    @click="focusNode(node.id)"
+                  >
+                    <b>{{ node.title }}</b>
+                    <span class="mv">{{ node.subtitle }}</span>
+                    <span v-if="node.tone === 'ok' || node.tone === 'warn' || node.tone === 'risk'" class="sd dot" :class="`st-${node.tone}`" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="map-legend">
+              <span>
+                <i class="leg-line gold" />
+                fio da linhagem
+              </span>
+              <span>
+                <i class="leg-line risk" />
+                fio crítico do ciclo
+              </span>
+              <span><span class="dot st-ok" /> no ritmo</span>
+              <span><span class="dot st-warn" /> atenção</span>
+              <span><span class="dot st-risk" /> em risco</span>
+            </div>
+          </div>
+          <p class="lede">
+            <b>Modo foco:</b> clique em qualquer nó para iluminar o fio — origem e consequência — e
+            abrir o dossiê. Esc limpa.
+          </p>
+        </section>
 
-                  <ul v-if="isOpen(questionKey(dim, question))" class="branch">
-                    <li v-if="question.answer_text" class="node">
-                      <p class="answer-note">
-                        <span class="answer-label">Resposta</span>{{ question.answer_text }}
-                      </p>
-                    </li>
-
-                    <li v-for="item in question.items" :key="item.id" class="node">
-                      <div class="row row--item" :class="`row--${item.quadrant}`">
-                        <button
-                          type="button"
-                          class="twist"
-                          :aria-expanded="isOpen(itemKey(item))"
-                          @click="toggle(itemKey(item))"
-                        >{{ isOpen(itemKey(item)) ? '−' : '+' }}</button>
-                        <span class="quad-badge" :class="`quad-badge--${item.quadrant}`">
-                          {{ QUADRANT_LABEL[item.quadrant] }}
-                        </span>
-                        <span class="row-title">{{ item.texto }}</span>
-                        <span class="row-tags">
-                          <span v-if="item.pilar" class="tag muted">{{ item.pilar }}</span>
-                          <span v-if="item.impacto" class="tag">impacto {{ item.impacto }}</span>
-                          <span v-if="item.initiatives.length" class="tag">
-                            {{ item.initiatives.length }} estratégia(s)
-                          </span>
-                          <span v-else-if="item.used_in" class="tag">
-                            em {{ item.used_in }} estratégia(s)
-                          </span>
-                          <span v-if="itemProjectCount(item)" class="tag tag--proj">
-                            {{ itemProjectCount(item) }} projeto(s)
-                          </span>
-                        </span>
-                      </div>
-
-                      <ul v-if="isOpen(itemKey(item))" class="branch">
-                        <li v-for="initiative in item.initiatives" :key="initiative.id" class="node">
-                          <div class="row row--tows">
-                            <button
-                              type="button"
-                              class="twist"
-                              :aria-expanded="isOpen(towsKey(initiative))"
-                              @click="toggle(towsKey(initiative))"
-                            >{{ isOpen(towsKey(initiative)) ? '−' : '+' }}</button>
-                            <span class="tows-badge">{{ TOWS_LABEL[initiative.field] }}</span>
-                            <span class="row-title">{{ initiative.acao || '—' }}</span>
-                            <span class="row-tags">
-                              <span v-if="initiative.objectives.length" class="tag">
-                                {{ initiative.objectives.length }} objetivo(s)
-                              </span>
-                              <span v-if="initiative.projects.length" class="tag tag--proj">
-                                {{ initiative.projects.length }} projeto(s)
-                              </span>
-                            </span>
-                          </div>
-
-                          <ul v-if="isOpen(towsKey(initiative))" class="branch">
-                            <li v-if="initiative.counterparts.length" class="node">
-                              <p class="counterparts">
-                                <span class="answer-label">Cruza com</span>
-                                <span
-                                  v-for="counterpart in initiative.counterparts"
-                                  :key="counterpart.id"
-                                  class="counterpart"
-                                  :class="counterpart.quadrant ? `quad-badge--${counterpart.quadrant}` : ''"
-                                >{{ counterpart.texto || counterpart.id }}</span>
-                              </p>
-                            </li>
-
-                            <li v-for="objective in initiative.objectives" :key="objective.id" class="node">
-                              <div class="row row--tows">
-                                <button
-                                  type="button"
-                                  class="twist"
-                                  :aria-expanded="isOpen(objKey(objective))"
-                                  @click="toggle(objKey(objective))"
-                                >{{ isOpen(objKey(objective)) ? '−' : '+' }}</button>
-                                <span class="tows-badge">Objective</span>
-                                <span class="row-title">{{ objective.titulo || '—' }}</span>
-                                <span class="row-tags">
-                                  <span v-if="objective.progress_pct != null" class="tag">
-                                    {{ objective.progress_pct.toFixed(0) }}%
-                                  </span>
-                                  <span v-if="objective.key_results.length" class="tag">
-                                    {{ objective.key_results.length }} KR(s)
-                                  </span>
-                                </span>
-                              </div>
-                              <ul v-if="isOpen(objKey(objective))" class="branch">
-                                <li v-if="!objective.key_results.length" class="node">
-                                  <p class="panel-empty">Sem Key Results ainda.</p>
-                                </li>
-                                <li v-for="kr in objective.key_results" :key="kr.id" class="node">
-                                  <div class="row row--project">
-                                    <span class="proj-badge">KR</span>
-                                    <span class="row-title">{{ kr.titulo || '—' }}</span>
-                                    <span class="row-tags">
-                                      <span class="tag">{{ kr.progress_pct.toFixed(0) }}%</span>
-                                      <span v-if="kr.projects.length" class="tag tag--proj">
-                                        {{ kr.projects.length }} projeto(s)
-                                      </span>
-                                    </span>
-                                  </div>
-                                  <ul v-if="kr.projects.length" class="branch">
-                                    <li v-for="project in kr.projects" :key="project.id" class="node">
-                                      <div class="row row--project">
-                                        <RouterLink :to="`/projetos/${project.id}`" class="row-title link">
-                                          {{ project.title }}
-                                        </RouterLink>
-                                      </div>
-                                    </li>
-                                  </ul>
-                                </li>
-                              </ul>
-                            </li>
-
-                            <li
-                              v-for="project in initiative.projects"
-                              :key="project.id"
-                              class="node"
-                            >
-                              <div class="row row--project">
-                                <span class="proj-badge">Projeto</span>
-                                <RouterLink :to="`/projetos/${project.id}`" class="row-title link">
-                                  {{ project.title }}
-                                </RouterLink>
-                                <span class="row-tags">
-                                  <span v-if="project.quadrant" class="tag">
-                                    {{ CANVAS_QUADRANT_LABEL[project.quadrant] }}
-                                  </span>
-                                  <button
-                                    v-if="projectById(project.id)"
-                                    type="button"
-                                    class="btn-mini btn-mini--danger"
-                                    :disabled="busy"
-                                    @click="applyLink(projectById(project.id)!, 'tows', initiative.id, false)"
-                                  >Desvincular</button>
-                                </span>
-                              </div>
-                            </li>
-                            <li class="node">
-                              <button
-                                type="button"
-                                class="btn-mini btn-mini--add"
-                                @click="togglePanel(towsKey(initiative))"
-                              >+ projeto desta estratégia</button>
-                              <div v-if="linkPanel === towsKey(initiative)" class="link-panel">
-                                <button
-                                  type="button"
-                                  class="btn-mini"
-                                  :disabled="busy"
-                                  @click="createProject(initiativePrefill(dim, question, item, initiative))"
-                                >Criar projeto pré-preenchido</button>
-                                <p class="panel-label">ou vincular um projeto existente</p>
-                                <p v-if="!projects.length" class="panel-empty">
-                                  Nenhum projeto criado ainda.
-                                </p>
-                                <ul v-else class="panel-list">
-                                  <li v-for="project in projects" :key="project.id">
-                                    <button
-                                      type="button"
-                                      class="panel-item"
-                                      :class="{ 'is-linked': isLinked(project, 'tows', initiative.id) }"
-                                      :disabled="busy"
-                                      @click="applyLink(project, 'tows', initiative.id, !isLinked(project, 'tows', initiative.id))"
-                                    >
-                                      <span class="panel-check" aria-hidden="true">
-                                        {{ isLinked(project, 'tows', initiative.id) ? '✓' : '+' }}
-                                      </span>
-                                      {{ project.title }}
-                                    </button>
-                                  </li>
-                                </ul>
-                              </div>
-                            </li>
-                          </ul>
-                        </li>
-
-                        <li v-for="project in item.projects" :key="project.id" class="node">
-                          <div class="row row--project">
-                            <span class="proj-badge">Projeto</span>
-                            <RouterLink :to="`/projetos/${project.id}`" class="row-title link">
-                              {{ project.title }}
-                            </RouterLink>
-                            <span class="row-tags">
-                              <span v-if="project.quadrant" class="tag">
-                                {{ CANVAS_QUADRANT_LABEL[project.quadrant] }}
-                              </span>
-                              <button
-                                v-if="projectById(project.id)"
-                                type="button"
-                                class="btn-mini btn-mini--danger"
-                                :disabled="busy"
-                                @click="applyLink(projectById(project.id)!, 'item', item.id, false)"
-                              >Desvincular</button>
-                            </span>
-                          </div>
-                        </li>
-
-                        <li class="node">
-                          <button
-                            type="button"
-                            class="btn-mini btn-mini--add"
-                            @click="togglePanel(itemKey(item))"
-                          >+ projeto deste item</button>
-                          <div v-if="linkPanel === itemKey(item)" class="link-panel">
-                            <button
-                              type="button"
-                              class="btn-mini"
-                              :disabled="busy"
-                              @click="createProject(itemPrefill(dim, question, item))"
-                            >Criar projeto pré-preenchido</button>
-                            <p class="panel-label">ou vincular um projeto existente</p>
-                            <p v-if="!projects.length" class="panel-empty">
-                              Nenhum projeto criado ainda.
-                            </p>
-                            <ul v-else class="panel-list">
-                              <li v-for="project in projects" :key="project.id">
-                                <button
-                                  type="button"
-                                  class="panel-item"
-                                  :class="{ 'is-linked': isLinked(project, 'item', item.id) }"
-                                  :disabled="busy"
-                                  @click="applyLink(project, 'item', item.id, !isLinked(project, 'item', item.id))"
-                                >
-                                  <span class="panel-check" aria-hidden="true">
-                                    {{ isLinked(project, 'item', item.id) ? '✓' : '+' }}
-                                  </span>
-                                  {{ project.title }}
-                                </button>
-                              </li>
-                            </ul>
-                          </div>
-                        </li>
-                      </ul>
-                    </li>
-
-                    <li v-for="entry in question.watchlist" :key="`w-${entry.id}`" class="node">
-                      <div class="row row--watch">
-                        <span class="quad-badge quad-badge--watch">Ponto de atenção</span>
-                        <span class="row-title">{{ entry.texto }}</span>
-                        <span class="row-tags">
-                          <span v-if="entry.nota" class="tag muted">nota {{ entry.nota }}</span>
-                        </span>
-                      </div>
-                    </li>
-                  </ul>
-                </li>
-              </ul>
+        <section v-if="unlinkedSummary" class="card orphan-card">
+          <p class="sec-title">Fora do mapa</p>
+          <p class="panel-label">
+            {{ unlinkedSummary.items }} item(ns) ·
+            {{ unlinkedSummary.initiatives }} estratégia(s) ·
+            {{ unlinkedSummary.objectives }} objective(s) ·
+            {{ unlinkedSummary.krs }} KR(s) ·
+            {{ unlinkedSummary.projects }} projeto(s) sem fio de origem.
+          </p>
+          <ul class="plain-list">
+            <li v-for="item in map?.unlinked.swot_items ?? []" :key="item.id">
+              <span class="tag muted">{{ QUADRANT_LABEL[item.quadrant] }}</span>
+              {{ item.texto }}
+            </li>
+            <li v-for="objective in map?.unlinked.objectives ?? []" :key="objective.id">
+              <span class="tag muted">Objective</span>
+              {{ objective.titulo }}
+            </li>
+            <li v-for="project in map?.unlinked.projects ?? []" :key="project.id">
+              <RouterLink :to="`/projetos/${project.id}`" class="link">{{ project.title }}</RouterLink>
+              <span class="tag muted">
+                {{ project.linked_to_swot ? 'sem item de origem' : 'sem SWOT de origem' }}
+              </span>
             </li>
           </ul>
-
-          <p v-if="hiddenCount" class="tree-hint">
-            {{ hiddenCount }} item(ns) oculto(s) pelos filtros.
-          </p>
         </section>
 
-        <!-- Fora da árvore -->
-        <section v-if="hasUnlinked" class="card">
-          <button
-            type="button"
-            class="unlinked-toggle"
-            :aria-expanded="isOpen('x:unlinked')"
-            @click="toggle('x:unlinked')"
-          >
-            <span class="sec-title">Fora da árvore</span>
-            <span class="tag muted">
-              {{ unlinkedItems.length }} item(ns) ·
-              {{ map?.unlinked.projects.length ?? 0 }} projeto(s) ·
-              {{ map?.unlinked.objectives.length ?? 0 }} objetivo(s) ·
-              {{ map?.unlinked.key_results.length ?? 0 }} KR(s)
-            </span>
-          </button>
-          <div v-if="isOpen('x:unlinked')" class="unlinked-body">
-            <p class="panel-label">
-              Itens sem pergunta de origem (criados à mão ou importados), projetos, Objectives e
-              Key Results sem vínculo.
-            </p>
-            <ul v-if="unlinkedItems.length" class="plain-list">
-              <li v-for="item in unlinkedItems" :key="item.id">
-                <span class="quad-badge" :class="`quad-badge--${item.quadrant}`">
-                  {{ QUADRANT_LABEL[item.quadrant] }}
-                </span>
-                {{ item.texto }}
-              </li>
-            </ul>
-            <ul v-if="map?.unlinked.projects.length" class="plain-list">
-              <li v-for="project in map.unlinked.projects" :key="project.id">
-                <RouterLink :to="`/projetos/${project.id}`" class="link">
-                  {{ project.title }}
-                </RouterLink>
-                <span class="tag muted">
-                  {{ project.linked_to_swot ? 'sem item de origem' : 'sem SWOT de origem' }}
-                </span>
-              </li>
-            </ul>
-            <ul v-if="map?.unlinked.objectives.length" class="plain-list">
-              <li v-for="objective in map.unlinked.objectives" :key="objective.id">
-                {{ objective.titulo }}
-                <span class="tag muted">sem TOWS/SWOT de origem válido</span>
-              </li>
-            </ul>
-            <ul v-if="map?.unlinked.key_results.length" class="plain-list">
-              <li v-for="kr in map.unlinked.key_results" :key="kr.id">
-                {{ kr.titulo }}
-                <span class="tag muted">{{ kr.objective_titulo }} · sem projeto vinculado</span>
+        <div class="save-seal">
+          <span>{{ graph.updatedLabel }}</span>
+          <span>Lentes Conselho · Diretoria · Auditoria</span>
+        </div>
+      </template>
+    </template>
+
+    <Teleport to="body">
+      <aside class="dock" :class="{ open: dockOpen && focusedNode }" aria-label="Dossiê do nó">
+        <template v-if="focusedNode">
+          <div class="dh">
+            <div>
+              <div class="dh-tags">
+                <span class="tag-id">{{ focusedNode.labelId }}</span>
+                <span class="tag" :class="`tag--${focusedNode.tone}`">{{ focusedNode.statusLabel }}</span>
+              </div>
+              <b>{{ focusedNode.title }}</b>
+            </div>
+            <button type="button" class="btn quiet" @click="clearFocus">Esc</button>
+          </div>
+          <div class="dblock">
+            <span class="dk">O que este nó diz</span>
+            <p>{{ focusedNode.body }}</p>
+          </div>
+          <div class="dblock">
+            <span class="dk">Fio da linhagem</span>
+            <span class="chain">{{ focusedNode.trail }}</span>
+          </div>
+          <div class="dblock">
+            <span class="dk">Próximo movimento</span>
+            <p>{{ focusedNode.next }}</p>
+          </div>
+          <div class="dblock ask">
+            <span class="dk">A pergunta para a sala</span>
+            <p>{{ focusedNode.ask }}</p>
+          </div>
+
+          <div v-if="focusedNode.kind === 'dim' && head?.maturity_response_id" class="dblock">
+            <RouterLink :to="`/ai-maturity/${head.maturity_response_id}`" class="btn">Abrir diagnóstico</RouterLink>
+          </div>
+          <div v-else-if="(focusedNode.kind === 'quad' || focusedNode.kind === 'tows' || focusedNode.kind === 'watch') && head?.swot_id" class="dblock">
+            <RouterLink :to="`/swot/${head.swot_id}`" class="btn">Abrir SWOT / TOWS</RouterLink>
+          </div>
+          <div v-else-if="focusedNode.kind === 'obj' && map?.okr_cycle" class="dblock">
+            <RouterLink :to="`/okrs/${map.okr_cycle.id}`" class="btn">Abrir ciclo OKR</RouterLink>
+          </div>
+          <div v-else-if="focusedNode.kind === 'proj' && focusedNode.projectId" class="dblock">
+            <RouterLink :to="`/projetos/${focusedNode.projectId}`" class="btn primary">Abrir canvas</RouterLink>
+          </div>
+
+          <div v-if="focusedNode.kind === 'tows' && dockInitiatives(focusedNode).length" class="dblock">
+            <span class="dk">Estratégias desta aposta</span>
+            <ul class="dock-list">
+              <li v-for="initiative in dockInitiatives(focusedNode)" :key="initiative.id">
+                <p class="dock-item-title">{{ initiative.acao || TOWS_LABEL[initiative.field] }}</p>
+                <p v-if="initiative.dono || initiative.horizonte" class="dock-item-meta">
+                  {{ [initiative.dono, initiative.horizonte].filter(Boolean).join(' · ') }}
+                </p>
+                <button type="button" class="btn-mini" @click="togglePanel(`t:${initiative.id}`)">
+                  + projeto desta estratégia
+                </button>
+                <div v-if="linkPanel === `t:${initiative.id}`" class="link-panel">
+                  <button
+                    type="button"
+                    class="btn-mini"
+                    :disabled="busy"
+                    @click="createProject(initiativePrefill(initiative, findInitiative(initiative.id)?.item ?? null))"
+                  >Criar projeto pré-preenchido</button>
+                  <p class="panel-label">ou vincular um projeto existente</p>
+                  <p v-if="!projects.length" class="panel-empty">Nenhum projeto criado ainda.</p>
+                  <ul v-else class="panel-list">
+                    <li v-for="project in projects" :key="project.id">
+                      <button
+                        type="button"
+                        class="panel-item"
+                        :class="{ 'is-linked': isLinked(project, 'tows', initiative.id) }"
+                        :disabled="busy"
+                        @click="applyLink(project, 'tows', initiative.id, !isLinked(project, 'tows', initiative.id))"
+                      >
+                        <span>{{ isLinked(project, 'tows', initiative.id) ? '✓' : '+' }}</span>
+                        {{ project.title }}
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </li>
             </ul>
           </div>
-        </section>
-      </template>
-    </template>
+
+          <div v-if="focusedNode.kind === 'quad' && dockItems(focusedNode).length" class="dblock">
+            <span class="dk">Itens deste quadrante</span>
+            <ul class="dock-list">
+              <li v-for="item in dockItems(focusedNode)" :key="item.id">
+                <p class="dock-item-title">{{ item.texto }}</p>
+                <button type="button" class="btn-mini" @click="togglePanel(`i:${item.id}`)">
+                  + projeto deste item
+                </button>
+                <div v-if="linkPanel === `i:${item.id}`" class="link-panel">
+                  <button
+                    type="button"
+                    class="btn-mini"
+                    :disabled="busy"
+                    @click="createProject(itemPrefill(item, findItemContext(item.id)?.dim, findItemContext(item.id)?.question))"
+                  >Criar projeto pré-preenchido</button>
+                  <p class="panel-label">ou vincular um projeto existente</p>
+                  <ul class="panel-list">
+                    <li v-for="project in projects" :key="project.id">
+                      <button
+                        type="button"
+                        class="panel-item"
+                        :class="{ 'is-linked': isLinked(project, 'item', item.id) }"
+                        :disabled="busy"
+                        @click="applyLink(project, 'item', item.id, !isLinked(project, 'item', item.id))"
+                      >
+                        <span>{{ isLinked(project, 'item', item.id) ? '✓' : '+' }}</span>
+                        {{ project.title }}
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </template>
+      </aside>
+    </Teleport>
+
+    <Teleport to="body">
+      <div class="stage-bar" :class="{ on: staging && currentAct }">
+        <div v-if="currentAct" class="st-t">{{ currentAct.kicker }} · <em>{{ currentAct.title }}</em></div>
+        <p v-if="currentAct">{{ currentAct.caption }}</p>
+        <div class="stage-ctl">
+          <button type="button" class="sbtn" :disabled="actIndex === 0" @click="prevAct">← Anterior</button>
+          <button type="button" class="sbtn" :disabled="actIndex >= acts.length - 1" @click="nextAct">
+            Avançar →
+          </button>
+          <button type="button" class="sbtn" @click="stopStage">Encerrar</button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
 .wrap {
-  max-width: 1080px;
+  --navy: #0c2340;
+  --gold-strong: var(--gold);
+  --muted: var(--k3);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --dim-strategy: #7a5aa3;
+  --dim-data: #3d6fa8;
+  --dim-people: #b9822f;
+  --dim-gov: #a3453f;
+  --s: var(--success);
+  --w: var(--warn);
+  --o: #3d6fa8;
+  --t: var(--low);
+  --a: #b9822f;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 16px 16px 56px;
+  padding: 16px 16px 72px;
+}
+.wrap.staging {
+  padding-bottom: 140px;
 }
 
-.page-header {
-  margin-bottom: 18px;
-}
+.page-header { margin-bottom: 16px; }
 .eyebrow {
   font-size: 11px;
   font-weight: 600;
@@ -1010,7 +956,7 @@ onMounted(() => {
 }
 .page-title {
   font-family: var(--serif);
-  font-size: clamp(22px, 5.5vw, 30px);
+  font-size: clamp(22px, 5.5vw, 32px);
   font-weight: 400;
   color: var(--k0);
   margin: 0 0 10px;
@@ -1018,7 +964,7 @@ onMounted(() => {
 }
 .page-lead {
   margin: 0;
-  max-width: 60em;
+  max-width: 62em;
   font-size: 14px;
   line-height: 1.6;
   color: var(--k3);
@@ -1031,7 +977,6 @@ onMounted(() => {
   padding: 16px;
   margin-bottom: 14px;
 }
-
 .state-card {
   background: var(--wh);
   border: 1px solid var(--bd);
@@ -1051,14 +996,9 @@ onMounted(() => {
   color: var(--k0);
   margin: 0 0 6px;
 }
-.empty-text {
-  margin: 0 0 14px;
-  font-size: 14px;
-}
+.empty-text { margin: 0 0 14px; font-size: 14px; }
 
-.source-card {
-  border-top: 3px solid var(--gold);
-}
+.source-card { border-top: 3px solid var(--gold); }
 .source-main {
   display: flex;
   flex-direction: column;
@@ -1073,8 +1013,7 @@ onMounted(() => {
   color: var(--k5);
   margin-bottom: 6px;
 }
-.select,
-.input {
+.select {
   width: 100%;
   min-height: 40px;
   padding: 8px 10px;
@@ -1085,21 +1024,14 @@ onMounted(() => {
   font-family: inherit;
   font-size: 14px;
 }
-.select:focus,
-.input:focus {
-  outline: none;
-  border-color: var(--goldbd);
-}
+.select:focus { outline: none; border-color: var(--goldbd); }
 .source-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
-.meta-item {
-  font-size: 13px;
-  color: var(--k3);
-}
+.meta-item { font-size: 13px; color: var(--k3); }
 .meta-pill {
   display: inline-flex;
   align-items: center;
@@ -1125,45 +1057,45 @@ onMounted(() => {
   gap: 8px;
   margin-top: 14px;
 }
-.notice {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: var(--success);
-}
+.notice { margin: 12px 0 0; font-size: 13px; color: var(--success); }
+.notice.warn-note { color: var(--warn); }
 
-.btn-primary,
-.btn-ghost {
+.btn,
+.btn-mini {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 10px 16px;
   border-radius: 6px;
-  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  transition: opacity 0.15s, background 0.15s, border-color 0.15s;
-}
-.btn-primary {
-  background: var(--k0);
-  color: var(--wh);
-  border: 1px solid var(--k0);
-}
-.btn-primary:hover:not(:disabled) {
-  opacity: 0.92;
-}
-.btn-ghost {
   background: var(--wh);
   color: var(--k0);
   border: 1px solid var(--bd);
 }
-.btn-ghost:hover {
+.btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.btn.primary {
+  background: var(--k0);
+  color: var(--wh);
+  border-color: var(--k0);
+}
+.btn.quiet { min-height: 32px; font-size: 12px; }
+.btn:hover:not(:disabled),
+.btn-mini:hover:not(:disabled) {
   border-color: var(--goldbd);
   background: var(--k9);
 }
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: wait;
+.btn.primary:hover:not(:disabled) { opacity: 0.92; background: var(--k0); }
+.btn:disabled,
+.btn-mini:disabled { opacity: 0.6; cursor: wait; }
+.btn-mini {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-top: 6px;
 }
 
 .kpi-grid {
@@ -1192,477 +1124,282 @@ onMounted(() => {
   color: var(--k0);
   line-height: 1.1;
 }
-.kpi-value.gold {
-  color: var(--gold);
-}
-.kpi-sub {
-  font-size: 12px;
-  color: var(--k5);
-  margin-top: 2px;
-}
+.kpi-value.gold { color: var(--gold); }
+.kpi-sub { font-size: 12px; color: var(--k5); margin-top: 2px; }
 
-.toolbar-row {
+.toolrow {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
   gap: 10px;
-}
-.toolbar-row + .toolbar-row {
-  margin-top: 10px;
-}
-.select--dim {
-  max-width: 260px;
-}
-.quad-chips {
-  display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  margin: 4px 0 8px;
 }
-.quad-chip {
+.tool-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-  background: var(--wh);
-  font-size: 12px;
-  font-weight: 600;
-  transition: opacity 0.15s;
-}
-.quad-chip .quad-letter {
-  font-family: var(--serif);
-  font-size: 13px;
-}
-.quad-chip.is-off {
-  color: var(--k5);
-  opacity: 0.55;
-}
-.quad-chip--forcas {
-  color: var(--success);
-}
-.quad-chip--oportunidades {
-  color: #3d6fa8;
-}
-.quad-chip--fraquezas {
-  color: var(--warn);
-}
-.quad-chip--ameacas {
-  color: var(--low);
-}
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--k3);
-}
-.toolbar-actions {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-.btn-mini {
-  padding: 5px 10px;
+  flex-wrap: wrap;
   border: 1px solid var(--bd);
-  border-radius: 6px;
+  border-radius: 8px;
+  overflow: hidden;
   background: var(--wh);
-  color: var(--k0);
+}
+.seg button {
+  border: none;
+  background: transparent;
+  color: var(--k3);
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 10px 14px;
 }
-.btn-mini:hover:not(:disabled) {
-  border-color: var(--goldbd);
-  background: var(--k9);
-}
-.btn-mini:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.btn-mini--danger {
-  color: var(--low);
-}
-.btn-mini--add {
-  color: var(--gold2);
-  border-color: var(--goldbd);
-  border-style: dashed;
-}
-
-.tree-card {
-  padding: 16px 12px;
-}
-.tree-root {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
+.seg button + button { border-left: 1px solid var(--bd); }
+.seg button.on {
   background: var(--k0);
   color: var(--wh);
 }
-.root-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-}
-.root-title {
-  font-family: var(--serif);
-  font-size: 15px;
-}
-.root-veredito {
+.mobile-note {
+  margin: 0 0 10px;
   font-size: 12px;
-  color: var(--gold2);
-}
-.tree-empty,
-.tree-hint {
-  margin: 14px 4px 0;
-  font-size: 13px;
   color: var(--k5);
 }
+@media (min-width: 980px) {
+  .mobile-note { display: none; }
+}
 
-.tree,
-.branch {
-  list-style: none;
+.pan { margin-top: 6px; }
+.reading { border-left: 3px solid var(--gold); }
+.eyebrow-p {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.reading p {
   margin: 0;
-  padding: 0;
-}
-.tree {
-  margin-top: 8px;
-}
-.branch {
-  margin-left: 10px;
-  padding-left: 14px;
-}
-.branch > .node {
-  position: relative;
-  padding-left: 14px;
-}
-.branch > .node::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 17px;
-  width: 12px;
-  height: 1px;
-  background: var(--k7);
-}
-.branch > .node::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--k7);
-}
-.branch > .node:last-child::after {
-  bottom: auto;
-  height: 17px;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  margin: 3px 0;
-  border-radius: 6px;
-  border: 1px solid transparent;
   font-size: 14px;
-  line-height: 1.4;
-}
-.row:hover {
-  background: var(--k9);
-}
-.row--dim {
-  background: var(--k8);
-  border-color: var(--bd);
-}
-.row--dim .row-title {
-  font-family: var(--serif);
-  font-size: 16px;
-}
-.row-accent {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-.row--question .row-title {
+  max-width: 780px;
   color: var(--k1);
 }
-.row--item {
-  border-left: 3px solid var(--k7);
+.pan-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.row--forcas {
-  border-left-color: var(--success);
+@media (min-width: 980px) {
+  .pan-grid { grid-template-columns: repeat(3, 1fr); }
 }
-.row--oportunidades {
-  border-left-color: #3d6fa8;
-}
-.row--fraquezas {
-  border-left-color: var(--warn);
-}
-.row--ameacas {
-  border-left-color: var(--low);
-}
-.row--tows {
-  background: var(--beige-bg);
-  border-color: var(--beige-bd);
-}
-.row--project {
-  background: var(--k0);
-  color: var(--wh);
-}
-.row--project .row-title {
-  color: var(--wh);
-}
-.row--watch {
-  color: var(--k3);
-}
-.row-title {
-  flex: 1 1 220px;
-  min-width: 0;
-}
-.row-title.link:hover {
-  text-decoration: underline;
-}
-.row-tags {
+.aposta {
+  padding: 16px 18px;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 3px solid var(--gold);
 }
-
-.twist {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border: 1px solid var(--k7);
-  border-radius: 4px;
-  background: var(--wh);
-  color: var(--k3);
-  font-size: 13px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.aposta.tone-risk { border-top-color: var(--low); }
+.aposta.tone-warn { border-top-color: var(--warn); }
+.aposta.tone-ok { border-top-color: var(--success); }
+.aposta .ak {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--gold);
 }
-.twist:hover {
-  border-color: var(--gold2);
-  color: var(--k0);
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--golddim);
-  border: 1px solid var(--goldbd);
-  color: var(--gold2);
-  white-space: nowrap;
-}
-.tag.muted {
-  background: var(--k8);
-  border-color: var(--bd);
-  color: var(--k4);
-}
-.tag--proj {
-  background: rgba(12, 35, 64, 0.08);
-  border-color: rgba(12, 35, 64, 0.18);
-  color: var(--k0);
-}
-.code {
+.aposta h3 {
   font-family: var(--serif);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--k4);
-  letter-spacing: 0.04em;
-}
-.score-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  background: var(--k8);
-  color: var(--k3);
-  white-space: nowrap;
-}
-.score-pill--1,
-.score-pill--2 {
-  background: var(--lowBg);
-  color: var(--low);
-}
-.score-pill--3 {
-  background: var(--warnBg);
-  color: var(--warn);
-}
-.score-pill--4,
-.score-pill--5 {
-  background: var(--successBg);
-  color: var(--success);
-}
-
-.quad-badge,
-.tows-badge,
-.proj-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.quad-badge--forcas {
-  background: var(--successBg);
-  color: var(--success);
-}
-.quad-badge--oportunidades {
-  background: #eaf1f8;
-  color: #3d6fa8;
-}
-.quad-badge--fraquezas {
-  background: var(--warnBg);
-  color: var(--warn);
-}
-.quad-badge--ameacas {
-  background: var(--lowBg);
-  color: var(--low);
-}
-.quad-badge--watch {
-  background: var(--k8);
-  color: var(--k4);
-}
-.tows-badge {
-  background: var(--wh);
-  border: 1px solid var(--beige-bd);
-  color: var(--gold2);
-}
-.proj-badge {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--wh);
-}
-
-.answer-note,
-.counterparts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0 6px 8px;
-  font-size: 13px;
-  color: var(--k3);
-}
-.answer-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--k5);
-}
-.counterpart {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  background: var(--k8);
-  color: var(--k3);
-}
-
-.link-panel {
-  margin: 6px 0 10px 8px;
-  padding: 10px;
-  border: 1px dashed var(--goldbd);
-  border-radius: 6px;
-  background: var(--k9);
-}
-.panel-label {
-  margin: 10px 0 6px;
-  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--k5);
-}
-.panel-empty {
+  font-size: 18px;
+  color: var(--k0);
+  line-height: 1.3;
   margin: 0;
+}
+.aposta p { margin: 0; font-size: 12.5px; color: var(--k3); }
+.aposta .st {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--k4);
+}
+.pan-alert {
+  border-left: 3px solid var(--low);
+  background: var(--lowBg);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--k1);
+}
+.pan-alert .pa-ic {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--low);
+  flex: none;
+}
+.pan-alert p { margin: 4px 0 0; color: var(--k3); }
+.lede {
+  margin: 10px 0 0;
   font-size: 13px;
   color: var(--k4);
 }
-.panel-list {
-  list-style: none;
+
+.map-sec { margin-top: 8px; }
+.map-card { padding: 0; overflow: hidden; }
+.map-wrap { overflow-x: auto; padding-bottom: 6px; }
+.map {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(168px, 1fr));
+  gap: 26px;
+  min-width: 920px;
+  padding: 16px;
+}
+.map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.mcol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.mcol-h {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--k5);
+  margin-bottom: 2px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.mcol-h .rn {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--k0);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.m-empty {
   margin: 0;
-  padding: 0;
+  font-size: 12px;
+  color: var(--k5);
+  padding: 12px 10px;
+  border: 1px dashed var(--bd);
+  border-radius: 6px;
+}
+.mnode {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: left;
+  background: var(--wh);
+  border: 1px solid var(--bd);
+  border-left: 3px solid var(--k6);
+  border-radius: 6px;
+  padding: 12px 14px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 220px;
-  overflow-y: auto;
+  box-shadow: 0 1px 0 rgba(12, 35, 64, 0.03);
 }
-.panel-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--bd);
-  border-radius: 6px;
-  background: var(--wh);
-  font-size: 13px;
-  text-align: left;
+.mnode b {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 600;
   color: var(--k0);
+  line-height: 1.3;
 }
-.panel-item:hover:not(:disabled) {
-  border-color: var(--goldbd);
+.mnode .mv {
+  font-size: 11.5px;
+  color: var(--k4);
 }
-.panel-item.is-linked {
-  border-color: var(--success);
-  color: var(--success);
+.mnode .sd {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
-.panel-check {
-  width: 16px;
-  flex-shrink: 0;
-  font-weight: 700;
+.mnode.mn-strategy { border-left-color: var(--dim-strategy); }
+.mnode.mn-data { border-left-color: var(--dim-data); }
+.mnode.mn-people { border-left-color: var(--dim-people); }
+.mnode.mn-gov { border-left-color: var(--dim-gov); }
+.mnode.mn-s { border-left-color: var(--s); }
+.mnode.mn-w { border-left-color: var(--w); }
+.mnode.mn-o { border-left-color: var(--o); }
+.mnode.mn-t { border-left-color: var(--t); }
+.mnode.mn-a { border-left-color: var(--a); }
+.mnode:hover { border-color: var(--goldbd); background: var(--k9); }
+.mnode.lit {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--golddim);
+  background: #fffdf8;
 }
+.mnode.dim { opacity: 0.28; }
+.only-lin { display: none; }
+.lens-lin .only-lin { display: flex; }
 
-.unlinked-toggle {
+.map-legend {
   display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  text-align: left;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--k5);
+  padding: 12px 16px;
+  border-top: 1px solid var(--bd);
 }
-.sec-title {
+.map-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.leg-line {
+  width: 22px;
+  height: 1.5px;
+  display: inline-block;
+  background: var(--gold);
+}
+.leg-line.risk { background: var(--low); }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--k6);
+}
+.dot.st-ok { background: var(--success); }
+.dot.st-warn { background: var(--warn); }
+.dot.st-risk { background: var(--low); }
+
+.orphan-card .sec-title {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--k5);
+  margin: 0 0 8px;
 }
-.unlinked-body {
-  margin-top: 10px;
+.panel-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--k4);
 }
 .plain-list {
   list-style: none;
-  margin: 0 0 10px;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -1676,38 +1413,212 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
 }
-.link {
-  color: var(--k0);
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
+  background: var(--k8);
+  border: 1px solid var(--bd);
+  color: var(--k4);
 }
-.link:hover {
-  text-decoration: underline;
+.tag.muted { color: var(--k4); }
+.link { color: var(--k0); font-weight: 600; }
+.link:hover { text-decoration: underline; }
+
+.save-seal {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--k5);
 }
 
 @media (min-width: 760px) {
-  .wrap {
-    padding: 22px 20px 64px;
-  }
-  .card {
-    padding: 20px;
-  }
-  .kpi-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  .wrap { padding: 22px 20px 80px; }
+  .kpi-grid { grid-template-columns: repeat(5, 1fr); }
   .source-main {
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
   }
-  .source-field {
-    min-width: 320px;
-  }
-  .branch {
-    margin-left: 14px;
-    padding-left: 18px;
-  }
-  .tree-card {
-    padding: 20px;
-  }
+  .source-field { min-width: 320px; }
 }
+</style>
+
+<style>
+.dock {
+  position: fixed;
+  top: var(--bar-h, 64px);
+  right: 0;
+  bottom: 0;
+  width: min(400px, 100vw);
+  transform: translateX(105%);
+  transition: transform 0.35s ease;
+  z-index: 350;
+  overflow: auto;
+  background: #fff;
+  border-left: 1px solid var(--bd);
+  box-shadow: -12px 0 40px rgba(12, 35, 64, 0.08);
+  padding: 18px 18px 40px;
+}
+.dock.open { transform: none; }
+.dock .dh {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.dock .dh b {
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--k0);
+  line-height: 1.3;
+}
+.dh-tags { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.tag-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--gold);
+}
+.dock .tag { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.dock .tag--ok { background: var(--successBg); color: var(--success); border-color: transparent; }
+.dock .tag--warn { background: var(--warnBg); color: var(--warn); border-color: transparent; }
+.dock .tag--risk { background: var(--lowBg); color: var(--low); border-color: transparent; }
+.dock .dblock { margin-bottom: 16px; }
+.dock .dk {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k5);
+  margin-bottom: 6px;
+}
+.dock .dblock p,
+.dock .chain {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--k1);
+  line-height: 1.55;
+}
+.dock .chain {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--k3);
+}
+.dock .dblock.ask {
+  background: var(--beige-bg);
+  border-radius: 6px;
+  padding: 12px;
+}
+.dock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dock-item-title { margin: 0; font-size: 13px; color: var(--k0); }
+.dock-item-meta { margin: 2px 0 0; font-size: 11px; color: var(--k5); }
+.dock .link-panel {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px dashed var(--goldbd);
+  border-radius: 6px;
+  background: var(--k9);
+}
+.dock .panel-label {
+  margin: 10px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--k5);
+}
+.dock .panel-empty { margin: 0; font-size: 13px; color: var(--k4); }
+.dock .panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.dock .panel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--wh);
+  font-size: 13px;
+  text-align: left;
+  color: var(--k0);
+}
+.dock .panel-item.is-linked { border-color: var(--success); color: var(--success); }
+
+.stage-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--k0);
+  color: var(--wh);
+  padding: 14px 18px 18px;
+  z-index: 360;
+  display: none;
+  box-shadow: 0 -10px 30px rgba(14, 27, 51, 0.3);
+}
+.stage-bar.on { display: block; }
+.stage-bar .st-t {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 600;
+}
+.stage-bar .st-t em { color: var(--gold2); font-style: italic; }
+.stage-bar p {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 760px;
+  margin-top: 4px;
+}
+.stage-ctl {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.sbtn {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--wh);
+  background: transparent;
+}
+.sbtn:hover:not(:disabled) { border-color: var(--gold2); }
+.sbtn:disabled { opacity: 0.4; cursor: default; }
 </style>
