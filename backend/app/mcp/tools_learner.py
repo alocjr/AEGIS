@@ -113,6 +113,62 @@ def _find_kr(key_results: list[dict], kr_id: str) -> tuple[int, dict]:
     raise ToolError(f"Key Result '{kid}' nao encontrado neste objective.")
 
 
+def _maturity_levels(question: dict) -> dict[str, str]:
+    raw = question.get("levels") or {}
+    out: dict[str, str] = {}
+    for n in ("1", "2", "3", "4", "5"):
+        val = raw.get(n)
+        if val:
+            out[n] = str(val)
+    return out
+
+
+def _maturity_questions(model: dict, tier: str) -> list[dict]:
+    rows: list[dict] = []
+    for dim in model.get("dimensions") or []:
+        dim_id = str(dim.get("id") or "")
+        dim_name = str(dim.get("name") or dim_id)
+        for q in dim.get("questions") or []:
+            q_tier = str(q.get("tier") or "basico")
+            if not maturity_routes._is_visible_tier(q_tier, tier):
+                continue
+            qid = str(q.get("id") or "")
+            if not qid:
+                continue
+            rows.append(
+                {
+                    "id": qid,
+                    "dimension_id": dim_id,
+                    "dimension": dim_name,
+                    "text": str(q.get("text") or ""),
+                    "levels": _maturity_levels(q),
+                }
+            )
+    return rows
+
+
+def _coerce_maturity_answers(raw: dict, *, known: set[str]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    unknown: list[str] = []
+    for key, value in raw.items():
+        qid = str(key or "").strip()
+        if qid not in known:
+            unknown.append(qid)
+            continue
+        try:
+            score = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ToolError(f"Nota invalida para {qid}: {value}") from exc
+        if score < 1 or score > 5:
+            raise ToolError(f"Nota de {qid} deve ser um inteiro de 1 a 5.")
+        out[qid] = score
+    if unknown:
+        raise ToolError(f"Perguntas desconhecidas neste modelo: {', '.join(unknown)}.")
+    if not out:
+        raise ToolError("Informe ao menos uma resposta (question_id + score, ou answers).")
+    return out
+
+
 def register_learner_tools(mcp) -> None:
     def _swot_user() -> dict:
         user = require_verified_user()
@@ -344,7 +400,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def maturity_model() -> dict:
-        """Retorna o modelo de questionário de maturidade em IA."""
+        """Modelo completo (inclui SWOT/TOWS). Para entrevistar o mentorado use maturity_questionnaire."""
         user = _maturity_user()
         return call_route(maturity_routes.get_model, user=user, db=get_db())
 
@@ -380,17 +436,141 @@ def register_learner_tools(mcp) -> None:
             db=get_db(),
         )
 
+    def _maturity_load_draft(user: dict, response_id: str | None, tier: str) -> tuple[str | None, dict[str, int], str, dict]:
+        org_id = _org_id(user)
+        db = get_db()
+
+        def _answers_of(doc: dict) -> dict[str, int]:
+            out: dict[str, int] = {}
+            for k, v in (doc.get("answers") or {}).items():
+                try:
+                    out[str(k)] = int(v)
+                except (TypeError, ValueError):
+                    continue
+            return out
+
+        if response_id:
+            doc = call_route(
+                maturity_routes.get_my_response_by_id,
+                response_id=response_id,
+                user=user,
+                org_id=org_id,
+                db=db,
+            )
+            return str(doc["id"]), _answers_of(doc), str(doc.get("tier") or tier), doc
+        listed = call_route(
+            maturity_routes.list_my_responses, user=user, org_id=org_id, db=db
+        )
+        draft = next((item for item in listed.get("items") or [] if not item.get("complete")), None)
+        if not draft:
+            return None, {}, tier, {"id": None, "complete": False, "result": None, "tier": tier}
+        doc = call_route(
+            maturity_routes.get_my_response_by_id,
+            response_id=str(draft["id"]),
+            user=user,
+            org_id=org_id,
+            db=db,
+        )
+        return str(doc["id"]), _answers_of(doc), str(doc.get("tier") or tier), doc
+
+    def _maturity_pack(model: dict, tier: str, answers: dict[str, int], saved: dict, *, include_questions: bool) -> dict:
+        questions = _maturity_questions(model, tier)
+        unanswered = [q for q in questions if q["id"] not in answers]
+        levels = (model.get("levels") or {}).get(tier) or {}
+        pack = {
+            "id": saved.get("id"),
+            "title": model.get("assessment_title") or model.get("title") or "Diagnóstico de Maturidade em IA",
+            "tier": tier,
+            "tier_label": levels.get("label") or tier,
+            "complete": bool(saved.get("complete")),
+            "answered": len(questions) - len(unanswered),
+            "total": len(questions),
+            "answers": answers,
+            "result": saved.get("result"),
+            "next": unanswered[:3],
+            "unanswered_ids": [q["id"] for q in unanswered],
+        }
+        if include_questions:
+            annotated = []
+            for q in questions:
+                annotated.append({**q, "answer": answers.get(q["id"])})
+            pack["questions"] = annotated
+        return pack
+
+    @mcp.tool
+    def maturity_questionnaire(tier: str | None = None, response_id: str | None = None) -> dict:
+        """Questionário enxuto para responder via chat: perguntas, escalas 1–5 e progresso.
+
+        tier: basico (12), completo (32) ou complementar (48). Omitido: usa o do rascunho, senão basico.
+        Sem response_id, continua o rascunho incompleto do autor se existir.
+        """
+        user = _maturity_user()
+        model = call_route(maturity_routes.get_model, user=user, db=get_db())
+        requested = (tier or "").strip().lower() or None
+        if requested and requested not in ("basico", "completo", "complementar"):
+            raise ToolError("Tier invalido. Use basico, completo ou complementar.")
+        _rid, answers, draft_tier, saved = _maturity_load_draft(
+            user, response_id, requested or "basico"
+        )
+        selected = maturity_routes._normalize_tier(requested or draft_tier or "basico")
+        return _maturity_pack(model, selected, answers, saved, include_questions=True)
+
+    @mcp.tool
+    def maturity_answer(
+        answers: dict[str, Any] | str | None = None,
+        question_id: str | None = None,
+        score: int | None = None,
+        response_id: str | None = None,
+        tier: str | None = None,
+    ) -> dict:
+        """Registra respostas do diagnóstico (merge — não apaga as já dadas).
+
+        Use question_id + score (1–5) para uma pergunta, ou answers {EV1: 4, EV2: 3, …} em lote.
+        Sem response_id, continua o rascunho do autor ou cria um novo.
+        Devolve progresso e as próximas perguntas em `next`. Quando complete=true, pode chamar swot_from_maturity.
+        """
+        user = _maturity_user()
+        model = call_route(maturity_routes.get_model, user=user, db=get_db())
+        requested = (tier or "").strip().lower() or None
+        if requested and requested not in ("basico", "completo", "complementar"):
+            raise ToolError("Tier invalido. Use basico, completo ou complementar.")
+        rid, existing, draft_tier, _saved = _maturity_load_draft(
+            user, response_id, requested or "basico"
+        )
+        selected = maturity_routes._normalize_tier(requested or draft_tier or "basico")
+        known = {q["id"] for q in _maturity_questions(model, selected)}
+        incoming: dict[str, Any] = {}
+        if answers is not None:
+            incoming.update(
+                parse_json_object(answers, label="answers") if not isinstance(answers, dict) else answers
+            )
+        if question_id:
+            if score is None:
+                raise ToolError("Informe score (1–5) junto com question_id.")
+            incoming[question_id] = score
+        patch = _coerce_maturity_answers(incoming, known=known)
+        merged = {**existing, **patch}
+        payload: dict[str, Any] = {"answers": merged, "tier": selected}
+        if rid:
+            payload["response_id"] = rid
+        body = validate_model(MaturityAnswersRequest, payload)
+        saved = call_route(
+            maturity_routes.save_my_response,
+            payload=body,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+        final_answers = {str(k): int(v) for k, v in (saved.get("answers") or merged).items()}
+        return _maturity_pack(model, str(saved.get("tier") or selected), final_answers, saved, include_questions=False)
+
     @mcp.tool
     def maturity_save(
         answers: dict[str, Any] | str,
         tier: str = "basico",
         response_id: str | None = None,
     ) -> dict:
-        """Cria ou atualiza uma autoavaliação. answers: mapa pergunta_id → nota 1–5.
-
-        Sem response_id, reutiliza o rascunho incompleto do autor ou cria um novo.
-        Completa automaticamente quando todas as perguntas do tier estão respondidas.
-        """
+        """Substitui o mapa inteiro de respostas. Para responder no chat, prefira maturity_answer."""
         user = _maturity_user()
         raw_answers = parse_json_object(answers, label="answers") if not isinstance(answers, dict) else answers
         payload = {"answers": raw_answers, "tier": tier}

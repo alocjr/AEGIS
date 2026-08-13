@@ -27,10 +27,12 @@ Cada tool de ferramenta exige o id correspondente em `users.tools` (`maturity`, 
 | `canvas_approve_portfolio` | `project_id` | `{ ai_system_id, status, … }` |
 | `course_get` | `course_slug?: str` | course + progress |
 | `maturity_model` | — | model |
+| `maturity_questionnaire` | `tier?`, `response_id?` | questions + progress |
+| `maturity_answer` | `answers?`, `question_id?`, `score?`, `response_id?`, `tier?` | progress + `next` |
 | `maturity_my_responses` | — | `{ items }` |
 | `maturity_get` | `response_id` | response |
 | `maturity_export` | `response_id` | envelope `aegis.maturidade-ia` |
-| `maturity_save` | `answers`, `tier?`, `response_id?` | saved response |
+| `maturity_save` | `answers`, `tier?`, `response_id?` | saved response (replace) |
 | `strategic_map` | `maturity_response_id?`, `swot_id?` | tree |
 | `okr_list` | — | `{ items }` |
 | `okr_get` | `cycle_id` | cycle |
@@ -75,3 +77,4 @@ Cada tool de ferramenta exige o id correspondente em `users.tools` (`maturity`, 
 
 - `swot_gerar_json`
 - `canvas_gerar_json`
+- `maturity_responder`

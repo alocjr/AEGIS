@@ -39,7 +39,7 @@ def create_mcp() -> FastMCP:
             "Tools de mentorado exigem email verificado e a ferramenta do AI Hub "
             "liberada na conta (maturidade, SWOT/TOWS, OKR, canvas, governança). "
             "Tools admin_* exigem is_admin. "
-            "Escrita: maturity_save; swot_update / swot_import / swot_from_maturity / tows_rebuild; "
+            "Escrita: maturity_questionnaire / maturity_answer; swot_update / swot_import / swot_from_maturity / tows_rebuild; "
             "okr_create / okr_create_objective / okr_update_objective / "
             "okr_create_key_result / okr_update_key_result / okr_activate; "
             "canvas_create / canvas_update / canvas_import; "

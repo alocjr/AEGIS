@@ -126,6 +126,7 @@ export interface MaturityResponseListItem {
   model_id?: string
   submitted_at: string | null
   tier?: MaturityTier | string
+  complete?: boolean
   result: {
     total_score: number
     max_score: number

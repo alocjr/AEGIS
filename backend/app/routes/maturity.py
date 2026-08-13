@@ -213,6 +213,7 @@ def list_my_responses(
             "model_id": str(doc["model_id"]) if doc.get("model_id") else model["id"],
             "submitted_at": submitted_at.isoformat() if submitted_at else None,
             "tier": doc.get("tier") or result.get("tier"),
+            "complete": bool(doc.get("complete")),
             "result": {
                 "total_score": result.get("total_score", 0),
                 "max_score": result.get("max_score", 0),

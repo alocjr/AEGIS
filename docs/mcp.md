@@ -90,11 +90,13 @@ Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
 
 | Tool | Descrição |
 |------|-----------|
-| `maturity_model` | Questionário ativo |
+| `maturity_model` | Modelo completo (SWOT/TOWS) — prefira o questionário |
+| `maturity_questionnaire` | **Entrevista** — perguntas + escalas 1–5 + progresso |
+| `maturity_answer` | **Escrita** — grava 1+ notas (merge; `question_id`+`score` ou `answers`) |
 | `maturity_my_responses` | Lista autoavaliações |
 | `maturity_get` | Uma autoavaliação (respostas + resultado) |
 | `maturity_export` | Envelope `aegis.maturidade-ia` |
-| `maturity_save` | **Escrita** — cria/atualiza answers (1–5) e tier |
+| `maturity_save` | **Escrita** — substitui o mapa inteiro de answers |
 
 ### SWOT / TOWS
 
@@ -160,7 +162,7 @@ Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
 ## Resources e prompts
 
 - Resources: `aegis://prompt/swot-ia`, `aegis://prompt/canvas-oportunidades`, `aegis://schema/swot-ia`, `aegis://schema/canvas-oportunidades`, `aegis://data/swot-pillars`
-- Prompts MCP: `swot_gerar_json`, `canvas_gerar_json`
+- Prompts MCP: `swot_gerar_json`, `canvas_gerar_json`, `maturity_responder`
 
 ## Segurança
 
