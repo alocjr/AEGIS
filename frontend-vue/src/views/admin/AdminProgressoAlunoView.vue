@@ -215,9 +215,27 @@ async function saveAgenda() {
   }
 }
 
+/** Soma semanas calendário à data, preservando dia da semana e hora local (inclui DST). */
+function addWeeksIso(iso: string, weeks: number): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  d.setDate(d.getDate() + 7 * weeks)
+  return d.toISOString()
+}
+
 function onAgendaInput(encId: number, datetimeLocal: string) {
   const next = { ...agendaEdit.value }
-  next[String(encId)] = datetimeLocal.trim() ? datetimeLocalToIso(datetimeLocal) : ''
+  const iso = datetimeLocal.trim() ? datetimeLocalToIso(datetimeLocal) : ''
+  next[String(encId)] = iso
+  if (iso) {
+    const ordered = todosEncontros.value
+    const startIdx = ordered.findIndex((enc) => enc.id === encId)
+    if (startIdx >= 0) {
+      for (let i = 1; startIdx + i < ordered.length; i++) {
+        next[String(ordered[startIdx + i].id)] = addWeeksIso(iso, i)
+      }
+    }
+  }
   agendaEdit.value = next
 }
 
@@ -412,7 +430,7 @@ onMounted(() => loadData())
 
       <div v-if="todosEncontros.length > 0" class="agenda-section">
         <h2 class="sec-title">Agenda (datas dos encontros)</h2>
-        <p class="sec-desc">Defina a data e hora de cada encontro. O aluno verá essas datas na tela Agenda e poderá exportar para o Google Calendar.</p>
+        <p class="sec-desc">Defina a data e hora de cada encontro. Ao definir uma data, os encontros seguintes são preenchidos automaticamente no mesmo dia da semana e horário, uma semana depois (1 encontro por semana). O aluno verá essas datas na tela Agenda e poderá exportar para o Google Calendar.</p>
         <div class="agenda-list agenda-list--edit">
           <div
             v-for="enc in todosEncontros"
