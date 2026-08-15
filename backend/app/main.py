@@ -224,6 +224,18 @@ def tutorial_tokens_agentes_js():
     return _public_static_file("tutorial-tokens-agentes.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/universo-da-ia-interativo.html")
+@app.get("/universo-da-ia-interativo")
+def universo_da_ia_html():
+    """Infográfico interativo do Universo da IA (HTML estático em public/)."""
+    return _public_static_file("universo-da-ia-interativo.html", "text/html; charset=utf-8")
+
+
+@app.get("/universo-da-ia-interativo.js")
+def universo_da_ia_js():
+    return _public_static_file("universo-da-ia-interativo.js", "application/javascript; charset=utf-8")
+
+
 @app.get("/401.png")
 def unauthorized_png():
     """Ilustração da página HTTP 401 (public/401.png → dist/401.png no build)."""
