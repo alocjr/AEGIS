@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>O Universo da Inteligência Artificial — Valorian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --marfim:#F7F3EB;
+    --marfim-2:#FDFBF6;
+    --navy-900:#0A1F33;
+    --navy-800:#13293D;
+    --navy-100:#E4E9EA;
+    --navy-200:#C6D2DA;
+    --navy-400:#6F8499;
+    --navy-600:#33506B;
+    --pedra:#C2C9D1;
+    --grafite:#4A4F55;
+    --dourado:#C9A227;
+    --dourado-100:#F1E8D0;
+    --muted:#5A6B7C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--marfim);font-family:'Inter',Arial,sans-serif;color:var(--navy-800);}
+  .topbar{
+    background:var(--navy-900);color:var(--marfim);
+    padding:10px 20px;text-align:center;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1.5px;
+    border-bottom:3px solid var(--dourado);
+  }
+  .topbar b{color:var(--dourado);}
+  .wrap{max-width:1920px;margin:0 auto;position:relative;}
+
+  /* ===== ZOOM / PAN ===== */
+  .zoom-stage{
+    position:relative; width:100%; aspect-ratio:1920/1290;
+    overflow:hidden; touch-action:none; cursor:grab;
+    background:var(--marfim); border-bottom:1px solid #E7E2D5;
+  }
+  .zoom-stage.panning{cursor:grabbing;}
+  .zoom-inner{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    transform-origin:0 0; will-change:transform;
+  }
+  .zoom-inner.smooth{transition:transform .25s ease;}
+  svg#chart{display:block; width:100%; height:100%;}
+
+  #zoom-controls{
+    position:fixed; right:18px; bottom:18px; z-index:50;
+    display:flex; flex-direction:column; gap:6px;
+    background:var(--navy-900); padding:6px; border-radius:14px;
+    box-shadow:0 8px 22px rgba(10,31,51,.3); border:1px solid var(--dourado);
+  }
+  #zoom-controls button{
+    width:38px; height:38px; border-radius:9px; border:none;
+    background:rgba(247,243,235,.1); color:var(--marfim);
+    font-size:18px; font-family:'Inter',sans-serif; font-weight:600;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s;
+  }
+  #zoom-controls button:hover{background:var(--dourado); color:var(--navy-900);}
+  #zoom-reset{font-size:15px;}
+
+  /* pills interativas */
+  .tech{cursor:pointer;}
+  .tech rect{transition:transform .15s ease, filter .15s ease, stroke-width .15s ease;}
+  .tech text{pointer-events:none;}
+  .tech:hover rect, .tech:focus-visible rect{
+    filter:drop-shadow(0 3px 8px rgba(10,31,51,0.35));
+    stroke-width:2.4;
+  }
+  .tech:focus-visible{outline:none;}
+  .tech:focus-visible rect{stroke:var(--dourado); stroke-width:2.6;}
+  .tech-gold:hover rect, .tech-gold:focus-visible rect{filter:drop-shadow(0 3px 10px rgba(201,162,39,0.55));}
+
+  /* hint flutuante */
+  .hint{
+    position:absolute; left:50%; transform:translateX(-50%);
+    top:172px;
+    background:var(--navy-900); color:var(--marfim);
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:.5px;
+    padding:7px 16px; border-radius:20px; border:1px solid var(--dourado);
+    box-shadow:0 6px 18px rgba(10,31,51,.25);
+    pointer-events:none; opacity:.95; z-index:5;
+  }
+
+  /* ===== MODAL ===== */
+  #backdrop{
+    position:fixed; inset:0; background:rgba(10,31,51,.55);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center;
+    z-index:100; padding:24px;
+  }
+  #backdrop.open{display:flex;}
+  #card{
+    background:var(--marfim-2); width:100%; max-width:520px; max-height:86vh;
+    border-radius:18px; overflow:hidden;
+    box-shadow:0 24px 60px rgba(10,31,51,.45);
+    display:flex; flex-direction:column;
+    animation:pop .18s ease;
+  }
+  @keyframes pop{from{opacity:0; transform:translateY(10px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);}}
+  #card-head{
+    background:var(--navy-900); padding:22px 26px 18px; position:relative;
+    border-bottom:3px solid var(--dourado);
+  }
+  #card-close{
+    position:absolute; top:14px; right:14px;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(247,243,235,.12); border:none; color:var(--marfim);
+    font-size:18px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #card-close:hover{background:rgba(247,243,235,.24);}
+  #card-eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:1.8px;
+    color:var(--dourado); text-transform:uppercase; margin:0 0 6px;
+  }
+  #card-title{
+    font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:24px;
+    color:var(--marfim); margin:0; line-height:1.15; padding-right:36px;
+  }
+  #card-era{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--marfim);
+    opacity:.65; margin-top:8px;
+  }
+  #card-body{padding:22px 26px 8px; overflow-y:auto;}
+  #card-status{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    margin-bottom:16px;
+  }
+  #card-status .dot{width:8px; height:8px; border-radius:50%;}
+  .status-ativa{background:var(--dourado-100); color:#7A5E10; border:1px solid var(--dourado);}
+  .status-ativa .dot{background:var(--dourado);}
+  .status-nicho{background:var(--navy-100); color:var(--navy-800); border:1px solid var(--navy-400);}
+  .status-nicho .dot{background:var(--navy-400);}
+  .status-historica{background:#EDEBE6; color:var(--grafite); border:1px solid #A9AEB3;}
+  .status-historica .dot{background:#8A8F94;}
+  .status-fronteira{background:var(--marfim-2); color:var(--navy-800); border:1.5px dashed var(--dourado);}
+  .status-fronteira .dot{background:var(--navy-800); box-shadow:0 0 0 3px var(--dourado-100);}
+
+  #card-desc{font-size:15px; line-height:1.55; color:var(--navy-800); margin:0 0 18px;}
+  #card-uses h4{
+    font-family:'Inter',sans-serif; font-size:11px; letter-spacing:1.6px; text-transform:uppercase;
+    color:var(--muted); margin:0 0 10px; font-weight:700;
+  }
+  #card-uses ul{margin:0 0 6px; padding:0; list-style:none;}
+  #card-uses li{
+    position:relative; padding:0 0 10px 20px; font-size:14px; line-height:1.45; color:var(--navy-800);
+  }
+  #card-uses li:before{
+    content:"›"; position:absolute; left:0; top:-2px; color:var(--dourado); font-weight:700; font-size:17px;
+  }
+  #card-foot{
+    padding:14px 26px 20px; font-size:11px; color:var(--muted); font-style:italic;
+    border-top:1px solid #E7E2D5;
+  }
+
+  @media (max-width: 640px){
+    #card-title{font-size:20px;}
+    .hint{font-size:10px; padding:6px 12px; top:150px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">VALORIAN <b>·</b> O Universo da Inteligência Artificial — infográfico interativo</div>
+
+<div class="wrap">
+  <div class="hint">👆 toque numa técnica · ✋ arraste para mover · 🔍 pinça ou botões +/− para zoom</div>
+  <div id="zoom-stage" class="zoom-stage">
+  <div id="zoom-inner" class="zoom-inner">
+  <svg id="chart" viewBox="0 0 1920 1290" xmlns="http://www.w3.org/2000/svg" font-family="Inter, Arial, sans-serif">
+    <defs>
+      <marker id="arrowGold" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#C9A227"/>
+      </marker>
+    </defs>
+    <style>
+      .fraunces{font-family:Fraunces,"Playfair Display",Georgia,serif;}
+      .mono{font-family:"JetBrains Mono","Courier New",monospace;}
+      .versalete{letter-spacing:2.2px; font-weight:600;}
+      .ink{fill:#13293D;}
+      .muted{fill:#5A6B7C;}
+      .ivory{fill:#F7F3EB;}
+    </style>
+
+    <!-- FUNDO -->
+    <rect x="0" y="0" width="1920" height="1350" fill="#F7F3EB"/>
+
+    <!-- CABEÇALHO -->
+    <rect x="0" y="0" width="1920" height="100" fill="#0A1F33"/>
+    <text x="960" y="60" text-anchor="middle" class="fraunces ivory" font-size="34" font-weight="700">O Universo da Inteligência Artificial</text>
+    <rect x="0" y="100" width="1920" height="3" fill="#C9A227"/>
+    <g transform="translate(0,-60)">
+
+    <!-- ANEL: CIÊNCIA DE DADOS -->
+    <rect x="40" y="185" width="1840" height="825" rx="90" fill="#F1EDE1" stroke="#13293D" stroke-width="1.2" stroke-opacity="0.55"/>
+    <text x="960" y="224" text-anchor="middle" class="fraunces ink" font-size="20" font-weight="700">Ciência de Dados</text>
+
+    <!-- legenda -->
+    <g>
+      <rect x="1658" y="782" width="200" height="205" rx="14" fill="#FDFBF6" stroke="#4A4F55" stroke-width="1"/>
+      <text x="1758" y="807" text-anchor="middle" class="versalete muted" font-size="10.5">CLASSIFICAÇÃO DE USO</text>
+
+      <rect x="1674" y="822" width="15" height="15" rx="4" fill="#DFC067" stroke="#13293D" stroke-width="1"/>
+      <text x="1697" y="833" font-size="11" class="ink">Muito usada hoje</text>
+
+      <rect x="1674" y="852" width="15" height="15" rx="4" fill="#6F8499" stroke="#13293D" stroke-width="1"/>
+      <text x="1697" y="863" font-size="11" class="ink">Uso em nicho</text>
+
+      <rect x="1674" y="882" width="15" height="15" rx="4" fill="#E6E3DA" stroke="#B9B2A3" stroke-width="1"/>
+      <text x="1697" y="893" font-size="11" class="ink">Majorit. histórica</text>
+
+      <rect x="1674" y="912" width="15" height="15" rx="4" fill="#FDFBF6" stroke="#C9A227" stroke-width="1.8" stroke-dasharray="3 2"/>
+      <text x="1697" y="923" font-size="11" class="ink">Fronteira de pesquisa</text>
+
+      <line x1="1674" y1="944" x2="1842" y2="944" stroke="#E7E2D5" stroke-width="1"/>
+      <text x="1674" y="961" font-size="9.5" font-style="italic" fill="#5A6B7C">Fundo em degradê = profundidade</text>
+      <text x="1674" y="974" font-size="9.5" font-style="italic" fill="#5A6B7C">na hierarquia (ML → RN → DL → Gen.)</text>
+    </g>
+
+    <!-- CONTÊINER IA -->
+    <rect x="90" y="240" width="1560" height="730" rx="80" fill="#F7F3EB" stroke="#13293D" stroke-width="2"/>
+    <text x="870" y="294" text-anchor="middle" class="fraunces ink" font-size="24" font-weight="700">Inteligência Artificial</text>
+
+    <!-- painel simbólico -->
+    <rect x="130" y="315" width="430" height="385" rx="18" fill="#FDFBF6" stroke="#13293D" stroke-width="1.5"/>
+    <text x="345" y="343" text-anchor="middle" class="versalete muted" font-size="12">PARADIGMA SIMBÓLICO</text>
+    <text x="345" y="361" text-anchor="middle" font-size="11" font-style="italic" class="muted">regras, lógica e conhecimento explícito · 1956 →</text>
+    <text x="345" y="682" text-anchor="middle" font-size="11" font-style="italic" class="muted">Nada aqui aprende com dados — tudo é conhecimento explícito.</text>
+
+    <!-- painéis família independente -->
+    <rect x="130" y="720" width="230" height="198" rx="18" fill="#FDFBF6" stroke="#13293D" stroke-width="1.5"/>
+    <text x="245" y="746" text-anchor="middle" class="versalete muted" font-size="11">BIO-INSPIRADAS</text>
+    <rect x="380" y="720" width="230" height="198" rx="18" fill="#FDFBF6" stroke="#13293D" stroke-width="1.5"/>
+    <text x="495" y="746" text-anchor="middle" class="versalete muted" font-size="11">OUTRAS FAMÍLIAS</text>
+
+    <!-- painel probabilístico -->
+    <rect x="630" y="770" width="260" height="178" rx="18" fill="#FDFBF6" stroke="#8A94A1" stroke-width="1.3"/>
+    <text x="760" y="796" text-anchor="middle" class="versalete muted" font-size="11">RACIOCÍNIO PROBABILÍSTICO</text>
+    <text x="760" y="812" text-anchor="middle" class="versalete muted" font-size="11">&amp; CAUSAL</text>
+
+    <!-- ponte neuro-simbólica -->
+    <line x1="560" y1="500" x2="663" y2="500" stroke="#C9A227" stroke-width="1.6" stroke-dasharray="4 5"/>
+    <line x1="877" y1="500" x2="958" y2="505" stroke="#C9A227" stroke-width="1.6" stroke-dasharray="4 5"/>
+    <polygon points="770,395 875,500 770,605 665,500" fill="#F7F3EB" stroke="#C9A227" stroke-width="2.5" stroke-dasharray="8 6" class="tech" data-id="neuro-simbolica" tabindex="0" role="button" aria-label="IA Neuro-simbólica"/>
+    <text x="770" y="488" text-anchor="middle" class="fraunces ink" font-size="14" font-weight="700" style="pointer-events:none">IA NEURO-</text>
+    <text x="770" y="506" text-anchor="middle" class="fraunces ink" font-size="14" font-weight="700" style="pointer-events:none">SIMBÓLICA</text>
+    <text x="770" y="528" text-anchor="middle" font-size="10.5" font-style="italic" class="muted" style="pointer-events:none">aprende + explica</text>
+
+    <!-- elipses aninhadas -->
+    <ellipse cx="1280" cy="615" rx="365" ry="340" fill="#E4E9EA" stroke="#13293D" stroke-width="1.4"/>
+    <ellipse cx="1325" cy="650" rx="270" ry="255" fill="#C6D2DA" stroke="#13293D" stroke-width="1.2"/>
+    <ellipse cx="1370" cy="685" rx="200" ry="185" fill="#6F8499" stroke="#13293D" stroke-width="1"/>
+    <ellipse cx="1415" cy="720" rx="135" ry="120" fill="#33506B" stroke="#13293D" stroke-width="1"/>
+
+    <text x="1280" y="325" text-anchor="middle" class="fraunces ink" font-size="17" font-weight="700">Machine Learning</text>
+    <text x="1061" y="372" text-anchor="middle" class="versalete muted" font-size="9.5">SUPERVISIONADO</text>
+    <text x="1002" y="542" text-anchor="middle" class="versalete muted" font-size="9.5">NÃO SUPERVISIONADO</text>
+    <text x="1025" y="674" text-anchor="middle" class="versalete muted" font-size="9.5">POR REFORÇO</text>
+    <text x="1110" y="802" text-anchor="middle" class="versalete muted" font-size="9.5">OUTROS REGIMES</text>
+    <text x="1325" y="428" text-anchor="middle" class="fraunces ink" font-size="15" font-weight="700">Redes Neurais</text>
+    <text x="1385" y="528" text-anchor="middle" class="fraunces ivory" font-size="15" font-weight="700">Deep Learning</text>
+    <text x="1415" y="630" text-anchor="middle" class="fraunces" fill="#F7F3EB" font-size="15" font-weight="700">IA Generativa</text>
+
+    <!-- conexões douradas -->
+    <path d="M 1090 778 C 1180 800, 1265 785, 1346 762" fill="none" stroke="#C9A227" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrowGold)"/>
+    <path d="M 1432 796 L 1470 908" fill="none" stroke="#C9A227" stroke-width="2" marker-end="url(#arrowGold)"/>
+    <path d="M 600 868 C 820 944, 1150 934, 1396 932" fill="none" stroke="#C9A227" stroke-width="1.4" stroke-dasharray="3 4" marker-end="url(#arrowGold)"/>
+
+    <!-- FAIXA APLICAÇÕES -->
+    <rect x="40" y="1025" width="1840" height="80" rx="14" fill="#E9E7DD"/>
+    <text x="64" y="1057" class="versalete muted" font-size="11">APLICAÇÕES &amp; CAPACIDADES</text>
+    <text x="64" y="1077" font-size="11" font-style="italic" class="muted">usam técnicas de várias famílias ao mesmo tempo</text>
+    <line x1="703" y1="1046" x2="703" y2="1012" stroke="#C9A227" stroke-width="1.4" stroke-dasharray="3 4"/>
+    <line x1="1145" y1="1046" x2="1145" y2="1012" stroke="#C9A227" stroke-width="1.4" stroke-dasharray="3 4"/>
+
+    <!-- FAIXA SUPORTE -->
+    <text x="64" y="1148" class="versalete muted" font-size="10.5">O QUE SUSTENTA TUDO</text>
+
+    <!-- LINHA DO TEMPO -->
+    <text x="90" y="1212" class="versalete muted" font-size="10.5">70+ ANOS DE HISTÓRIA — OS "INVERNOS" DE UM PARADIGMA FORAM AS PRIMAVERAS DO OUTRO</text>
+    <circle cx="1590" cy="1208" r="5" fill="none" stroke="#13293D" stroke-width="1.5"/><text x="1600" y="1212" font-size="10.5" class="muted">simbólico</text>
+    <circle cx="1682" cy="1208" r="5" fill="#13293D"/><text x="1692" y="1212" font-size="10.5" class="muted">conexionista</text>
+    <circle cx="1786" cy="1208" r="5" fill="#C9A227"/><text x="1796" y="1212" font-size="10.5" class="muted">era atual</text>
+    <line x1="80" y1="1250" x2="1840" y2="1250" stroke="#C9A227" stroke-width="1.4"/>
+    <g class="mono" font-size="13" text-anchor="middle" font-weight="600">
+      <text x="90" y="1234" class="ink">1943</text><text x="264" y="1234" class="ink">1950</text><text x="438" y="1234" class="ink">1956</text><text x="612" y="1234" class="ink">1958</text><text x="786" y="1234" class="ink">~1980</text><text x="960" y="1234" class="ink">1997</text><text x="1134" y="1234" class="ink">2012</text><text x="1308" y="1234" class="ink">2016</text><text x="1482" y="1234" class="ink">2017</text><text x="1656" y="1234" class="ink">2022</text><text x="1830" y="1234" class="ink">2024+</text>
+    </g>
+    <g>
+      <circle cx="90" cy="1250" r="6" fill="#13293D"/>
+      <circle cx="264" cy="1250" r="6" fill="none" stroke="#13293D" stroke-width="2"/>
+      <circle cx="438" cy="1250" r="6" fill="none" stroke="#13293D" stroke-width="2"/>
+      <circle cx="612" cy="1250" r="6" fill="#13293D"/>
+      <circle cx="786" cy="1250" r="6" fill="none" stroke="#13293D" stroke-width="2"/>
+      <circle cx="960" cy="1250" r="6" fill="none" stroke="#13293D" stroke-width="2"/>
+      <circle cx="1134" cy="1250" r="6" fill="#13293D"/>
+      <circle cx="1308" cy="1250" r="6" fill="#13293D"/>
+      <circle cx="1482" cy="1250" r="6" fill="#13293D"/>
+      <circle cx="1656" cy="1250" r="6" fill="#C9A227"/>
+      <circle cx="1830" cy="1250" r="6" fill="#C9A227"/>
+    </g>
+    <g font-size="11" text-anchor="middle" class="ink">
+      <text x="90" y="1272">Neurônio</text><text x="90" y="1286">artificial</text>
+      <text x="264" y="1272">Teste de</text><text x="264" y="1286">Turing</text>
+      <text x="438" y="1272">Dartmouth —</text><text x="438" y="1286">nasce o termo "IA"</text>
+      <text x="612" y="1272">Perceptron</text>
+      <text x="786" y="1272">Sistemas</text><text x="786" y="1286">Especialistas</text>
+      <text x="960" y="1272">Deep Blue</text><text x="960" y="1286">vence Kasparov</text>
+      <text x="1134" y="1272">AlexNet —</text><text x="1134" y="1286">Deep Learning</text>
+      <text x="1308" y="1272">AlphaGo</text>
+      <text x="1482" y="1272">Transformers</text>
+      <text x="1656" y="1272">ChatGPT —</text><text x="1656" y="1286">IA Generativa</text>
+      <text x="1830" y="1272">IA Agêntica</text>
+    </g>
+
+    <!-- RODAPÉ -->
+    <rect x="0" y="1314" width="1920" height="36" fill="#0A1F33"/>
+    <text x="960" y="1337" text-anchor="middle" font-size="12" fill="#F7F3EB">VALORIAN · Mentoria Executiva em IA — Versão Interativa v1</text>
+
+    <!-- ===== PILLS INTERATIVAS RENDERIZADAS VIA JAVASCRIPT ===== -->
+    <g id="pills-layer"></g>
+    </g>
+  </svg>
+  </div>
+  </div>
+  <div id="zoom-controls" aria-hidden="false">
+    <button id="zoom-in" aria-label="Aproximar">+</button>
+    <button id="zoom-reset" aria-label="Redefinir zoom">⟲</button>
+    <button id="zoom-out" aria-label="Afastar">−</button>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div id="backdrop">
+  <div id="card" role="dialog" aria-modal="true" aria-labelledby="card-title">
+    <div id="card-head">
+      <button id="card-close" aria-label="Fechar">✕</button>
+      <p id="card-eyebrow"></p>
+      <h3 id="card-title"></h3>
+      <p id="card-era"></p>
+    </div>
+    <div id="card-body">
+      <div id="card-status"><span class="dot"></span><span id="card-status-label"></span></div>
+      <p id="card-desc"></p>
+      <div id="card-uses">
+        <h4>Casos de uso</h4>
+        <ul id="card-uses-list"></ul>
+      </div>
+    </div>
+    <div id="card-foot">Toque fora do card ou pressione ESC para fechar.</div>
+  </div>
+</div>
+
+<script>
+const TECH = {
+  // ===== CIÊNCIA DE DADOS =====
+  "estatistica": {group:"Ciência de Dados", name:"Estatística", era:"Base desde o século XVIII", status:"ativa", statusLabel:"Fundamento sempre usado",
+    desc:"Base matemática para inferência, testes de hipótese e intervalos de confiança que sustentam qualquer modelo de IA — sem estatística não há como saber se um resultado é real ou coincidência.",
+    uses:["Validação de experimentos A/B","Controle de qualidade industrial","Definição de KPIs e métricas de negócio"]},
+  "visualizacao-dados": {group:"Ciência de Dados", name:"Visualização de Dados", era:"Consolidada desde os anos 1980", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Técnicas gráficas — dashboards, gráficos, mapas de calor — que tornam dados e resultados de modelos compreensíveis para quem decide.",
+    uses:["Dashboards executivos","Exploração de dados (EDA) antes de treinar modelos","Comunicação de resultados de ML para não técnicos"]},
+  "armazenamento-dados": {group:"Ciência de Dados", name:"Armazenamento de Dados", era:"Em evolução constante", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Bancos relacionais, NoSQL, data lakes e data warehouses que guardam os dados usados para treinar e operar modelos de IA.",
+    uses:["MongoDB / Postgres para aplicações","Snowflake / BigQuery para analytics","Data lakes para treino de LLMs"]},
+  "design-experimentos": {group:"Ciência de Dados", name:"Design de Experimentos", era:"Formalizado nos anos 1920 (Fisher)", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Metodologia estatística para planejar testes controlados que isolam o efeito real de uma mudança, evitando conclusões enganosas.",
+    uses:["Testes A/B e multivariados de produto","Otimização de prompts de LLMs","Comparação controlada entre modelos em produção"]},
+  "engenharia-dados": {group:"Ciência de Dados", name:"Engenharia de Dados (ETL)", era:"Essencial desde sempre, reinventada com big data", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Pipelines de extração, transformação e carga que preparam dados brutos para uso em modelos e análises.",
+    uses:["Pipelines de treino de modelos","Integração de sistemas legados","Feature stores para ML em produção"]},
+  "big-data": {group:"Ciência de Dados", name:"Big Data & Computação Distribuída", era:"Auge 2010–2018", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Frameworks como Spark e Hadoop para processar volumes de dados que não cabem em uma única máquina. Parte do protagonismo migrou para data warehouses em nuvem.",
+    uses:["Pré-processamento de datasets de treino de LLMs","Processamento de logs em escala","Análise de cliques em e-commerce"]},
+  "qualidade-governanca": {group:"Ciência de Dados", name:"Qualidade & Governança de Dados", era:"Em forte expansão desde 2020", status:"ativa", statusLabel:"Muito usada, crescendo",
+    desc:"Processos e ferramentas para garantir que os dados usados por modelos são precisos, completos e rastreáveis.",
+    uses:["Catálogos de dados corporativos","Linhagem de dados (data lineage)","Compliance com LGPD e regulação setorial"]},
+
+  // ===== PARADIGMA SIMBÓLICO =====
+  "sistemas-especialistas": {group:"Paradigma Simbólico", name:"Sistemas Especialistas", era:"Auge nos anos 1970–1990", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Sistemas baseados em regras 'se-então' escritas por especialistas humanos para simular decisões em domínios específicos, como o pioneiro MYCIN em diagnóstico médico.",
+    uses:["Motores de regras em crédito e compliance","Triagem médica básica em protocolos fechados","Configuradores de produto complexo"]},
+  "ontologias": {group:"Paradigma Simbólico", name:"Ontologias & Grafos de Conhecimento", era:"Anos 1990 → ressurgindo agora", status:"ativa", statusLabel:"Ressurgindo com força",
+    desc:"Estruturas formais que organizam conceitos de um domínio e suas relações, permitindo que máquinas 'entendam' significado, não só palavras.",
+    uses:["Google Knowledge Graph","Integração de dados em saúde (SNOMED CT)","GraphRAG — combinar LLMs com grafos de conhecimento"]},
+  "logica-programacao": {group:"Paradigma Simbólico", name:"Lógica & Programação Lógica", era:"Prolog, anos 1970", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Programação declarativa baseada em lógica formal, onde o programa descreve fatos e regras e o sistema deriva conclusões automaticamente.",
+    uses:["Sistemas de verificação formal","Planejadores de IA clássica","Ensino de lógica computacional"]},
+  "busca-heuristica": {group:"Paradigma Simbólico", name:"Busca Heurística", era:"1950s → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Algoritmos que exploram espaços de estados usando heurísticas para encontrar soluções ótimas ou quase ótimas (A*, minimax, Monte Carlo Tree Search).",
+    uses:["Motores de xadrez, como o histórico Deep Blue","GPS e roteamento de mapas","Parte do motor de busca por trás do AlphaGo"]},
+  "planejamento-automatizado": {group:"Paradigma Simbólico", name:"Planejamento Automatizado", era:"Anos 1970 (STRIPS) → hoje", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Técnicas que geram sequências de ações para atingir um objetivo a partir de um estado inicial conhecido.",
+    uses:["Planejamento de missões robóticas e espaciais (NASA)","Logística industrial complexa","Agentes de IA que decompõem tarefas em passos"]},
+  "raciocinio-casos": {group:"Paradigma Simbólico", name:"Raciocínio Baseado em Casos (CBR)", era:"Anos 1980–1990", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Resolve novos problemas recuperando e adaptando soluções de casos passados semelhantes, em vez de partir de regras gerais.",
+    uses:["Help desks técnicos legados","Apoio à decisão jurídica por jurisprudência","Diagnóstico por analogia em engenharia"]},
+  "redes-semanticas": {group:"Paradigma Simbólico", name:"Redes Semânticas & Frames", era:"Anos 1970–1980", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Representam conhecimento como grafos de conceitos conectados por relações rotuladas; frames organizam atributos típicos de um conceito.",
+    uses:["Precursoras diretas dos grafos de conhecimento modernos","Processamento de linguagem natural simbólico clássico"]},
+
+  // ===== BIO-INSPIRADAS =====
+  "comp-evolucionaria": {group:"Bio-inspiradas", name:"Computação Evolucionária", era:"Anos 1970 → nicho ativo", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Algoritmos que simulam seleção natural — mutação, cruzamento, seleção — para evoluir soluções a problemas de otimização.",
+    uses:["Design de antenas da NASA","Otimização de portfólios financeiros","Tuning de hiperparâmetros de redes neurais"]},
+  "enxames": {group:"Bio-inspiradas", name:"Inteligência de Enxames", era:"Anos 1990 → nicho ativo", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Inspirados no comportamento coletivo de formigas e pássaros (ACO, PSO), resolvem problemas de otimização de forma distribuída.",
+    uses:["Roteamento de veículos e logística","Otimização de redes de telecomunicações"]},
+  "sist-imunologicos": {group:"Bio-inspiradas", name:"Sistemas Imunológicos Artificiais", era:"Anos 1990–2000", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Algoritmos inspirados no sistema imunológico biológico para detecção de anomalias e otimização.",
+    uses:["Detecção de intrusão em segurança de redes (legado)","Detecção de fraude em sistemas antigos"]},
+  "automatos-celulares": {group:"Bio-inspiradas", name:"Autômatos Celulares", era:"1940s (von Neumann) → nicho", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Modelos computacionais simples — grades de células com regras locais — que geram comportamento complexo emergente, como o Jogo da Vida de Conway.",
+    uses:["Simulação de tráfego urbano","Modelagem de propagação de epidemias","Geração procedural em jogos"]},
+
+  // ===== OUTRAS FAMÍLIAS =====
+  "logica-fuzzy": {group:"Outras Famílias", name:"Lógica Fuzzy", era:"1965 (Zadeh) → hoje", status:"ativa", statusLabel:"Muito usada, embarcada",
+    desc:"Permite raciocínio com graus de verdade entre 0 e 1, em vez de verdadeiro/falso puro, lidando bem com incerteza e imprecisão da linguagem natural.",
+    uses:["Controle de ar-condicionado e câmbio automático","Sistemas de controle industrial"]},
+  "otimizacao-metaheuristica": {group:"Outras Famílias", name:"Otimização Metaheurística", era:"Anos 1980 → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Estratégias gerais (Simulated Annealing, Busca Tabu, Hill Climbing) para encontrar boas soluções em problemas grandes demais para busca exaustiva.",
+    uses:["Roteirização de entregas","Escalonamento de produção industrial"]},
+  "agentes-multiagente": {group:"Outras Famílias", name:"Agentes & Sistemas Multiagente", era:"Anos 1980 → base da IA agêntica atual", status:"ativa", statusLabel:"Muito usada, base conceitual atual",
+    desc:"Sistemas onde múltiplos agentes autônomos interagem, cooperam ou competem para atingir objetivos (arquitetura BDI: crenças, desejos, intenções).",
+    uses:["Simulação de mercados financeiros","Leilões automatizados","Base conceitual dos agentes de IA modernos"]},
+
+  // ===== PROBABILÍSTICO =====
+  "redes-bayesianas": {group:"Raciocínio Probabilístico", name:"Redes Bayesianas & Naive Bayes", era:"Anos 1980 → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Modelos gráficos que representam relações de dependência probabilística entre variáveis, permitindo inferência sob incerteza.",
+    uses:["Diagnóstico médico probabilístico","Filtros de spam clássicos","Sistemas de recomendação simples"]},
+  "hmm-mdp": {group:"Raciocínio Probabilístico", name:"HMM · MDP · Modelos Gráficos", era:"Anos 1970–1990", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Modelos que descrevem sistemas com estados ocultos que evoluem no tempo (HMM) ou processos de decisão sequencial (MDP) — base teórica do aprendizado por reforço.",
+    uses:["Reconhecimento de fala clássico","Robótica de navegação","Precificação dinâmica"]},
+  "inferencia-causal": {group:"Raciocínio Probabilístico", name:"Inferência Causal", era:"Framework moderno de Judea Pearl", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Framework para distinguir correlação de causalidade e responder perguntas contrafactuais — 'o que teria acontecido se...'.",
+    uses:["Avaliação de políticas públicas","Medicina baseada em evidência","Growth e experimentação em produtos digitais"]},
+
+  // ===== NEURO-SIMBÓLICA =====
+  "neuro-simbolica": {group:"Fronteira", name:"IA Neuro-simbólica", era:"Fronteira de pesquisa ativa (2020s)", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Combina redes neurais, que aprendem padrões, com representação simbólica, que raciocina com regras — busca o melhor dos dois mundos: aprendizado com explicabilidade verificável.",
+    uses:["AlphaGeometry — resolve problemas de geometria olímpica","LLMs aumentados com grafos de conhecimento (GraphRAG)","Verificação formal de código gerado por IA"]},
+
+  // ===== ML SUPERVISIONADO =====
+  "regressao": {group:"Machine Learning", name:"Regressão Linear & Logística", era:"Século XIX/XX, base do ML", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Modelos que preveem um valor numérico (linear) ou uma classe (logística) a partir de uma combinação de variáveis de entrada.",
+    uses:["Previsão de vendas","Score de crédito","Previsão de churn de clientes"]},
+  "arvores-rf": {group:"Machine Learning", name:"Árvores de Decisão & Random Forest", era:"Anos 1990 → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Árvores de decisão dividem dados por perguntas sucessivas; Random Forest combina muitas árvores para maior precisão e estabilidade.",
+    uses:["Detecção de fraude bancária","Modelos de risco de crédito","Triagem médica assistida"]},
+  "boosting": {group:"Machine Learning", name:"Boosting (XGBoost, LightGBM)", era:"2010s → padrão-ouro atual", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Combina modelos fracos sequencialmente, cada um corrigindo os erros do anterior — hoje é o padrão-ouro para dados tabulares estruturados.",
+    uses:["Competições de dados (Kaggle)","Scoring de crédito em produção","Precificação de seguros"]},
+  "svm-knn-nb": {group:"Machine Learning", name:"SVM · KNN · Naive Bayes", era:"Anos 1990–2000, hoje complementares", status:"nicho", statusLabel:"Uso especializado",
+    desc:"SVM encontra a fronteira ótima entre classes; KNN classifica por vizinhança; Naive Bayes usa probabilidade condicional simples e rápida.",
+    uses:["Classificação de texto em datasets pequenos","Reconhecimento de padrões com poucos dados","Sistemas de recomendação básicos"]},
+
+  // ===== ML NÃO SUPERVISIONADO =====
+  "clusterizacao": {group:"Machine Learning", name:"Clusterização (K-means, DBSCAN)", era:"Anos 1960 → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Agrupa dados semelhantes entre si sem usar rótulos prévios, revelando estrutura escondida nos dados.",
+    uses:["Segmentação de clientes","Agrupamento de documentos e conteúdo","Detecção de anomalias operacionais"]},
+  "pca-tsne-umap": {group:"Machine Learning", name:"PCA · t-SNE · UMAP", era:"PCA (1901) a UMAP (2018)", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Técnicas de redução de dimensionalidade que preservam a estrutura dos dados para visualização ou como pré-processamento.",
+    uses:["Visualização de embeddings de LLMs","Compressão de features antes do treino","Remoção de ruído em datasets"]},
+  "associacao": {group:"Machine Learning", name:"Regras de Associação (Apriori)", era:"Anos 1990", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Descobre regras de associação entre itens frequentemente relacionados — o clássico 'quem compra X também compra Y'.",
+    uses:["Recomendação de produtos em e-commerce","Análise de cesta de compras no varejo"]},
+
+  // ===== ML REFORÇO =====
+  "q-learning-dqn": {group:"Machine Learning", name:"Q-Learning & Deep Q-Networks", era:"1989 (Q-Learning) → 2013 (DQN)", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Aprende uma política de ação por tentativa e erro, maximizando recompensas acumuladas ao longo do tempo.",
+    uses:["Controle de robôs","Otimização de refrigeração em datacenters (caso Google/DeepMind)","Jogos e simulações"]},
+  "alphago": {group:"Machine Learning", name:"AlphaGo & AlphaZero", era:"Marco de 2016", status:"historica", statusLabel:"Marco histórico, técnica evoluiu",
+    desc:"Combinou aprendizado por reforço e busca em árvore para vencer o campeão mundial de Go, provando que RL supera intuição humana em domínios complexos.",
+    uses:["Base conceitual do AlphaFold (descoberta de proteínas)","AlphaTensor (otimização de algoritmos)","Motores de jogos estratégicos modernos"]},
+  "rlhf": {group:"Machine Learning", name:"RLHF — Reforço com Feedback Humano", era:"Popularizado em 2022 com o ChatGPT", status:"ativa", statusLabel:"Crítica hoje",
+    desc:"Ajusta modelos de linguagem usando preferências humanas como sinal de recompensa — foi a técnica que tornou o ChatGPT utilizável e 'alinhado'.",
+    uses:["Fine-tuning de todos os grandes LLMs (GPT, Claude, Gemini)","Moderação e filtragem de conteúdo","Alinhamento de comportamento e tom da IA"]},
+
+  // ===== ML OUTROS REGIMES =====
+  "series-temporais": {group:"Machine Learning", name:"Séries Temporais", era:"Clássica, reforçada com deep learning", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Modelos especializados em prever valores futuros a partir de padrões históricos sequenciais (ARIMA, Prophet, modelos neurais temporais).",
+    uses:["Previsão de demanda e estoque","Previsão financeira","Previsão climática"]},
+  "self-superv-federado": {group:"Machine Learning", name:"Self-supervised & Aprendizado Federado", era:"2018 → em forte crescimento", status:"ativa", statusLabel:"Muito usada, crescendo",
+    desc:"Aprendizado auto-supervisionado gera seus próprios rótulos a partir dos dados (base do pré-treino de LLMs); federado treina em dados distribuídos sem centralizá-los.",
+    uses:["Pré-treino de todos os grandes LLMs","Teclados preditivos sem enviar dados do usuário","Modelos de saúde multi-hospitalares"]},
+  "automl": {group:"Machine Learning", name:"AutoML", era:"2015 → consolidado", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Automatiza a seleção de modelo, features e hiperparâmetros, reduzindo a dependência de um especialista para tarefas de ML padrão.",
+    uses:["Google Vertex AI AutoML","DataRobot","Prototipagem rápida em empresas sem equipe de ML madura"]},
+
+  // ===== REDES NEURAIS =====
+  "perceptron": {group:"Redes Neurais", name:"Perceptron", era:"1958 (Frank Rosenblatt)", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"O primeiro modelo de neurônio artificial, capaz de aprender fronteiras lineares simples. Sua limitação (não resolve XOR) causou o primeiro 'inverno da IA'.",
+    uses:["Hoje é puramente pedagógico","Bloco de construção conceitual de toda rede neural moderna"]},
+  "mlp-backprop": {group:"Redes Neurais", name:"Perceptron Multicamadas & Backpropagation", era:"1986 (Rumelhart, Hinton, Williams)", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Permitiu treinar redes com camadas ocultas, resolvendo problemas não lineares — é a arquitetura básica dentro de praticamente todo modelo de deep learning atual.",
+    uses:["Camadas densas em qualquer rede neural moderna","Classificadores simples em produção"]},
+  "som": {group:"Redes Neurais", name:"Mapas Auto-Organizáveis (SOM)", era:"1982 (Teuvo Kohonen)", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Redes que se auto-organizam para mapear dados de alta dimensão em um espaço 2D, preservando relações de similaridade.",
+    uses:["Visualização de dados complexos","Segmentação de mercado (uso legado)","Detecção de padrões em genômica"]},
+  "hopfield-boltzmann": {group:"Redes Neurais", name:"Redes de Hopfield & Máquinas de Boltzmann", era:"1982–1985", status:"historica", statusLabel:"Majoritariamente histórica",
+    desc:"Redes recorrentes que funcionam como memórias associativas (Hopfield) ou aprendem distribuições de probabilidade (Boltzmann) — precursoras conceituais do deep learning moderno.",
+    uses:["Hoje majoritariamente históricas","Inspiraram autoencoders e modelos de energia usados em difusão"]},
+
+  // ===== DEEP LEARNING =====
+  "visao-cnn": {group:"Deep Learning", name:"Visão Computacional (CNN)", era:"2012 (AlexNet) → hoje", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Redes Convolucionais aprendem a reconhecer padrões visuais hierárquicos — bordas, formas, objetos — através de filtros aplicados à imagem.",
+    uses:["Diagnóstico por imagem médica (raio-x, ressonância)","Inspeção de qualidade industrial","Reconhecimento facial e biometria"]},
+  "fala-audicao-rnn": {group:"Deep Learning", name:"Fala & Audição (RNN, LSTM)", era:"Anos 1990–2010, hoje superadas", status:"nicho", statusLabel:"Uso especializado",
+    desc:"Redes recorrentes processam sequências temporais — foram a base clássica do reconhecimento de fala e tradução antes dos Transformers.",
+    uses:["Assistentes de voz de primeira geração","Análise de séries temporais e sinais de sensores"]},
+  "sinais-autoencoders": {group:"Deep Learning", name:"Processamento de Sinais & Autoencoders", era:"Consolidada, em uso crescente", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Deep learning aplicado a sons, vibrações e sensores; autoencoders aprendem a comprimir e reconstruir dados, úteis para detectar anomalias.",
+    uses:["Manutenção preditiva industrial (vibração de máquinas)","Compressão de imagem","Detecção de fraude por reconstrução anômala"]},
+  "gnn": {group:"Deep Learning", name:"Redes Neurais de Grafos (GNN)", era:"2017 → em forte crescimento", status:"ativa", statusLabel:"Muito usada, crescendo",
+    desc:"Aprendem representações de nós considerando suas conexões — essenciais para dados relacionais como redes sociais, moléculas e mapas.",
+    uses:["Descoberta de fármacos (previsão de propriedades moleculares)","Detecção de fraude em redes de transações","Recomendação no Pinterest e Alibaba"]},
+  "mod-difusao": {group:"Deep Learning", name:"Modelos de Difusão", era:"2020 → estado da arte", status:"ativa", statusLabel:"Estado da arte hoje",
+    desc:"Aprendem a gerar dados revertendo gradualmente um processo de adição de ruído — a arquitetura por trás da atual geração de imagens por IA.",
+    uses:["Midjourney, Stable Diffusion, DALL-E","Geração de vídeo (Sora, Veo)"]},
+  "nerf-3d": {group:"Deep Learning", name:"NeRF & Gaussian Splatting", era:"2020 → fronteira ativa", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Reconstroem cenas 3D fotorrealistas a partir de fotos 2D usando redes neurais; Gaussian Splatting é uma técnica mais recente e rápida para o mesmo fim.",
+    uses:["Captura de cenas 3D para VR e games","Efeitos visuais em cinema","Digitalização de patrimônio histórico"]},
+
+  // ===== IA GENERATIVA =====
+  "gan-vae": {group:"IA Generativa", name:"GAN & VAE", era:"2014 (GAN) / 2013 (VAE) → superadas em imagem", status:"nicho", statusLabel:"Uso especializado",
+    desc:"GANs usam dois modelos competindo entre si para gerar dados realistas; VAEs aprendem uma representação compacta e geram variações a partir dela.",
+    uses:["Geração de rostos sintéticos para pesquisa","Síntese de dados quando há poucos dados reais","Primeiras gerações de deepfakes"]},
+  "transformers": {group:"IA Generativa", name:"Transformers", era:"2017 — 'Attention Is All You Need'", status:"ativa", statusLabel:"Padrão-ouro atual",
+    desc:"Arquitetura que processa sequências inteiras em paralelo usando 'atenção', em vez de passo a passo como as RNNs — é a base de todos os LLMs modernos.",
+    uses:["Todos os grandes modelos de linguagem","Tradução automática e geração de código","Vision Transformers em visão computacional"]},
+  "llms": {group:"IA Generativa", name:"LLMs — Grandes Modelos de Linguagem", era:"2018 → explosão desde 2022", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Transformers treinados em volumes massivos de texto para prever a próxima palavra, adquirindo capacidades emergentes de raciocínio, escrita e código.",
+    uses:["Assistentes conversacionais (GPT, Claude, Gemini)","Geração e revisão de código","Análise e síntese de documentos longos"]},
+  "geracao-multimidia": {group:"IA Generativa", name:"Geração de Imagem, Vídeo, Áudio e Código", era:"2022 → em expansão acelerada", status:"ativa", statusLabel:"Muito usada, crescendo",
+    desc:"Modelos generativos especializados por modalidade — imagem, vídeo, voz e código — derivados de arquiteturas de difusão ou Transformers.",
+    uses:["Produção de marketing e design (Midjourney)","Dublagem e clonagem de voz (ElevenLabs)","Prototipagem de software (Claude Code, Copilot)"]},
+
+  // ===== IA AGÊNTICA =====
+  "ia-agentica": {group:"Fronteira", name:"IA Agêntica", era:"2024 → evoluindo rapidamente", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"LLMs que deixam de apenas responder e passam a agir de forma autônoma: decidem quais ferramentas usar, executam ações e observam resultados (ciclo ReAct), muitas vezes coordenando múltiplos agentes.",
+    uses:["Agentes de codificação autônomos (Claude Code)","Automação de pesquisa e atendimento","Orquestração de fluxos de trabalho empresariais"]},
+
+  // ===== APLICAÇÕES =====
+  "app-visao": {group:"Aplicações", name:"Visão Computacional (aplicação)", era:"Consolidada", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Aplica deep learning — majoritariamente CNNs e Vision Transformers — para que máquinas 'enxerguem' e interpretem imagens e vídeos.",
+    uses:["Inspeção de qualidade em fábricas","Diagnóstico por imagem médica","Veículos autônomos e biometria facial"]},
+  "app-pln": {group:"Aplicações", name:"PLN — Processamento de Linguagem Natural", era:"Hoje dominado por LLMs", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Cobre todo o espectro de tarefas com texto — hoje majoritariamente resolvido por LLMs baseados em Transformers.",
+    uses:["Chatbots e atendimento automatizado","Análise de sentimento","Extração de informação de contratos"]},
+  "app-fala": {group:"Aplicações", name:"Fala (ASR & TTS, aplicação)", era:"Hoje baseada em Transformers e difusão", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Reconhecimento de fala (ASR) e síntese de voz (TTS), hoje majoritariamente baseados em Transformers e modelos de difusão de áudio.",
+    uses:["Assistentes de voz","Transcrição automática de reuniões","Dublagem e clonagem de voz"]},
+  "app-robotica": {group:"Aplicações", name:"Robótica & IA Incorporada (Embodied AI)", era:"Acelerando desde 2023 com LLMs multimodais", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Combina visão, controle e aprendizado por reforço para que sistemas físicos ajam de forma autônoma no mundo real.",
+    uses:["Braços robóticos industriais","Robôs humanoides (Figure, Optimus)","Drones autônomos e cirurgia robótica assistida"]},
+  "app-recomendacao": {group:"Aplicações", name:"Sistemas de Recomendação", era:"Consolidada, reforçada com deep learning", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Combina filtragem colaborativa, embeddings e deep learning para prever o que um usuário vai querer ver ou comprar.",
+    uses:["Netflix e Spotify","Feed do Instagram e TikTok","Recomendação de produtos na Amazon"]},
+  "app-veiculos": {group:"Aplicações", name:"Veículos Autônomos", era:"Operação comercial limitada desde 2023", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Combina visão computacional, sensores (LiDAR/radar), planejamento simbólico e aprendizado por reforço em um único sistema.",
+    uses:["Waymo e Tesla FSD em operação comercial limitada","Caminhões autônomos de longa distância","Robôs de entrega urbana"]},
+
+  // ===== SUPORTE =====
+  "hardware": {group:"Suporte", name:"Hardware: GPU · TPU · NPU · Neuromórfica", era:"Em corrida acelerada desde 2012", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Chips especializados em processamento paralelo massivo, essenciais para treinar e rodar modelos de deep learning em tempo viável.",
+    uses:["Treino de LLMs em clusters de GPU (NVIDIA H100/B200)","Inferência em dispositivos móveis via NPU","Datacenters dedicados a IA"]},
+  "mlops-llmops": {group:"Suporte", name:"MLOps / LLMOps", era:"Consolidando-se desde 2019", status:"ativa", statusLabel:"Muito usada hoje",
+    desc:"Práticas e ferramentas para versionar, testar, implantar e monitorar modelos de IA em produção de forma confiável e repetível.",
+    uses:["Pipelines de CI/CD para modelos","Monitoramento de drift de dados","Avaliação contínua de qualidade de LLMs"]},
+  "xai": {group:"Suporte", name:"IA Explicável (XAI)", era:"Exigência crescente desde 2018", status:"ativa", statusLabel:"Cada vez mais exigida por lei",
+    desc:"Técnicas como SHAP e LIME tentam tornar as decisões de modelos complexos, especialmente deep learning, compreensíveis para humanos.",
+    uses:["Justificar negativas de crédito exigidas por regulação","Auditoria de modelos de risco","Depuração de vieses em modelos de contratação"]},
+  "seguranca-alinhamento": {group:"Suporte", name:"Segurança & Alinhamento (AI Safety)", era:"Área de pesquisa em rápida expansão", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    desc:"Busca garantir que sistemas de IA cada vez mais capazes ajam de acordo com a intenção humana, evitando comportamentos indesejados ou perigosos.",
+    uses:["Red-teaming de LLMs antes do lançamento","Constitutional AI (abordagem da Anthropic)","Pesquisa em interpretabilidade mecanicista"]},
+  "etica-governanca": {group:"Suporte", name:"Ética, Governança & Regulação", era:"Em rápida expansão regulatória (2024–2026)", status:"ativa", statusLabel:"Muito usada, crescendo",
+    desc:"Frameworks regulatórios e éticos que definem limites e responsabilidades para o desenvolvimento e uso de IA.",
+    uses:["EU AI Act — classificação de risco por aplicação","PL 2338 no Brasil","Políticas internas de governança de IA em empresas"]}
+};
+
+// ===== LAYOUT: coordenadas de cada pill (id, geometria, texto, variante visual) =====
+const PILLS = [
+  // Ciência de Dados (satélites)
+  {id:"estatistica", x:1658,y:300,w:200,h:44,rx:22,fs:13,label:"Estatística"},
+  {id:"visualizacao-dados", x:1658,y:364,w:200,h:44,rx:22,fs:12,label:"Visualização de Dados"},
+  {id:"armazenamento-dados", x:1658,y:428,w:200,h:44,rx:22,fs:12,label:"Armazenamento de Dados"},
+  {id:"design-experimentos", x:1658,y:492,w:200,h:44,rx:22,fs:12,label:"Design de Experimentos"},
+  {id:"engenharia-dados", x:1658,y:556,w:200,h:44,rx:22,fs:12,label:"Engenharia de Dados (ETL)"},
+  {id:"big-data", x:1658,y:620,w:200,h:44,rx:22,fs:12,label:"Big Data & Distribuída"},
+  {id:"qualidade-governanca", x:1658,y:684,w:200,h:44,rx:22,fs:12,label:"Qualidade & Governança"},
+
+  // Paradigma Simbólico
+  {id:"sistemas-especialistas", x:154,y:374,w:382,h:27,rx:13.5,fs:11,label:"Sistemas Especialistas · motores de regras"},
+  {id:"ontologias", x:154,y:414,w:382,h:27,rx:13.5,fs:11,label:"Ontologias & Grafos de Conhecimento"},
+  {id:"logica-programacao", x:154,y:454,w:382,h:27,rx:13.5,fs:11,label:"Lógica & Programação Lógica (Prolog)"},
+  {id:"busca-heuristica", x:154,y:494,w:382,h:27,rx:13.5,fs:11,label:"Busca Heurística (A*, minimax, MCTS)"},
+  {id:"planejamento-automatizado", x:154,y:534,w:382,h:27,rx:13.5,fs:11,label:"Planejamento Automatizado (STRIPS)"},
+  {id:"raciocinio-casos", x:154,y:574,w:382,h:27,rx:13.5,fs:11,label:"Raciocínio Baseado em Casos (CBR)"},
+  {id:"redes-semanticas", x:154,y:614,w:382,h:27,rx:13.5,fs:11,label:"Redes Semânticas & Frames · KRR"},
+
+  // Bio-inspiradas
+  {id:"comp-evolucionaria", x:154,y:758,w:182,h:25,rx:12.5,fs:10.5,label:"Comp. Evolucionária (AG·PG)"},
+  {id:"enxames", x:154,y:796,w:182,h:25,rx:12.5,fs:10.5,label:"Enxames (ACO · PSO)"},
+  {id:"sist-imunologicos", x:154,y:834,w:182,h:25,rx:12.5,fs:10.5,label:"Sist. Imunológicos Artif."},
+  {id:"automatos-celulares", x:154,y:872,w:182,h:25,rx:12.5,fs:10.5,label:"Autômatos Celulares"},
+
+  // Outras Famílias
+  {id:"logica-fuzzy", x:404,y:761,w:182,h:26,rx:13,fs:11,label:"Lógica Fuzzy"},
+  {id:"otimizacao-metaheuristica", x:404,y:803,w:182,h:26,rx:13,fs:10.5,label:"Otimização Metaheurística"},
+  {id:"agentes-multiagente", x:404,y:845,w:182,h:26,rx:13,fs:11,label:"Agentes & Multiagente"},
+
+  // Probabilístico (variante "stone")
+  {id:"redes-bayesianas", x:654,y:823,w:212,h:26,rx:13,fs:10.5,label:"Redes Bayesianas · Naive Bayes",variant:"stone"},
+  {id:"hmm-mdp", x:654,y:860,w:212,h:26,rx:13,fs:10.5,label:"HMM · MDP · Mod. Gráficos",variant:"stone"},
+  {id:"inferencia-causal", x:654,y:897,w:212,h:26,rx:13,fs:10.5,label:"Inferência Causal (Pearl)",variant:"stone"},
+
+  // ML Supervisionado
+  {id:"regressao", x:1018,y:388,w:150,h:24,rx:12,fs:10,label:"Regressão Lin. & Log."},
+  {id:"arvores-rf", x:990,y:426,w:170,h:24,rx:12,fs:10,label:"Árvores · Random Forest"},
+  {id:"boosting", x:968,y:464,w:158,h:24,rx:12,fs:10,label:"Boosting (XGBoost)"},
+  {id:"svm-knn-nb", x:953,y:502,w:148,h:24,rx:12,fs:9.5,label:"SVM · KNN · N. Bayes"},
+
+  // ML Não supervisionado
+  {id:"clusterizacao", x:939,y:566,w:128,h:24,rx:12,fs:9,label:"Clusterização (K-means)"},
+  {id:"pca-tsne-umap", x:937,y:602,w:126,h:24,rx:12,fs:9.5,label:"PCA · t-SNE · UMAP"},
+  {id:"associacao", x:939,y:638,w:122,h:24,rx:12,fs:9.5,label:"Associação (Apriori)"},
+
+  // ML Reforço
+  {id:"q-learning-dqn", x:952,y:698,w:120,h:24,rx:12,fs:9.5,label:"Q-Learning · DQN"},
+  {id:"alphago", x:965,y:732,w:116,h:24,rx:12,fs:9.5,label:"AlphaGo · 2016"},
+  {id:"rlhf", x:982,y:766,w:108,h:24,rx:12,fs:11,label:"RLHF",variant:"gold",bold:true},
+
+  // ML Outros regimes
+  {id:"series-temporais", x:1027,y:826,w:96,h:22,rx:11,fs:9,label:"Séries Temporais"},
+  {id:"self-superv-federado", x:1058,y:856,w:110,h:22,rx:11,fs:8,label:"Self-superv. · Federado"},
+  {id:"automl", x:1100,y:886,w:80,h:22,rx:11,fs:9,label:"AutoML"},
+
+  // Redes Neurais
+  {id:"perceptron", x:1163,y:450,w:140,h:24,rx:12,fs:9.5,label:"Perceptron · 1958"},
+  {id:"mlp-backprop", x:1122,y:490,w:162,h:24,rx:12,fs:9.5,label:"MLP · Backprop · 1986"},
+  {id:"som", x:1098,y:530,w:140,h:24,rx:12,fs:9.5,label:"SOM (Kohonen)"},
+  {id:"hopfield-boltzmann", x:1083,y:570,w:114,h:24,rx:12,fs:8.5,label:"Hopfield · Boltzmann"},
+
+  // Deep Learning
+  {id:"visao-cnn", x:1237,y:552,w:174,h:24,rx:12,fs:9.5,label:"Visão Computacional (CNN)"},
+  {id:"fala-audicao-rnn", x:1213,y:591,w:164,h:24,rx:12,fs:9.5,label:"Fala · Audição (RNN·LSTM)"},
+  {id:"sinais-autoencoders", x:1199,y:630,w:126,h:24,rx:12,fs:9,label:"Sinais · Autoencoders"},
+  {id:"gnn", x:1194,y:669,w:104,h:24,rx:12,fs:10,label:"GNN · Grafos"},
+  {id:"mod-difusao", x:1193,y:708,w:94,h:24,rx:12,fs:9,label:"Mod. de Difusão"},
+  {id:"nerf-3d", x:1203,y:747,w:84,h:24,rx:12,fs:9.5,label:"NeRF · 3D"},
+
+  // IA Generativa (elipse 4, texto claro sobre fundo escuro)
+  {id:"gan-vae", x:1345,y:638,w:140,h:22,rx:11,fs:10,label:"GAN · VAE",variant:"dark"},
+  {id:"transformers", x:1345,y:665,w:140,h:20,rx:10,fs:9.5,label:"Transformers · 2017",variant:"dark"},
+
+  // LLMs (dentro da caixa dourada)
+  {id:"llms", x:1360,y:717,w:136,h:14,rx:6,fs:8,label:"LLMs — clique para detalhes",variant:"gold-label"},
+  {id:"llms-gpt", x:1362,y:732,w:38,h:21,rx:10.5,fs:9,label:"GPT",variant:"gold",bold:true,linkId:"llms"},
+  {id:"llms-claude", x:1409,y:732,w:38,h:21,rx:10.5,fs:8.5,label:"Claude",variant:"gold",bold:true,linkId:"llms"},
+  {id:"llms-gemini", x:1456,y:732,w:38,h:21,rx:10.5,fs:8.5,label:"Gemini",variant:"gold",bold:true,linkId:"llms"},
+  {id:"llms-llama", x:1362,y:759,w:38,h:21,rx:10.5,fs:8.5,label:"Llama",variant:"gold",bold:true,linkId:"llms"},
+  {id:"llms-deepseek", x:1409,y:759,w:38,h:21,rx:10.5,fs:7,label:"DeepSeek",variant:"gold",bold:true,linkId:"llms"},
+  {id:"llms-mistral", x:1456,y:759,w:38,h:21,rx:10.5,fs:8,label:"Mistral",variant:"gold",bold:true,linkId:"llms"},
+
+  {id:"geracao-multimidia", x:1345,y:798,w:140,h:20,rx:10,fs:9.5,label:"Imagem · Vídeo · Áudio · Código",variant:"dark"},
+
+  // IA Agêntica
+  {id:"ia-agentica", x:1400,y:912,w:230,h:40,rx:20,fs:12,label:"IA Agêntica · 2024+",variant:"gold-box",sub:"ReAct · Ferramentas · RAG · MCP · Multiagente"},
+
+  // Aplicações
+  {id:"app-visao", x:380,y:1048,w:205,h:34,rx:17,fs:13,label:"Visão Computacional"},
+  {id:"app-pln", x:601,y:1048,w:205,h:34,rx:17,fs:12,label:"PLN — Linguagem Natural"},
+  {id:"app-fala", x:822,y:1048,w:205,h:34,rx:17,fs:13,label:"Fala (ASR · TTS)"},
+  {id:"app-robotica", x:1043,y:1048,w:205,h:34,rx:17,fs:13,label:"Robótica & Embodied AI"},
+  {id:"app-recomendacao", x:1264,y:1048,w:205,h:34,rx:17,fs:11.5,label:"Sistemas de Recomendação"},
+  {id:"app-veiculos", x:1485,y:1048,w:205,h:34,rx:17,fs:13,label:"Veículos Autônomos"},
+
+  // Suporte
+  {id:"hardware", x:300,y:1120,w:300,h:44,rx:22,fs:12.5,label:"Hardware: GPU · TPU · NPU · Neuromórfica",variant:"support"},
+  {id:"mlops-llmops", x:622,y:1120,w:170,h:44,rx:22,fs:12.5,label:"MLOps / LLMOps",variant:"support"},
+  {id:"xai", x:814,y:1120,w:185,h:44,rx:22,fs:12.5,label:"IA Explicável (XAI)",variant:"support"},
+  {id:"seguranca-alinhamento", x:1021,y:1120,w:235,h:44,rx:22,fs:12.5,label:"Segurança & Alinhamento",variant:"support"},
+  {id:"etica-governanca", x:1278,y:1120,w:345,h:44,rx:22,fs:12.5,label:"Ética · Governança — EU AI Act · PL 2338",variant:"support"}
+];
+
+const SVGNS = "http://www.w3.org/2000/svg";
+
+// Cor de preenchimento por classificação de uso (status), não mais por camada estrutural
+const STATUS_STYLE = {
+  ativa:     {fill:"#DFC067", stroke:"#13293D", sw:1,   textFill:"#13293D", dash:null},
+  nicho:     {fill:"#6F8499", stroke:"#13293D", sw:1,   textFill:"#F7F3EB", dash:null},
+  historica: {fill:"#E6E3DA", stroke:"#B9B2A3", sw:1,   textFill:"#4A4F55", dash:null},
+  fronteira: {fill:"#FDFBF6", stroke:"#C9A227", sw:1.8, textFill:"#13293D", dash:"4 3"}
+};
+
+function styleFor(status){
+  return STATUS_STYLE[status] || {fill:"#FDFBF6", stroke:"#13293D", sw:1.3, textFill:"#13293D", dash:null};
+}
+
+function renderPills(){
+  const layer = document.getElementById("pills-layer");
+  PILLS.forEach(p => {
+    const clickId = p.linkId || p.id;
+    const data = TECH[clickId];
+    if (!data && p.variant !== "gold-label") { console.warn("Sem dados para:", clickId); }
+
+    const g = document.createElementNS(SVGNS, "g");
+    const isActive = data && data.status === "ativa";
+    g.setAttribute("class", "tech" + (isActive ? " tech-gold" : ""));
+    g.setAttribute("data-id", clickId);
+    g.setAttribute("data-status", data ? data.status : "");
+    if (p.variant !== "gold-label"){
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute("aria-label", p.label);
+    } else {
+      g.style.pointerEvents = "none";
+    }
+
+    const st = styleFor(data ? data.status : null);
+
+    if (p.variant !== "gold-label"){
+      const rect = document.createElementNS(SVGNS, "rect");
+      rect.setAttribute("x", p.x); rect.setAttribute("y", p.y);
+      rect.setAttribute("width", p.w); rect.setAttribute("height", p.h);
+      rect.setAttribute("rx", p.rx);
+      rect.setAttribute("fill", st.fill);
+      rect.setAttribute("stroke", st.stroke);
+      rect.setAttribute("stroke-width", st.sw);
+      if (st.dash) rect.setAttribute("stroke-dasharray", st.dash);
+      g.appendChild(rect);
+    }
+
+    const text = document.createElementNS(SVGNS, "text");
+    text.setAttribute("x", p.x + p.w/2);
+    text.setAttribute("y", p.y + p.h/2 + (p.fs*0.35));
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("font-size", p.fs);
+    text.setAttribute("fill", st.textFill);
+    if (p.bold) text.setAttribute("font-weight", "600");
+    text.textContent = p.label;
+    g.appendChild(text);
+
+    if (p.sub){
+      const sub = document.createElementNS(SVGNS, "text");
+      sub.setAttribute("x", p.x + p.w/2);
+      sub.setAttribute("y", p.y + p.h - 6);
+      sub.setAttribute("text-anchor", "middle");
+      sub.setAttribute("font-size", 8.5);
+      sub.setAttribute("fill", st.textFill);
+      sub.textContent = p.sub;
+      g.appendChild(sub);
+    }
+
+    if (p.variant !== "gold-label"){
+      g.addEventListener("click", () => openCard(clickId));
+      g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openCard(clickId); }});
+    }
+    layer.appendChild(g);
+  });
+}
+
+// ===== MODAL =====
+const backdrop = document.getElementById("backdrop");
+const elEyebrow = document.getElementById("card-eyebrow");
+const elTitle = document.getElementById("card-title");
+const elEra = document.getElementById("card-era");
+const elStatus = document.getElementById("card-status");
+const elStatusLabel = document.getElementById("card-status-label");
+const elDesc = document.getElementById("card-desc");
+const elUsesList = document.getElementById("card-uses-list");
+
+function openCard(id){
+  const d = TECH[id];
+  if (!d) return;
+  elEyebrow.textContent = d.group;
+  elTitle.textContent = d.name;
+  elEra.textContent = d.era;
+  elStatus.className = "status-" + d.status;
+  elStatusLabel.textContent = d.statusLabel;
+  elDesc.textContent = d.desc;
+  elUsesList.innerHTML = "";
+  d.uses.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u;
+    elUsesList.appendChild(li);
+  });
+  backdrop.classList.add("open");
+  document.getElementById("card-close").focus();
+}
+function closeCard(){
+  backdrop.classList.remove("open");
+}
+document.getElementById("card-close").addEventListener("click", closeCard);
+backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeCard(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
+
+renderPills();
+
+// esconder hint após primeira interação
+let hintTimer = setTimeout(()=>{ const h=document.querySelector(".hint"); if(h) h.style.transition="opacity .6s"; if(h) h.style.opacity="0"; }, 7000);
+function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.transition="opacity .3s"; h.style.opacity="0"; } clearTimeout(hintTimer); }
+
+// ===== ZOOM / PAN =====
+(function(){
+  const stage = document.getElementById("zoom-stage");
+  const inner = document.getElementById("zoom-inner");
+  const MIN_SCALE = 1, MAX_SCALE = 6;
+  const state = {scale:1, x:0, y:0};
+  const pointers = new Map();
+  let isPanning = false, dragMoved = false, panStart = null;
+  let pinchStartDist = 0, pinchStartScale = 1, pinchMid = null;
+
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  function clampPan(){
+    const rect = stage.getBoundingClientRect();
+    const contentW = rect.width * state.scale, contentH = rect.height * state.scale;
+    const minX = Math.min(0, rect.width - contentW), maxX = 0;
+    const minY = Math.min(0, rect.height - contentH), maxY = 0;
+    state.x = clamp(state.x, minX, maxX);
+    state.y = clamp(state.y, minY, maxY);
+  }
+
+  function applyTransform(){
+    inner.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+  }
+
+  function zoomAt(px, py, newScale){
+    newScale = clamp(newScale, MIN_SCALE, MAX_SCALE);
+    const lx = (px - state.x) / state.scale;
+    const ly = (py - state.y) / state.scale;
+    state.scale = newScale;
+    state.x = px - newScale * lx;
+    state.y = py - newScale * ly;
+    clampPan();
+    applyTransform();
+  }
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function mid(a,b){ return {x:(a.x+b.x)/2, y:(a.y+b.y)/2}; }
+  function toStageLocal(clientX, clientY){
+    const rect = stage.getBoundingClientRect();
+    return {x: clientX - rect.left, y: clientY - rect.top};
+  }
+
+  stage.addEventListener("pointerdown", (e) => {
+    dismissHint();
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    inner.classList.remove("smooth");
+    if (pointers.size === 1){
+      isPanning = true; dragMoved = false;
+      panStart = {x:e.clientX, y:e.clientY, sx:state.x, sy:state.y};
+      stage.classList.add("panning");
+    } else if (pointers.size === 2){
+      isPanning = false;
+      const pts = Array.from(pointers.values());
+      pinchStartDist = dist(pts[0], pts[1]);
+      pinchStartScale = state.scale;
+      pinchMid = mid(pts[0], pts[1]);
+    }
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+    if (pointers.size === 1 && isPanning){
+      const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
+      if (Math.hypot(dx,dy) > 6) dragMoved = true;
+      state.x = panStart.sx + dx;
+      state.y = panStart.sy + dy;
+      clampPan();
+      applyTransform();
+    } else if (pointers.size === 2){
+      dragMoved = true;
+      const pts = Array.from(pointers.values());
+      const d = dist(pts[0], pts[1]);
+      const newMid = mid(pts[0], pts[1]);
+      const local = toStageLocal(newMid.x, newMid.y);
+      const newScale = pinchStartScale * (d / pinchStartDist);
+      zoomAt(local.x, local.y, newScale);
+    }
+  });
+
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0){
+      isPanning = false;
+      stage.classList.remove("panning");
+    } else if (pointers.size === 1){
+      const remaining = Array.from(pointers.entries())[0];
+      isPanning = true;
+      panStart = {x:remaining[1].x, y:remaining[1].y, sx:state.x, sy:state.y};
+    }
+  }
+  window.addEventListener("pointerup", endPointer);
+  window.addEventListener("pointercancel", endPointer);
+
+  // impede que um arraste dispare o clique de uma pill
+  stage.addEventListener("click", (e) => {
+    if (dragMoved){ e.stopPropagation(); dragMoved = false; }
+  }, true);
+
+
+  // duplo clique / duplo toque para zoom rápido
+  stage.addEventListener("dblclick", (e) => {
+    dismissHint();
+    inner.classList.add("smooth");
+    const local = toStageLocal(e.clientX, e.clientY);
+    if (state.scale > MIN_SCALE * 1.5){
+      state.scale = MIN_SCALE; state.x = 0; state.y = 0;
+      applyTransform();
+    } else {
+      zoomAt(local.x, local.y, 2.4);
+    }
+  });
+
+  // botões de controle
+  document.getElementById("zoom-in").addEventListener("click", () => {
+    inner.classList.add("smooth");
+    const rect = stage.getBoundingClientRect();
+    zoomAt(rect.width/2, rect.height/2, state.scale * 1.4);
+  });
+  document.getElementById("zoom-out").addEventListener("click", () => {
+    inner.classList.add("smooth");
+    const rect = stage.getBoundingClientRect();
+    zoomAt(rect.width/2, rect.height/2, state.scale / 1.4);
+  });
+  document.getElementById("zoom-reset").addEventListener("click", () => {
+    inner.classList.add("smooth");
+    state.scale = 1; state.x = 0; state.y = 0;
+    applyTransform();
+  });
+
+  applyTransform();
+})();
+
+</script>
+</body>
+</html>
