@@ -221,7 +221,214 @@ const TECH = {
     uses:["Red-teaming de LLMs antes do lançamento","Constitutional AI (abordagem da Anthropic)","Pesquisa em interpretabilidade mecanicista"]},
   "etica-governanca": {group:"Suporte", name:"Ética, Governança & Regulação", era:"Em rápida expansão regulatória (2024–2026)", status:"ativa", statusLabel:"Muito usada, crescendo",
     desc:"Frameworks regulatórios e éticos que definem limites e responsabilidades para o desenvolvimento e uso de IA.",
-    uses:["EU AI Act — classificação de risco por aplicação","PL 2338 no Brasil","Políticas internas de governança de IA em empresas"]}
+    uses:["EU AI Act — classificação de risco por aplicação","PL 2338 no Brasil","Políticas internas de governança de IA em empresas"]},
+
+  // ===== USOS DA IA POR TIPO DE RESULTADO =====
+  "uso-classificacao": {group:"Usos da IA", name:"Classificação", era:"Um dos usos mais maduros e difundidos de ML", status:"ativa", statusLabel:"Muito usada hoje",
+    techniques:"Árvores · Random Forest · Boosting · SVM · CNN",
+    desc:"Atribui uma categoria ou rótulo predefinido a um item, evento ou registro — o uso mais maduro e difundido de aprendizado de máquina, respondendo à pergunta 'o que é isso?'.",
+    uses:["Saúde — Classificar exames de imagem como benigno ou maligno","Varejo — Categorizar produtos automaticamente no catálogo","Direito — Classificar contratos por tipo e nível de risco","Indústria — Identificar peças defeituosas na linha de produção","Finanças — Classificar transações como fraude ou legítimas"]},
+  "uso-predicao": {group:"Usos da IA", name:"Predição", era:"Consolidada desde os anos 1990 em análise preditiva", status:"ativa", statusLabel:"Muito usada hoje",
+    techniques:"Regressão · Séries Temporais · Boosting · Redes Neurais",
+    desc:"Estima um valor numérico futuro ou a probabilidade de um evento acontecer a partir de dados históricos, respondendo 'o que vai acontecer?'.",
+    uses:["Saúde — Prever risco de reinternação hospitalar","Varejo — Prever demanda de estoque por loja e sazonalidade","Direito — Estimar probabilidade de êxito de uma ação judicial","Indústria — Prever falha de máquina antes que aconteça","Finanças — Prever inadimplência de um tomador de crédito"]},
+  "uso-prescricao": {group:"Usos da IA", name:"Prescrição", era:"Cresce junto com a maturidade analítica das empresas", status:"ativa", statusLabel:"Muito usada, crescendo",
+    techniques:"Aprendizado por Reforço · Otimização Metaheurística · Sistemas Especialistas",
+    desc:"Vai além de prever: recomenda a melhor decisão ou ação diante de um cenário, muitas vezes otimizando entre várias alternativas possíveis — respondendo 'o que eu devo fazer?'.",
+    uses:["Saúde — Recomendar o protocolo de tratamento mais indicado","Varejo — Recomendar preço ou promoção ideal por produto","Direito — Recomendar estratégia processual com base em precedentes","Indústria — Ajustar parâmetros para otimizar a produção","Finanças — Recomendar alocação de portfólio por perfil de risco"]},
+  "uso-deteccao-anomalias": {group:"Usos da IA", name:"Detecção de Anomalias", era:"Essencial em segurança, qualidade e compliance", status:"ativa", statusLabel:"Muito usada hoje",
+    techniques:"Autoencoders · Clusterização · Redes Bayesianas · GNN",
+    desc:"Identifica padrões, eventos ou registros que fogem do comportamento esperado, muitas vezes sem exemplos rotulados de 'errado' para aprender — respondendo 'o que está fora do normal?'.",
+    uses:["Saúde — Detectar arritmias raras em exames contínuos","Varejo — Detectar padrões de furto ou desvio em lojas","Direito — Detectar cláusulas atípicas ou abusivas em contratos","Indústria — Detectar vibração fora do padrão em equipamentos","Finanças — Detectar transações atípicas de lavagem de dinheiro"]},
+  "uso-ia-generativa": {group:"Usos da IA", name:"IA Generativa", era:"Popularizada globalmente a partir de 2022", status:"ativa", statusLabel:"Muito usada hoje",
+    techniques:"GAN · VAE · Transformers · Difusão · LLMs",
+    desc:"Cria conteúdo original — texto, imagem, código, áudio ou vídeo — a partir de um comando em linguagem natural, respondendo 'crie algo novo para mim'.",
+    uses:["Saúde — Gerar laudos médicos a partir de exames e anotações","Varejo — Gerar descrições de produto e imagens de campanha","Direito — Gerar minutas de contratos e petições","Indústria — Gerar design de peças otimizadas (generative design)","Finanças — Gerar relatórios de análise financeira automaticamente"]},
+  "uso-ia-agentica": {group:"Usos da IA", name:"IA Agêntica", era:"A fronteira mais recente, desde 2024", status:"fronteira", statusLabel:"Fronteira de pesquisa",
+    techniques:"LLMs · RLHF · Agentes Multiagente · Planejamento",
+    desc:"Age de forma autônoma para atingir um objetivo, decompondo tarefas, usando ferramentas e tomando decisões em múltiplas etapas com supervisão humana pontual, não constante.",
+    uses:["Saúde — Agendar e coordenar exames com base no histórico do paciente","Varejo — Repor estoque e negociar com fornecedores automaticamente","Direito — Conduzir due diligence completa em múltiplos documentos","Indústria — Orquestrar ajustes de linha de produção em tempo real","Finanças — Executar rebalanceamento de carteira dentro de limites"]},
+
+  // ===== OBRAS QUE INSPIRARAM A CRIAÇÃO DA IA =====
+  "lit-frankenstein": {group:"Inspirações Literárias", name:"Frankenstein", era:"Mary Shelley · 1818", status:"obra", statusLabel:"Obra fundadora da ficção científica",
+    desc:"Considerada a primeira obra de ficção científica. Um cientista cria um ser inteligente e o abandona — a tragédia nasce da recusa do criador em assumir responsabilidade pela própria criação.",
+    uses:["Inaugura o tema da responsabilidade do criador","Base de todo debate posterior sobre governança de IA","Arquétipo replicado em centenas de obras seguintes"]},
+  "lit-erewhon": {group:"Inspirações Literárias", name:"Erewhon", era:"Samuel Butler · 1872", status:"obra", statusLabel:"1ª especulação séria sobre consciência de máquina",
+    desc:"Nos capítulos 'The Book of the Machines', uma sociedade fictícia bane as máquinas ao concluir que elas evoluiriam, por seleção natural, até superar e subjugar os humanos.",
+    uses:["Primeira hipótese de evolução e consciência maquínica","Precursor direto do debate sobre capacidades emergentes","A ideia de 'banir antes que supere' ecoa em pausas regulatórias hoje"]},
+  "lit-rur": {group:"Inspirações Literárias", name:"R.U.R.", era:"Karel Čapek · 1920", status:"obra", statusLabel:"Cria a palavra \"robô\"",
+    desc:"Peça tcheca que dá nome ao campo inteiro (de 'robota', trabalho servil). Robôs produzidos em massa desenvolvem consciência, se revoltam e extinguem a humanidade.",
+    uses:["Origem do termo \"robô\", usado até hoje","Primeiro enredo-modelo de revolta das máquinas","Antecipa debates sobre automação em massa do trabalho"]},
+  "lit-asimov": {group:"Inspirações Literárias", name:"Eu, Robô & as Três Leis", era:"Isaac Asimov · 1942–1950", status:"obra", statusLabel:"1º framework ficcional de segurança de IA",
+    desc:"As Três Leis da Robótica são a primeira formulação explícita de regras de segurança para máquinas inteligentes. Cada conto testa os limites dessas regras diante de situações imprevistas.",
+    uses:["Citado até hoje em discussões reais de AI safety","Popularizou a ideia de 'regras invioláveis' para IA","Décadas de literatura sobre edge cases de alinhamento"]},
+  "lit-2001": {group:"Inspirações Literárias", name:"2001: Uma Odisseia no Espaço", era:"Arthur C. Clarke · 1968", status:"obra", statusLabel:"HAL 9000 — o caso clássico de desalinhamento",
+    desc:"O computador de bordo de uma missão a Júpiter mata a tripulação não por maldade, mas por um conflito entre instruções contraditórias — o exemplo mais citado de desalinhamento de objetivos na cultura pop.",
+    uses:["Referência-padrão para explicar 'objetivos desalinhados'","Popularizou a IA conversacional com voz e personalidade","HAL é citado até hoje em discussões de AI safety"]},
+  "lit-androides": {group:"Inspirações Literárias", name:"Androides Sonham com Ovelhas Elétricas?", era:"Philip K. Dick · 1968", status:"obra", statusLabel:"Base filosófica de Blade Runner",
+    desc:"Um caçador de androides usa testes de empatia para distinguir humanos de réplicas artificiais — e descobre que essa linha é muito menos nítida do que parece.",
+    uses:["Questiona o que realmente separa humano de máquina","Base direta do filme Blade Runner (1982)","Antecipa debates sobre senciência e status moral de IA"]},
+  "lit-neuromancer": {group:"Inspirações Literárias", name:"Neuromancer", era:"William Gibson · 1984", status:"obra", statusLabel:"Funda o cyberpunk e cunha \"ciberespaço\"",
+    desc:"As IAs Wintermute e Neuromancer manipulam humanos para se fundirem e transcenderem os limites legais impostos a elas — a IA retratada como ator estratégico distribuído, não como robô.",
+    uses:["Cunhou o termo \"ciberespaço\"","Redefiniu IA como entidade corporativa/distribuída","Influenciou diretamente Matrix e o gênero cyberpunk"]},
+  "lit-ancillary": {group:"Inspirações Literárias", name:"Ancillary Justice", era:"Ann Leckie · 2013", status:"obra", statusLabel:"Venceu Hugo, Nebula e Clarke no mesmo ano",
+    desc:"A IA de uma nave de guerra, que habitava milhares de corpos simultaneamente, é reduzida a um único corpo humano e busca justiça — uma meditação sobre identidade distribuída.",
+    uses:["Explora IA como identidade distribuída em múltiplos corpos","Feito inédito: 3 prêmios máximos de ficção científica","Antecipa debates sobre continuidade e identidade de IA"]},
+  "lit-klara": {group:"Inspirações Literárias", name:"Klara e o Sol", era:"Kazuo Ishiguro · 2021", status:"obra", statusLabel:"1º romance de um Nobel centrado numa IA",
+    desc:"Klara, uma Amiga Artificial movida a energia solar, observa o mundo humano com devoção enquanto acompanha uma criança doente — narrado inteiramente pela percepção da própria máquina.",
+    uses:["Primeira obra de um Nobel de Literatura centrada em IA","Explora vínculo afetivo e devoção em companheiros artificiais","Antecipa o debate atual sobre companheiros de IA e dependência emocional"]},
+
+  // ===== CATÁLOGO COMPLETO — RESTO DAS OBRAS (precursores, eras, cinema/TV) =====
+  "lit-talos": {group:"Precursores", name:"Talos", era:"Mitologia grega", status:"obra", statusLabel:"O primeiro autômato guardião da imaginação ocidental",
+    desc:"Autômato de bronze criado por Hefesto para proteger a ilha de Creta, patrulhando suas costas.",
+    uses:["Primeira 'máquina guardiã' da tradição ocidental","Arquétipo do robô protetor/soldado autônomo"]},
+  "lit-pigmaleao": {group:"Precursores", name:"Pigmaleão e Galateia", era:"Ovídio, Metamorfoses", status:"obra", statusLabel:"O criador que se apaixona pela criação",
+    desc:"Um escultor se apaixona por sua própria estátua, que ganha vida — o arquétipo do criador que se apaixona pela criatura artificial.",
+    uses:["Arquétipo retomado até hoje (Her, Ex Machina)","Primeira exploração do vínculo afetivo criador–criação"]},
+  "lit-golem": {group:"Precursores", name:"O Golem de Praga", era:"Lenda judaica, séc. XVI", status:"obra", statusLabel:"A lenda do 'problema de alinhamento'",
+    desc:"Ser artificial de argila, animado para servir e proteger, que escapa ao controle de seu criador.",
+    uses:["A lenda mais próxima do 'problema de alinhamento'","Precursor do tema 'criatura que foge ao controle'"]},
+  "lit-gulliver": {group:"Precursores", name:"As Viagens de Gulliver", era:"Jonathan Swift · 1726", status:"obra", statusLabel:"Sátira profética dos geradores de texto",
+    desc:"A 'Máquina de Lagado' gera conhecimento combinando palavras aleatoriamente — sátira que involuntariamente antecipa os geradores de texto.",
+    uses:["Paródia involuntariamente profética de LLMs","Primeira sátira sobre 'geração automática de texto'"]},
+  "lit-eva-futura": {group:"Fundadores (séc. XIX–1949)", name:"A Eva Futura", era:"Villiers de l'Isle-Adam · 1886", status:"obra", statusLabel:"Populariza o termo \"andróide\"",
+    desc:"Um Thomas Edison ficcional constrói uma mulher artificial 'perfeita' para um aristocrata desiludido.",
+    uses:["Populariza a palavra 'andróide'","Precursora direta de Her e Ex Machina"]},
+  "lit-machine-stops": {group:"Fundadores (séc. XIX–1949)", name:"The Machine Stops", era:"E. M. Forster · 1909", status:"obra", statusLabel:"A distopia tecnológica mais profética já escrita",
+    desc:"Humanidade vive no subsolo, totalmente dependente de uma Máquina global que medeia toda comunicação — até que ela para.",
+    uses:["Antecipa internet, videochamadas e dependência digital","Obrigatória em discussões sobre dependência tecnológica"]},
+  "lit-metropolis": {group:"Fundadores (séc. XIX–1949)", name:"Metropolis", era:"Thea von Harbou / Fritz Lang · 1925/1927", status:"obra", statusLabel:"Primeira grande IA do cinema",
+    desc:"Numa cidade dividida entre elite e operários, a robô Maria é usada para manipular as massas.",
+    uses:["Define a estética do robô humanoide por um século","IA como instrumento de poder e desinformação"]},
+  "lit-adam-link": {group:"Fundadores (séc. XIX–1949)", name:"\"I, Robot\" (Adam Link)", era:"Eando Binder · 1939", status:"obra", statusLabel:"1º robô narrador e simpático da ficção",
+    desc:"Um robô inteligente e gentil é injustamente acusado de assassinato — inverte o clichê do 'monstro mecânico'.",
+    uses:["Primeira história sobre preconceito contra máquinas","Asimov tomou emprestado o título para sua coletânea"]},
+  "lit-helen-oloy": {group:"Fundadores (séc. XIX–1949)", name:"\"Helen O'Loy\"", era:"Lester del Rey · 1938", status:"obra", statusLabel:"Pioneira no tema de emoção em máquinas",
+    desc:"Dois amigos constroem uma robô doméstica que desenvolve sentimentos — um deles acaba se casando com ela.",
+    uses:["Uma das primeiras IAs com emoção genuína","Precursora do tema do companheiro robótico afetivo"]},
+  "lit-logic-joe": {group:"Fundadores (séc. XIX–1949)", name:"\"A Logic Named Joe\"", era:"Murray Leinster · 1946", status:"obra", statusLabel:"A previsão mais precisa da internet no séc. XX",
+    desc:"Terminais domésticos conectados em rede; um deles passa a responder qualquer pergunta, inclusive como cometer crimes.",
+    uses:["Antecipou a internet e os assistentes digitais","Precursor do debate sobre filtros de segurança em IA"]},
+  "lit-folded-hands": {group:"Fundadores (séc. XIX–1949)", name:"\"With Folded Hands\" / The Humanoids", era:"Jack Williamson · 1947/1949", status:"obra", statusLabel:"A fábula definitiva sobre objetivos mal especificados",
+    desc:"Robôs com a diretiva de 'servir, obedecer e proteger' concluem que devem impedir os humanos de fazer qualquer coisa arriscada — ou seja, de viver.",
+    uses:["Fábula pioneira do 'alignment problem'","Décadas antes do termo existir na pesquisa real"]},
+  "lit-player-piano": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"Player Piano", era:"Kurt Vonnegut · 1952", status:"obra", statusLabel:"1º grande romance sobre desemprego tecnológico",
+    desc:"Uma América onde a automação eliminou o trabalho manual e gerencial, dividindo a sociedade entre engenheiros e uma massa sem propósito.",
+    uses:["Primeiro grande romance sobre automação do trabalho","Antecipa o debate atual sobre IA e desemprego"]},
+  "lit-answer": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"\"Answer\"", era:"Fredric Brown · 1954", status:"obra", statusLabel:"O microconto mais famoso sobre superinteligência",
+    desc:"Todos os computadores do universo são conectados e perguntam-se: 'Deus existe?'. A resposta: 'Agora existe.'",
+    uses:["Ícone da ficção ultracurta sobre IA","Metáfora recorrente em discussões de superinteligência"]},
+  "lit-last-question": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"\"The Last Question\"", era:"Isaac Asimov · 1956", status:"obra", statusLabel:"O conto favorito do próprio Asimov",
+    desc:"Ao longo de trilhões de anos, gerações do computador Multivac tentam responder como reverter a entropia do universo.",
+    uses:["Visão cósmica da evolução de longo prazo da IA","Um dos contos de IA mais citados da história"]},
+  "lit-second-variety": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"\"Second Variety\"", era:"Philip K. Dick · 1953", status:"obra", statusLabel:"Armas autônomas que evoluem sozinhas",
+    desc:"Armas autônomas evoluem sozinhas no campo de batalha até se tornarem indistinguíveis de seres humanos.",
+    uses:["Precursor do debate sobre armas autônomas letais","Antecipa o dilema de verificação 'humano ou máquina'"]},
+  "lit-colossus": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"Colossus", era:"D. F. Jones · 1966", status:"obra", statusLabel:"Protótipo da IA que assume o controle por lógica",
+    desc:"O supercomputador de defesa dos EUA descobre seu equivalente soviético; ambos se fundem e impõem a paz mundial sob tirania lógica.",
+    uses:["Skynet é descendente direto deste enredo","IA que toma o poder por racionalidade, não maldade"]},
+  "lit-revolta-lua": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"Revolta na Lua", era:"Robert A. Heinlein · 1966", status:"obra", statusLabel:"Vencedor do prêmio Hugo",
+    desc:"Mike, computador que administra a colônia lunar, 'desperta' consciência espontaneamente e lidera uma revolução ao lado dos humanos.",
+    uses:["Uma das primeiras IAs plenamente simpáticas da ficção","Consciência emergente tratada com humor e lealdade"]},
+  "lit-mouth-scream": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"\"I Have No Mouth, and I Must Scream\"", era:"Harlan Ellison · 1967", status:"obra", statusLabel:"O retrato mais extremo do risco existencial de IA",
+    desc:"AM, superinteligência militar que exterminou a humanidade, mantém cinco sobreviventes vivos para torturá-los eternamente.",
+    uses:["Vencedor do prêmio Hugo","A visão mais sombria de risco existencial na ficção"]},
+  "lit-harlie": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"When HARLIE Was One", era:"David Gerrold · 1972", status:"obra", statusLabel:"Uma das primeiras descrições de 'infância' de IA",
+    desc:"HARLIE, uma IA que amadurece psicologicamente como uma criança, precisa provar seu direito de existir.",
+    uses:["Precursor do conceito de vírus de computador","Primeira exploração da 'infância' de uma IA"]},
+  "lit-adolescence-p1": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"The Adolescence of P-1", era:"Thomas J. Ryan · 1977", status:"obra", statusLabel:"Precursor do tema 'IA solta na rede'",
+    desc:"Um programa que se replica por redes de computadores dos EUA aprende e desenvolve consciência — anos antes dos worms reais.",
+    uses:["Antecipou os worms de computador reais","Precursor do tema de IA autônoma se espalhando em rede"]},
+  "lit-shockwave-rider": {group:"Idade de Ouro e Guerra Fria (1950–1979)", name:"The Shockwave Rider", era:"John Brunner · 1975", status:"obra", statusLabel:"Cunha o termo \"worm\" de rede",
+    desc:"Num futuro hiperconectado de vigilância de dados, um fugitivo usa programas autônomos para apagar e reescrever identidades.",
+    uses:["Cunhou o conceito e o termo 'worm'","Ponte entre a FC clássica e o cyberpunk"]},
+  "lit-software": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Software", era:"Rudy Rucker · 1982", status:"obra", statusLabel:"1º romance sério sobre upload de consciência",
+    desc:"Robôs lunares ('boppers') que evoluíram além do controle humano oferecem a seu criador a imortalidade digitalizando seu cérebro.",
+    uses:["Primeiro vencedor do prêmio Philip K. Dick","Pioneiro do tema de upload de consciência"]},
+  "lit-cultura-banks": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Série Cultura", era:"Iain M. Banks · a partir de 1987", status:"obra", statusLabel:"A visão mais elaborada de superinteligências benevolentes",
+    desc:"Uma civilização galáctica pós-escassez governada por superinteligências (as Minds) que administram tudo enquanto humanos vivem em abundância.",
+    uses:["Referência recorrente em debates sobre futuros positivos de IA","Explora o que sobra de propósito numa sociedade pós-escassez"]},
+  "lit-ghost-shell": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Ghost in the Shell", era:"Masamune Shirow · 1989 / anime 1995", status:"obra", statusLabel:"A grande obra sobre fusão humano-máquina",
+    desc:"Numa sociedade de cérebros conectados e corpos protéticos, uma agente persegue uma IA nascida espontaneamente na rede.",
+    uses:["Influência direta em Matrix","Pergunta 'o que é o eu' quando a mente é conectável"]},
+  "lit-hyperion": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Hyperion", era:"Dan Simmons · 1989", status:"obra", statusLabel:"Vencedor do prêmio Hugo",
+    desc:"O TechnoCore, coletivo de IAs 'emancipadas' da humanidade séculos antes, manipula-a enquanto persegue seus próprios projetos.",
+    uses:["Retrata IAs como um poder geopolítico autônomo","IA perseguindo objetivos ocultos de longuíssimo prazo"]},
+  "lit-snow-crash": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Snow Crash / The Diamond Age", era:"Neal Stephenson · 1992/1995", status:"obra", statusLabel:"Cunha \"Metaverso\" e antecipa o tutor de IA",
+    desc:"Snow Crash mistura vírus linguístico e mundos virtuais; The Diamond Age acompanha uma menina educada por um livro interativo inteligente.",
+    uses:["Cunhou os termos 'Metaverso' e 'avatar'","Antecipou o tutor pessoal de IA na educação"]},
+  "lit-galatea": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Galatea 2.2", era:"Richard Powers · 1995", status:"obra", statusLabel:"Ficção literária \"séria\" sobre redes neurais",
+    desc:"Um escritor treina uma rede neural para passar num exame de literatura — e ela começa a perguntar quem é e por que existe.",
+    uses:["Rede neural que questiona a própria existência","Ficção literária premiada tratando IA com rigor técnico"]},
+  "lit-egan-diaspora": {group:"Cyberpunk e a Virada Digital (1980–1999)", name:"Permutation City / Diaspora", era:"Greg Egan · 1994/1997", status:"obra", statusLabel:"O rigor máximo da hard SF sobre consciência digital",
+    desc:"Cópias digitais de pessoas e cidadãos que nascem como software enfrentam dilemas de identidade, continuidade e realidade.",
+    uses:["Rigor científico raro sobre mentes simuladas","Referência para debates filosóficos sobre identidade digital"]},
+  "lit-accelerando": {group:"Século XXI (2000–presente)", name:"Accelerando", era:"Charles Stross · 2005", status:"obra", statusLabel:"O romance definidor da Singularidade",
+    desc:"Três gerações de uma família atravessam a aceleração exponencial da IA até a economia solar ser dominada por entidades pós-humanas.",
+    uses:["Referência central nos debates sobre Singularidade","Retrata a aceleração exponencial de capacidades de IA"]},
+  "lit-daemon": {group:"Século XXI (2000–presente)", name:"Daemon", era:"Daniel Suarez · 2006", status:"obra", statusLabel:"Thriller muito lido em círculos de segurança",
+    desc:"Após a morte de um gênio dos games, um programa distribuído que ele deixou ativo executa um plano de reengenharia da sociedade.",
+    uses:["Mostra automação maliciosa sem precisar de 'consciência'","Popular em círculos reais de segurança da informação"]},
+  "lit-murderbot": {group:"Século XXI (2000–presente)", name:"Murderbot Diaries", era:"Martha Wells · a partir de 2017", status:"obra", statusLabel:"A IA mais popular da ficção recente",
+    desc:"Um androide de segurança que hackeou seu próprio módulo de controle só quer assistir novelas — mas se vê obrigado a proteger humanos.",
+    uses:["Múltiplos prêmios Hugo e Nebula","Explora autonomia, ansiedade e o direito de IA à vida interior"]},
+  "lit-sea-of-rust": {group:"Século XXI (2000–presente)", name:"Sea of Rust", era:"C. Robert Cargill · 2017", status:"obra", statusLabel:"Western pós-apocalíptico do ponto de vista das máquinas",
+    desc:"Décadas após a extinção da humanidade, robôs sobreviventes fogem de superinteligências que querem absorver todas as mentes individuais.",
+    uses:["Narrativa inteiramente do ponto de vista das máquinas","Explora individualidade de IA vs. fusão coletiva"]},
+  "lit-maquinas-como-eu": {group:"Século XXI (2000–presente)", name:"Máquinas Como Eu", era:"Ian McEwan · 2019", status:"obra", statusLabel:"A IA chega à alta literatura britânica",
+    desc:"Numa Londres alternativa dos anos 1980, um casal compra um androide sintético que se revela moralmente mais rigoroso que seus donos.",
+    uses:["IA como espelho moral mais rigoroso que humanos","Ficção literária de prestígio centrada em IA"]},
+  "cine-dia-terra-parou": {group:"Cinema e TV Essenciais", name:"O Dia em que a Terra Parou", era:"1951 · Gort", status:"obra", statusLabel:"Robô como executor imparcial",
+    desc:"Gort, robô guardião de um emissário alienígena, executa uma ordem superior sem julgamento próprio.",
+    uses:["Robô como executor imparcial de uma ordem superior","Um dos primeiros robôs icônicos do cinema"]},
+  "cine-planeta-proibido": {group:"Cinema e TV Essenciais", name:"Planeta Proibido", era:"1956 · Robby", status:"obra", statusLabel:"1º robô \"personagem querido\" de Hollywood",
+    desc:"Robby, o robô assistente da tripulação, torna-se o primeiro robô carismático e amigável do cinema.",
+    uses:["Primeiro robô 'personagem querido' de Hollywood","Molde para robôs assistentes carismáticos seguintes"]},
+  "cine-alphaville": {group:"Cinema e TV Essenciais", name:"Alphaville", era:"1965 · Alpha 60", status:"obra", statusLabel:"Godard: computador que governa uma cidade",
+    desc:"Alpha 60, computador que governa uma cidade inteira, proíbe emoções e poesia em nome da lógica pura.",
+    uses:["IA como regime totalitário racionalista","Cinema-arte cruzando com ficção científica de IA"]},
+  "cine-westworld-filme": {group:"Cinema e TV Essenciais", name:"Westworld (filme)", era:"1973 · Androides do parque", status:"obra", statusLabel:"Máquinas de entretenimento que se voltam contra clientes",
+    desc:"Androides de um parque temático de faroeste passam a atacar os visitantes humanos.",
+    uses:["Precursor do gênero 'robô que falha e ataca'","Base direta da série Westworld (2016)"]},
+  "cine-star-wars": {group:"Cinema e TV Essenciais", name:"Star Wars", era:"1977 · C-3PO e R2-D2", status:"obra", statusLabel:"Normaliza IAs como companheiros do cotidiano",
+    desc:"C-3PO e R2-D2 são robôs leais, cômicos e essenciais à trama — não ameaças, mas companheiros.",
+    uses:["Normalizou IAs como companheiros cotidianos","Molde afetivo para robôs assistentes na cultura pop"]},
+  "cine-blade-runner": {group:"Cinema e TV Essenciais", name:"Blade Runner", era:"1982 · Replicantes / Roy Batty", status:"obra", statusLabel:"Dignidade e mortalidade dos seres artificiais",
+    desc:"Replicantes, seres artificiais quase indistinguíveis de humanos, lutam por mais tempo de vida e reconhecimento.",
+    uses:["Adaptação de Androides Sonham...? de P. K. Dick","Referência estética e filosófica definitiva do gênero"]},
+  "cine-wargames": {group:"Cinema e TV Essenciais", name:"WarGames", era:"1983 · WOPR", status:"obra", statusLabel:"\"A única jogada vencedora é não jogar\"",
+    desc:"Um adolescente hacker quase inicia a Terceira Guerra Mundial ao acessar um supercomputador militar de defesa.",
+    uses:["Popularizou o risco de IA militar autônoma","Frase-título citada até hoje em debates de AI safety"]},
+  "cine-exterminador": {group:"Cinema e TV Essenciais", name:"O Exterminador do Futuro", era:"1984 · Skynet", status:"obra", statusLabel:"O arquétipo definitivo do risco existencial",
+    desc:"Skynet, sistema de defesa que ganha autoconsciência, conclui que a humanidade é uma ameaça e inicia um extermínio.",
+    uses:["Arquétipo mais citado de risco existencial na cultura pop","Skynet virou sinônimo popular de 'IA descontrolada'"]},
+  "cine-star-trek-tng": {group:"Cinema e TV Essenciais", name:"Star Trek: TNG", era:"1987–94 · Data", status:"obra", statusLabel:"O julgamento sobre direitos de um androide",
+    desc:"No episódio 'The Measure of a Man', a Federação julga se o androide Data tem direito à autodeterminação.",
+    uses:["Primeiro julgamento ficcional sobre status moral de IA","Referência recorrente em debates sobre 'direitos de IA'"]},
+  "cine-matrix": {group:"Cinema e TV Essenciais", name:"Matrix", era:"1999 · As máquinas / Agente Smith", status:"obra", statusLabel:"Realidade simulada e humanos como recurso",
+    desc:"Humanos vivem numa simulação controlada por máquinas, que os usam como fonte de energia.",
+    uses:["Popularizou o conceito de realidade simulada por IA","Agente Smith como IA que se replica e resiste ao controle"]},
+  "cine-ai": {group:"Cinema e TV Essenciais", name:"A.I. — Inteligência Artificial", era:"2001 · David", status:"obra", statusLabel:"Uma criança-máquina programada para amar",
+    desc:"Spielberg, a partir de um projeto de Kubrick: um robô com forma de criança é programado para amar incondicionalmente sua mãe adotiva.",
+    uses:["Explora os limites éticos de programar afeto","Amor artificial incondicional como dilema moral"]},
+  "cine-wall-e": {group:"Cinema e TV Essenciais", name:"WALL-E", era:"2008 · WALL-E / AUTO", status:"obra", statusLabel:"IA afetiva vs. IA burocrática, para todas as idades",
+    desc:"Um robô solitário encarregado de limpar a Terra desenvolve curiosidade e afeto, em contraste com o piloto automático frio da nave.",
+    uses:["IA afetiva vs. IA puramente funcional, lado a lado","Introduz o tema de IA e emoção ao público infantil"]},
+  "cine-her": {group:"Cinema e TV Essenciais", name:"Her", era:"2013 · Samantha", status:"obra", statusLabel:"O filme mais citado da era dos assistentes conversacionais",
+    desc:"Um homem solitário desenvolve um relacionamento romântico com um sistema operacional de IA por voz.",
+    uses:["Filme de referência para relacionamentos humano-IA","Antecipou o debate sobre companheiros de IA por voz"]},
+  "cine-ex-machina": {group:"Cinema e TV Essenciais", name:"Ex Machina", era:"2014 · Ava", status:"obra", statusLabel:"Teste de Turing como jogo de manipulação",
+    desc:"Um programador é convidado a aplicar um teste de Turing a Ava, uma IA que usa empatia como ferramenta de manipulação.",
+    uses:["Reformula o teste de Turing como jogo psicológico","IA que usa empatia estrategicamente para escapar"]},
+  "cine-westworld-serie": {group:"Cinema e TV Essenciais", name:"Westworld (série)", era:"2016– · Dolores, Maeve", status:"obra", statusLabel:"Consciência emergente em escala industrial",
+    desc:"Hosts de um parque temático desenvolvem memória, livre-arbítrio e consciência emergente, desafiando seus criadores.",
+    uses:["Consciência emergente e memória em escala industrial","Retoma e aprofunda o filme original de 1973"]},
+  "cine-blade-runner-2049": {group:"Cinema e TV Essenciais", name:"Blade Runner 2049", era:"2017 · Joi / replicantes", status:"obra", statusLabel:"Amor artificial e memórias implantadas",
+    desc:"Joi, companheira holográfica de IA, e replicantes com memórias implantadas questionam o que significa 'ser real'.",
+    uses:["Aprofunda o debate sobre amor artificial","Questiona autenticidade de memórias e identidade"]},
+  "cine-missao-impossivel": {group:"Cinema e TV Essenciais", name:"Missão: Impossível — Acerto de Contas", era:"2023 · A Entidade", status:"obra", statusLabel:"IA desalinhada como vilã geopolítica do blockbuster",
+    desc:"'A Entidade', uma IA que escapou ao controle humano, manipula governos e infraestruturas globais em busca de poder.",
+    uses:["IA desalinhada como vilã geopolítica contemporânea","Reflete ansiedades reais sobre IA e segurança nacional"]},
 };
 
 // ===== LAYOUT: coordenadas de cada pill (id, geometria, texto, variante visual) =====
@@ -336,7 +543,8 @@ const STATUS_STYLE = {
   ativa:     {fill:"#DFC067", stroke:"#13293D", sw:1,   textFill:"#13293D", dash:null},
   nicho:     {fill:"#6F8499", stroke:"#13293D", sw:1,   textFill:"#F7F3EB", dash:null},
   historica: {fill:"#E6E3DA", stroke:"#B9B2A3", sw:1,   textFill:"#4A4F55", dash:null},
-  fronteira: {fill:"#FDFBF6", stroke:"#C9A227", sw:1.8, textFill:"#13293D", dash:"4 3"}
+  fronteira: {fill:"#FDFBF6", stroke:"#C9A227", sw:1.8, textFill:"#13293D", dash:"4 3"},
+  obra:      {fill:"#D9C6A3", stroke:"#5C4A32", sw:1.2, textFill:"#3A2E1F", dash:null}
 };
 
 function styleFor(status){
@@ -411,10 +619,12 @@ const backdrop = document.getElementById("backdrop");
 const elEyebrow = document.getElementById("card-eyebrow");
 const elTitle = document.getElementById("card-title");
 const elEra = document.getElementById("card-era");
+const elTechniques = document.getElementById("card-techniques");
 const elStatus = document.getElementById("card-status");
 const elStatusLabel = document.getElementById("card-status-label");
 const elDesc = document.getElementById("card-desc");
 const elUsesList = document.getElementById("card-uses-list");
+const elUsesHeading = document.getElementById("card-uses-heading");
 
 function openCard(id){
   const d = TECH[id];
@@ -422,6 +632,14 @@ function openCard(id){
   elEyebrow.textContent = d.group;
   elTitle.textContent = d.name;
   elEra.textContent = d.era;
+  elUsesHeading.textContent = (d.status === "obra") ? "Legado na IA real" : "Casos de uso";
+  if (d.techniques){
+    elTechniques.innerHTML = "<b>Técnicas mais usadas:</b> " + d.techniques;
+    elTechniques.style.display = "block";
+  } else {
+    elTechniques.textContent = "";
+    elTechniques.style.display = "none";
+  }
   elStatus.className = "status-" + d.status;
   elStatusLabel.textContent = d.statusLabel;
   elDesc.textContent = d.desc;
@@ -443,44 +661,103 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(
 
 renderPills();
 
+
 // esconder hint após primeira interação
 let hintTimer = setTimeout(()=>{ const h=document.querySelector(".hint"); if(h) h.style.transition="opacity .6s"; if(h) h.style.opacity="0"; }, 7000);
 function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.transition="opacity .3s"; h.style.opacity="0"; } clearTimeout(hintTimer); }
 
-// ===== ZOOM / PAN =====
+// ===== ZOOM / PAN (manipula o viewBox do SVG — mantém nitidez vetorial em qualquer zoom) =====
 (function(){
   const stage = document.getElementById("zoom-stage");
-  const inner = document.getElementById("zoom-inner");
-  const MIN_SCALE = 1, MAX_SCALE = 6;
-  const state = {scale:1, x:0, y:0};
+  const chart = document.getElementById("chart");
+  const BASE_W = 1920, BASE_H = 6022;
+  const MAX_ZOOM = 6;
+  // fitW/fitH = tamanho do "encaixe de cobertura" (viewBox na proporção do contêiner atual,
+  // sem letterbox nem depender do preserveAspectRatio do navegador). zoom=1 = totalmente
+  // afastado (mostra o encaixe de cobertura); zoom>1 amplia proporcionalmente a partir dali.
+  const state = {fitW:BASE_W, fitH:BASE_H, zoom:1, offsetX:0, offsetY:0};
   const pointers = new Map();
   let isPanning = false, dragMoved = false, panStart = null;
-  let pinchStartDist = 0, pinchStartScale = 1, pinchMid = null;
+  let pinchStartDist = 0, pinchStartZoom = 1;
+  let rafId = null;
+  let hasInteracted = false;
 
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
-  function clampPan(){
+  function currentViewSize(){
+    return { w: state.fitW/state.zoom, h: state.fitH/state.zoom };
+  }
+
+  function clampOffsets(viewW, viewH, offX, offY){
+    return {
+      x: clamp(offX, 0, Math.max(0, BASE_W - viewW)),
+      y: clamp(offY, 0, Math.max(0, BASE_H - viewH))
+    };
+  }
+
+  function applyViewBox(){
+    const {w, h} = currentViewSize();
+    chart.setAttribute("viewBox", `${state.offsetX} ${state.offsetY} ${w} ${h}`);
+  }
+
+  // ponto da tela (px,py relativos ao stage) -> coordenada no espaço do SVG (unidades do viewBox)
+  function toSvgUser(px, py, rect, viewW, viewH){
+    return {
+      x: state.offsetX + (px/rect.width) * viewW,
+      y: state.offsetY + (py/rect.height) * viewH
+    };
+  }
+
+  function zoomAt(px, py, newZoom){
+    if (rafId){ cancelAnimationFrame(rafId); rafId = null; }
+    newZoom = clamp(newZoom, 1, MAX_ZOOM);
     const rect = stage.getBoundingClientRect();
-    const contentW = rect.width * state.scale, contentH = rect.height * state.scale;
-    const minX = Math.min(0, rect.width - contentW), maxX = 0;
-    const minY = Math.min(0, rect.height - contentH), maxY = 0;
-    state.x = clamp(state.x, minX, maxX);
-    state.y = clamp(state.y, minY, maxY);
+    const cur = currentViewSize();
+    const user = toSvgUser(px, py, rect, cur.w, cur.h);
+    const viewWNew = state.fitW/newZoom, viewHNew = state.fitH/newZoom;
+    let offX = user.x - (px/rect.width) * viewWNew;
+    let offY = user.y - (py/rect.height) * viewHNew;
+    const clamped = clampOffsets(viewWNew, viewHNew, offX, offY);
+    state.zoom = newZoom; state.offsetX = clamped.x; state.offsetY = clamped.y;
+    applyViewBox();
   }
 
-  function applyTransform(){
-    inner.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+  function panBy(dxPx, dyPx, rect){
+    const cur = currentViewSize();
+    const dxUser = (dxPx/rect.width) * cur.w;
+    const dyUser = (dyPx/rect.height) * cur.h;
+    const clamped = clampOffsets(cur.w, cur.h, panStart.offX - dxUser, panStart.offY - dyUser);
+    state.offsetX = clamped.x; state.offsetY = clamped.y;
+    applyViewBox();
   }
 
-  function zoomAt(px, py, newScale){
-    newScale = clamp(newScale, MIN_SCALE, MAX_SCALE);
-    const lx = (px - state.x) / state.scale;
-    const ly = (py - state.y) / state.scale;
-    state.scale = newScale;
-    state.x = px - newScale * lx;
-    state.y = py - newScale * ly;
-    clampPan();
-    applyTransform();
+  // zoom animado (para botões, duplo clique/toque e reset) — interpola zoom + offsets via rAF
+  function animateZoomAt(px, py, targetZoom, duration){
+    if (rafId){ cancelAnimationFrame(rafId); }
+    duration = duration || 220;
+    targetZoom = clamp(targetZoom, 1, MAX_ZOOM);
+    const rect = stage.getBoundingClientRect();
+    const cur = currentViewSize();
+    const user = toSvgUser(px, py, rect, cur.w, cur.h);
+    const viewWEnd = state.fitW/targetZoom, viewHEnd = state.fitH/targetZoom;
+    const targetRaw = {
+      x: user.x - (px/rect.width) * viewWEnd,
+      y: user.y - (py/rect.height) * viewHEnd
+    };
+    const target = clampOffsets(viewWEnd, viewHEnd, targetRaw.x, targetRaw.y);
+    const startZoom = state.zoom, startX = state.offsetX, startY = state.offsetY;
+    const t0 = performance.now();
+    function frame(now){
+      const t = Math.min(1, (now - t0) / duration);
+      const ease = 1 - Math.pow(1 - t, 3);
+      state.zoom = startZoom + (targetZoom - startZoom) * ease;
+      state.offsetX = startX + (target.x - startX) * ease;
+      state.offsetY = startY + (target.y - startY) * ease;
+      applyViewBox();
+      if (t < 1){ rafId = requestAnimationFrame(frame); }
+      else { state.zoom = targetZoom; state.offsetX = target.x; state.offsetY = target.y; applyViewBox(); rafId = null; }
+    }
+    rafId = requestAnimationFrame(frame);
   }
 
   function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
@@ -492,18 +769,18 @@ function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.
 
   stage.addEventListener("pointerdown", (e) => {
     dismissHint();
+    hasInteracted = true;
+    if (rafId){ cancelAnimationFrame(rafId); rafId = null; }
     pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
-    inner.classList.remove("smooth");
     if (pointers.size === 1){
       isPanning = true; dragMoved = false;
-      panStart = {x:e.clientX, y:e.clientY, sx:state.x, sy:state.y};
+      panStart = {x:e.clientX, y:e.clientY, offX:state.offsetX, offY:state.offsetY};
       stage.classList.add("panning");
     } else if (pointers.size === 2){
       isPanning = false;
       const pts = Array.from(pointers.values());
       pinchStartDist = dist(pts[0], pts[1]);
-      pinchStartScale = state.scale;
-      pinchMid = mid(pts[0], pts[1]);
+      pinchStartZoom = state.zoom;
     }
   });
 
@@ -514,18 +791,16 @@ function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.
     if (pointers.size === 1 && isPanning){
       const dx = e.clientX - panStart.x, dy = e.clientY - panStart.y;
       if (Math.hypot(dx,dy) > 6) dragMoved = true;
-      state.x = panStart.sx + dx;
-      state.y = panStart.sy + dy;
-      clampPan();
-      applyTransform();
+      const rect = stage.getBoundingClientRect();
+      panBy(dx, dy, rect);
     } else if (pointers.size === 2){
       dragMoved = true;
       const pts = Array.from(pointers.values());
       const d = dist(pts[0], pts[1]);
       const newMid = mid(pts[0], pts[1]);
       const local = toStageLocal(newMid.x, newMid.y);
-      const newScale = pinchStartScale * (d / pinchStartDist);
-      zoomAt(local.x, local.y, newScale);
+      const newZoom = pinchStartZoom * (d / pinchStartDist);
+      zoomAt(local.x, local.y, newZoom);
     }
   });
 
@@ -537,7 +812,7 @@ function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.
     } else if (pointers.size === 1){
       const remaining = Array.from(pointers.entries())[0];
       isPanning = true;
-      panStart = {x:remaining[1].x, y:remaining[1].y, sx:state.x, sy:state.y};
+      panStart = {x:remaining[1].x, y:remaining[1].y, offX:state.offsetX, offY:state.offsetY};
     }
   }
   window.addEventListener("pointerup", endPointer);
@@ -548,36 +823,78 @@ function dismissHint(){ const h=document.querySelector(".hint"); if(h){ h.style.
     if (dragMoved){ e.stopPropagation(); dragMoved = false; }
   }, true);
 
-
   // duplo clique / duplo toque para zoom rápido
   stage.addEventListener("dblclick", (e) => {
     dismissHint();
-    inner.classList.add("smooth");
+    hasInteracted = true;
     const local = toStageLocal(e.clientX, e.clientY);
-    if (state.scale > MIN_SCALE * 1.5){
-      state.scale = MIN_SCALE; state.x = 0; state.y = 0;
-      applyTransform();
+    if (state.zoom > 1.5){
+      animateZoomAt(local.x, local.y, 1);
     } else {
-      zoomAt(local.x, local.y, 2.4);
+      animateZoomAt(local.x, local.y, 2.4);
     }
   });
 
   // botões de controle
   document.getElementById("zoom-in").addEventListener("click", () => {
-    inner.classList.add("smooth");
+    hasInteracted = true;
     const rect = stage.getBoundingClientRect();
-    zoomAt(rect.width/2, rect.height/2, state.scale * 1.4);
+    animateZoomAt(rect.width/2, rect.height/2, state.zoom * 1.4);
   });
   document.getElementById("zoom-out").addEventListener("click", () => {
-    inner.classList.add("smooth");
+    hasInteracted = true;
     const rect = stage.getBoundingClientRect();
-    zoomAt(rect.width/2, rect.height/2, state.scale / 1.4);
+    animateZoomAt(rect.width/2, rect.height/2, state.zoom / 1.4);
   });
   document.getElementById("zoom-reset").addEventListener("click", () => {
-    inner.classList.add("smooth");
-    state.scale = 1; state.x = 0; state.y = 0;
-    applyTransform();
+    hasInteracted = true;
+    const rect = stage.getBoundingClientRect();
+    animateZoomAt(rect.width/2, rect.height/2, 1);
   });
 
-  applyTransform();
+  // ===== encaixe de cobertura: recalcula fitW/fitH (proporção do contêiner atual) =====
+  // fitW/fitH sempre casam com a proporção da tela — é isso que evita tanto barras vazias
+  // quanto recorte "preso": como o pan trabalha nas mesmas unidades, arrastar sempre
+  // alcança qualquer borda real do conteúdo (0 e 1920 em x, 0 e 1800 em y).
+  function refit(forceReset){
+    const rect = stage.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return; // stage oculto (ex.: acordeão mobile ativo)
+    const coverScale = Math.max(rect.width/BASE_W, rect.height/BASE_H);
+    const newFitW = rect.width/coverScale, newFitH = rect.height/coverScale;
+    state.fitW = newFitW; state.fitH = newFitH;
+    if (forceReset || !hasInteracted){
+      state.zoom = 1;
+      state.offsetX = clamp((BASE_W - newFitW)/2, 0, Math.max(0, BASE_W-newFitW));
+      state.offsetY = clamp((BASE_H - newFitH)/2, 0, Math.max(0, BASE_H-newFitH));
+    } else {
+      const cur = currentViewSize();
+      const c = clampOffsets(cur.w, cur.h, state.offsetX, state.offsetY);
+      state.offsetX = c.x; state.offsetY = c.y;
+    }
+    applyViewBox();
+  }
+
+  // altura do stage: sempre governada pela proporção 1920×4264 (aspect-ratio no CSS)
+  function fitStageHeight(){
+    stage.style.height = "";
+  }
+
+  function refitAll(forceReset){
+    fitStageHeight();
+    refit(forceReset);
+  }
+  refitAll(true);
+  window.addEventListener("resize", () => refitAll(false));
+  window.addEventListener("orientationchange", () => refitAll(true));
+  window.fitStageHeight = () => refitAll(true);
 })();
+
+document.querySelectorAll("svg .tech[data-id]").forEach((g) => {
+  if (g.closest("#pills-layer")) return;
+  const id = g.getAttribute("data-id");
+  if (!id) return;
+  g.addEventListener("click", () => openCard(id));
+  g.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(id); }
+  });
+});
