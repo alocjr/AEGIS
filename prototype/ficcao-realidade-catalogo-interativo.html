@@ -152,6 +152,7 @@ button{font-family:inherit;cursor:pointer;}
 
 /* ===== LAYOUT ===== */
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+#catalogo .wrap{max-width:min(1680px, 100%);}
 section{padding:86px 0;}
 section.tight{padding:60px 0;}
 .section-head{max-width:720px;margin:0 auto 46px;text-align:center;}
@@ -259,36 +260,46 @@ td.empty-cell{color:var(--pedra);}
 }
 .switch input{accent-color:var(--dourado);width:15px;height:15px;}
 
-.catalog-board{
-  display:flex;align-items:flex-start;gap:14px;
-  overflow-x:auto;padding:4px 2px 12px;margin:0 -2px;
-  scrollbar-width:thin;
+.catalog-matrix-scroll{
+  overflow-x:auto;border:1px solid var(--hairline);border-radius:var(--radius);
+  background:var(--marfim-2);box-shadow:var(--shadow-card);
 }
-.catalog-board.filtered{
-  display:block;overflow:visible;padding-bottom:0;
-}
-.catalog-col{
-  flex:0 0 286px;width:286px;min-width:286px;
-  display:flex;flex-direction:column;gap:10px;
-}
-.catalog-board.filtered .catalog-col{
-  flex:none;width:auto;min-width:0;
-}
-.catalog-col-head{
-  display:flex;align-items:center;gap:8px;
+table.catalog-matrix{border-collapse:collapse;width:max-content;min-width:100%;}
+table.catalog-matrix thead th{
   background:var(--navy-900);color:var(--marfim);
-  border-radius:var(--radius);padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.6px;
-  text-transform:uppercase;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.5px;
+  text-transform:uppercase;padding:12px 12px;text-align:left;font-weight:600;
+  white-space:nowrap;vertical-align:middle;
 }
-.catalog-col-head .chip-dot{flex:none;box-shadow:0 0 0 2px rgba(247,243,235,.18);}
-.catalog-col-n{
-  margin-left:auto;color:var(--dourado);font-weight:700;letter-spacing:0;
+table.catalog-matrix thead th .chip-dot{margin-right:6px;}
+table.catalog-matrix thead th b{color:var(--dourado);font-weight:700;margin-left:2px;}
+table.catalog-matrix thead th:first-child,
+table.catalog-matrix tbody th.cm-period{
+  position:sticky;left:0;z-index:2;
+  box-shadow:2px 0 0 var(--dourado);
+  min-width:138px;max-width:160px;width:138px;
 }
-.catalog-col-cards{display:flex;flex-direction:column;gap:10px;}
-.catalog-board.filtered .catalog-col-cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;
+table.catalog-matrix thead th:first-child{z-index:3;box-shadow:2px 0 0 var(--dourado);}
+table.catalog-matrix tbody th.cm-period{
+  background:var(--marfim-2);
+  font-family:'Fraunces',serif;font-weight:600;color:var(--navy-900);
+  font-size:13.5px;line-height:1.3;padding:14px 12px;text-align:left;vertical-align:top;
+  border-top:1px solid var(--hairline);
 }
+table.catalog-matrix td{
+  padding:10px;vertical-align:top;border-top:1px solid var(--hairline);
+  min-width:252px;width:252px;
+}
+table.catalog-matrix tr:nth-child(even) td,
+table.catalog-matrix tr:nth-child(even) th.cm-period{background:#FBF8F1;}
+table.catalog-matrix td.empty-cell{color:var(--pedra);}
+.cm-stack{display:flex;flex-direction:column;gap:8px;}
+.catalog-matrix .work-card{padding:12px;gap:10px;}
+.catalog-matrix .wc-cover{flex:0 0 52px;}
+.catalog-matrix .wc-cover svg{width:52px;height:78px;}
+.catalog-matrix .work-title{font-size:14.5px;}
+.catalog-matrix .work-desc{-webkit-line-clamp:2;font-size:12.5px;}
+.catalog-matrix .work-tag{display:none;}
 .work-card{
   background:var(--marfim-2);border:1px solid var(--hairline);border-radius:var(--radius);
   padding:16px;cursor:pointer;transition:transform .15s, box-shadow .15s, border-color .15s;
@@ -319,7 +330,6 @@ td.empty-cell{color:var(--pedra);}
   width:100%;text-align:center;padding:60px 20px;color:var(--muted);
   font-family:'JetBrains Mono',monospace;font-size:13px;
 }
-.catalog-board .empty-state{flex:1 0 100%;}
 
 /* ===== GENEALOGY TREE INTERACTION ===== */
 .tree-node{cursor:pointer;outline:none;}
@@ -558,8 +568,6 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
 }
 @media (max-width:560px){
   .art-grid{grid-template-columns:1fr;}
-  .catalog-col{flex-basis:82vw;width:82vw;min-width:82vw;}
-  .catalog-board.filtered .catalog-col-cards{grid-template-columns:1fr;}
   .hero{padding:56px 18px 46px;}
   .catalog-controls{top:0;}
 }
@@ -647,7 +655,7 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
     <div class="section-head">
       <div class="eyebrow">Seção 04 · O coração do catálogo</div>
       <h2 class="section-title">143 obras, uma busca</h2>
-      <p class="section-desc">Filtre por mídia, busque por título, autor ou conceito. Cada coluna é um tipo de obra; dentro dela, as fichas sobem no tempo. Clique para abrir a ficha completa.</p>
+      <p class="section-desc">Filtre por mídia, busque por título, autor ou conceito. As linhas alinham as obras pelo período; cada coluna é um tipo de mídia. Clique para abrir a ficha completa.</p>
     </div>
 
     <div class="catalog-controls">
@@ -661,7 +669,7 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
       </div>
     </div>
 
-    <div class="catalog-board" id="catalog-grid"></div>
+    <div class="catalog-matrix-scroll" id="catalog-grid"></div>
   </div>
 </section>
 
@@ -6734,6 +6742,19 @@ var CAT_LABEL = {
   mitos:'Mitos', literatura:'Literatura', cinema:'Cinema', series:'Séries de TV',
   animes:'Animes & Mangás', games:'Games', ciborgues:'Ciborgues', transumanismo:'Transumanismo'
 };
+var PERIODS = [
+  {id:'ancient', label:'Antiguidade e Idade Média', min:null, max:1799},
+  {id:'p1800', label:'1800–1919', min:1800, max:1919},
+  {id:'p1920', label:'1920–1949', min:1920, max:1949},
+  {id:'p1950', label:'Anos 1950', min:1950, max:1959},
+  {id:'p1960', label:'Anos 1960', min:1960, max:1969},
+  {id:'p1970', label:'Anos 1970', min:1970, max:1979},
+  {id:'p1980', label:'Anos 1980', min:1980, max:1989},
+  {id:'p1990', label:'Anos 1990', min:1990, max:1999},
+  {id:'p2000', label:'2000–2009', min:2000, max:2009},
+  {id:'p2010', label:'2010–2019', min:2010, max:2019},
+  {id:'p2020', label:'2020–2026', min:2020, max:9999}
+];
 
 function esc(s){
   if(s===undefined||s===null) return '';
@@ -7086,6 +7107,17 @@ function yearKey(e){
   return isNaN(n) ? -1e9 : n;
 }
 
+function periodOf(e){
+  var y = yearKey(e);
+  for(var i=0;i<PERIODS.length;i++){
+    var p = PERIODS[i];
+    var min = (p.min===null || p.min===undefined) ? -Infinity : p.min;
+    var max = (p.max===null || p.max===undefined) ? Infinity : p.max;
+    if(y>=min && y<=max) return p;
+  }
+  return PERIODS[0];
+}
+
 function sortByDate(a,b){
   var ya = yearKey(a), yb = yearKey(b);
   if(ya!==yb) return ya-yb;
@@ -7134,30 +7166,41 @@ function renderCatalog(){
   document.getElementById('result-count').textContent = list.length + ' obra' + (list.length===1?'':'s');
 
   if(list.length===0){
-    grid.className = 'catalog-board';
+    grid.className = 'catalog-matrix-scroll';
     grid.innerHTML = '<div class="empty-state">Nenhuma obra encontrada. Tente outro termo ou limpe os filtros.</div>';
     return;
   }
 
-  var byCat = {};
+  var catCounts = {};
+  var byPeriodCat = {};
   list.forEach(function(e){
-    var k = e.media || 'literatura';
-    (byCat[k] = byCat[k] || []).push(e);
+    var c = e.media || 'literatura';
+    catCounts[c] = (catCounts[c]||0)+1;
+    var pid = periodOf(e).id;
+    if(!byPeriodCat[pid]) byPeriodCat[pid] = {};
+    (byPeriodCat[pid][c] = byPeriodCat[pid][c] || []).push(e);
   });
-  var cats = CAT_ORDER.filter(function(c){ return byCat[c] && byCat[c].length; });
-  Object.keys(byCat).forEach(function(c){
+  var cats = CAT_ORDER.filter(function(c){ return catCounts[c]; });
+  Object.keys(catCounts).forEach(function(c){
     if(cats.indexOf(c)===-1) cats.push(c);
   });
+  var periods = PERIODS.filter(function(p){ return !!byPeriodCat[p.id]; });
 
-  var filtered = cats.length===1;
-  grid.className = 'catalog-board'+(filtered?' filtered':'');
-  grid.innerHTML = cats.map(function(c){
-    var items = byCat[c];
-    return '<div class="catalog-col" data-cat="'+c+'">' +
-      '<div class="catalog-col-head"><span class="chip-dot" style="background:'+CAT_COLOR[c]+'"></span>'+esc(CAT_LABEL[c]||c)+'<span class="catalog-col-n">'+items.length+'</span></div>' +
-      '<div class="catalog-col-cards">'+items.map(cardHTML).join('')+'</div>' +
-    '</div>';
+  var thead = '<thead><tr><th>Período</th>' + cats.map(function(c){
+    return '<th><span class="chip-dot" style="background:'+CAT_COLOR[c]+'"></span>'+esc(CAT_LABEL[c]||c)+' <b>'+catCounts[c]+'</b></th>';
+  }).join('') + '</tr></thead>';
+
+  var rows = periods.map(function(p){
+    var cells = cats.map(function(c){
+      var items = (byPeriodCat[p.id] && byPeriodCat[p.id][c]) || [];
+      if(!items.length) return '<td class="empty-cell"></td>';
+      return '<td><div class="cm-stack">'+items.map(cardHTML).join('')+'</div></td>';
+    }).join('');
+    return '<tr><th class="cm-period">'+esc(p.label)+'</th>'+cells+'</tr>';
   }).join('');
+
+  grid.className = 'catalog-matrix-scroll';
+  grid.innerHTML = '<table class="catalog-matrix">'+thead+'<tbody>'+rows+'</tbody></table>';
 }
 
 function openModal(id, kind){

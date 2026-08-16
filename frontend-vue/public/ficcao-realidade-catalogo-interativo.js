@@ -13,6 +13,19 @@ var CAT_LABEL = {
   mitos:'Mitos', literatura:'Literatura', cinema:'Cinema', series:'Séries de TV',
   animes:'Animes & Mangás', games:'Games', ciborgues:'Ciborgues', transumanismo:'Transumanismo'
 };
+var PERIODS = [
+  {id:'ancient', label:'Antiguidade e Idade Média', min:null, max:1799},
+  {id:'p1800', label:'1800–1919', min:1800, max:1919},
+  {id:'p1920', label:'1920–1949', min:1920, max:1949},
+  {id:'p1950', label:'Anos 1950', min:1950, max:1959},
+  {id:'p1960', label:'Anos 1960', min:1960, max:1969},
+  {id:'p1970', label:'Anos 1970', min:1970, max:1979},
+  {id:'p1980', label:'Anos 1980', min:1980, max:1989},
+  {id:'p1990', label:'Anos 1990', min:1990, max:1999},
+  {id:'p2000', label:'2000–2009', min:2000, max:2009},
+  {id:'p2010', label:'2010–2019', min:2010, max:2019},
+  {id:'p2020', label:'2020–2026', min:2020, max:9999}
+];
 
 function esc(s){
   if(s===undefined||s===null) return '';
@@ -365,6 +378,17 @@ function yearKey(e){
   return isNaN(n) ? -1e9 : n;
 }
 
+function periodOf(e){
+  var y = yearKey(e);
+  for(var i=0;i<PERIODS.length;i++){
+    var p = PERIODS[i];
+    var min = (p.min===null || p.min===undefined) ? -Infinity : p.min;
+    var max = (p.max===null || p.max===undefined) ? Infinity : p.max;
+    if(y>=min && y<=max) return p;
+  }
+  return PERIODS[0];
+}
+
 function sortByDate(a,b){
   var ya = yearKey(a), yb = yearKey(b);
   if(ya!==yb) return ya-yb;
@@ -413,30 +437,41 @@ function renderCatalog(){
   document.getElementById('result-count').textContent = list.length + ' obra' + (list.length===1?'':'s');
 
   if(list.length===0){
-    grid.className = 'catalog-board';
+    grid.className = 'catalog-matrix-scroll';
     grid.innerHTML = '<div class="empty-state">Nenhuma obra encontrada. Tente outro termo ou limpe os filtros.</div>';
     return;
   }
 
-  var byCat = {};
+  var catCounts = {};
+  var byPeriodCat = {};
   list.forEach(function(e){
-    var k = e.media || 'literatura';
-    (byCat[k] = byCat[k] || []).push(e);
+    var c = e.media || 'literatura';
+    catCounts[c] = (catCounts[c]||0)+1;
+    var pid = periodOf(e).id;
+    if(!byPeriodCat[pid]) byPeriodCat[pid] = {};
+    (byPeriodCat[pid][c] = byPeriodCat[pid][c] || []).push(e);
   });
-  var cats = CAT_ORDER.filter(function(c){ return byCat[c] && byCat[c].length; });
-  Object.keys(byCat).forEach(function(c){
+  var cats = CAT_ORDER.filter(function(c){ return catCounts[c]; });
+  Object.keys(catCounts).forEach(function(c){
     if(cats.indexOf(c)===-1) cats.push(c);
   });
+  var periods = PERIODS.filter(function(p){ return !!byPeriodCat[p.id]; });
 
-  var filtered = cats.length===1;
-  grid.className = 'catalog-board'+(filtered?' filtered':'');
-  grid.innerHTML = cats.map(function(c){
-    var items = byCat[c];
-    return '<div class="catalog-col" data-cat="'+c+'">' +
-      '<div class="catalog-col-head"><span class="chip-dot" style="background:'+CAT_COLOR[c]+'"></span>'+esc(CAT_LABEL[c]||c)+'<span class="catalog-col-n">'+items.length+'</span></div>' +
-      '<div class="catalog-col-cards">'+items.map(cardHTML).join('')+'</div>' +
-    '</div>';
+  var thead = '<thead><tr><th>Período</th>' + cats.map(function(c){
+    return '<th><span class="chip-dot" style="background:'+CAT_COLOR[c]+'"></span>'+esc(CAT_LABEL[c]||c)+' <b>'+catCounts[c]+'</b></th>';
+  }).join('') + '</tr></thead>';
+
+  var rows = periods.map(function(p){
+    var cells = cats.map(function(c){
+      var items = (byPeriodCat[p.id] && byPeriodCat[p.id][c]) || [];
+      if(!items.length) return '<td class="empty-cell"></td>';
+      return '<td><div class="cm-stack">'+items.map(cardHTML).join('')+'</div></td>';
+    }).join('');
+    return '<tr><th class="cm-period">'+esc(p.label)+'</th>'+cells+'</tr>';
   }).join('');
+
+  grid.className = 'catalog-matrix-scroll';
+  grid.innerHTML = '<table class="catalog-matrix">'+thead+'<tbody>'+rows+'</tbody></table>';
 }
 
 function openModal(id, kind){

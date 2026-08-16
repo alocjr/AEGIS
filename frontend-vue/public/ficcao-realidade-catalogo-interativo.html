@@ -152,6 +152,7 @@ button{font-family:inherit;cursor:pointer;}
 
 /* ===== LAYOUT ===== */
 .wrap{max-width:1180px;margin:0 auto;padding:0 24px;}
+#catalogo .wrap{max-width:min(1680px, 100%);}
 section{padding:86px 0;}
 section.tight{padding:60px 0;}
 .section-head{max-width:720px;margin:0 auto 46px;text-align:center;}
@@ -230,6 +231,7 @@ td.empty-cell{color:var(--pedra);}
   position:sticky;top:49px;z-index:40;background:var(--marfim);padding:16px 0;
   border-bottom:1px solid var(--hairline);
 }
+.bg-alt .catalog-controls{background:var(--marfim-2);}
 .search-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
 .search-input{
   flex:1;min-width:220px;background:var(--marfim-2);border:1px solid var(--hairline);
@@ -259,36 +261,46 @@ td.empty-cell{color:var(--pedra);}
 }
 .switch input{accent-color:var(--dourado);width:15px;height:15px;}
 
-.catalog-board{
-  display:flex;align-items:flex-start;gap:14px;
-  overflow-x:auto;padding:4px 2px 12px;margin:0 -2px;
-  scrollbar-width:thin;
+.catalog-matrix-scroll{
+  overflow-x:auto;border:1px solid var(--hairline);border-radius:var(--radius);
+  background:var(--marfim-2);box-shadow:var(--shadow-card);
 }
-.catalog-board.filtered{
-  display:block;overflow:visible;padding-bottom:0;
-}
-.catalog-col{
-  flex:0 0 286px;width:286px;min-width:286px;
-  display:flex;flex-direction:column;gap:10px;
-}
-.catalog-board.filtered .catalog-col{
-  flex:none;width:auto;min-width:0;
-}
-.catalog-col-head{
-  display:flex;align-items:center;gap:8px;
+table.catalog-matrix{border-collapse:collapse;width:max-content;min-width:100%;}
+table.catalog-matrix thead th{
   background:var(--navy-900);color:var(--marfim);
-  border-radius:var(--radius);padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.6px;
-  text-transform:uppercase;font-weight:600;
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.5px;
+  text-transform:uppercase;padding:12px 12px;text-align:left;font-weight:600;
+  white-space:nowrap;vertical-align:middle;
 }
-.catalog-col-head .chip-dot{flex:none;box-shadow:0 0 0 2px rgba(247,243,235,.18);}
-.catalog-col-n{
-  margin-left:auto;color:var(--dourado);font-weight:700;letter-spacing:0;
+table.catalog-matrix thead th .chip-dot{margin-right:6px;}
+table.catalog-matrix thead th b{color:var(--dourado);font-weight:700;margin-left:2px;}
+table.catalog-matrix thead th:first-child,
+table.catalog-matrix tbody th.cm-period{
+  position:sticky;left:0;z-index:2;
+  box-shadow:2px 0 0 var(--dourado);
+  min-width:138px;max-width:160px;width:138px;
 }
-.catalog-col-cards{display:flex;flex-direction:column;gap:10px;}
-.catalog-board.filtered .catalog-col-cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;
+table.catalog-matrix thead th:first-child{z-index:3;box-shadow:2px 0 0 var(--dourado);}
+table.catalog-matrix tbody th.cm-period{
+  background:var(--marfim-2);
+  font-family:'Fraunces',serif;font-weight:600;color:var(--navy-900);
+  font-size:13.5px;line-height:1.3;padding:14px 12px;text-align:left;vertical-align:top;
+  border-top:1px solid var(--hairline);
 }
+table.catalog-matrix td{
+  padding:10px;vertical-align:top;border-top:1px solid var(--hairline);
+  min-width:252px;width:252px;
+}
+table.catalog-matrix tr:nth-child(even) td,
+table.catalog-matrix tr:nth-child(even) th.cm-period{background:#FBF8F1;}
+table.catalog-matrix td.empty-cell{color:var(--pedra);}
+.cm-stack{display:flex;flex-direction:column;gap:8px;}
+.catalog-matrix .work-card{padding:12px;gap:10px;}
+.catalog-matrix .wc-cover{flex:0 0 52px;}
+.catalog-matrix .wc-cover svg{width:52px;height:78px;}
+.catalog-matrix .work-title{font-size:14.5px;}
+.catalog-matrix .work-desc{-webkit-line-clamp:2;font-size:12.5px;}
+.catalog-matrix .work-tag{display:none;}
 .work-card{
   background:var(--marfim-2);border:1px solid var(--hairline);border-radius:var(--radius);
   padding:16px;cursor:pointer;transition:transform .15s, box-shadow .15s, border-color .15s;
@@ -319,7 +331,6 @@ td.empty-cell{color:var(--pedra);}
   width:100%;text-align:center;padding:60px 20px;color:var(--muted);
   font-family:'JetBrains Mono',monospace;font-size:13px;
 }
-.catalog-board .empty-state{flex:1 0 100%;}
 
 /* ===== GENEALOGY TREE INTERACTION ===== */
 .tree-node{cursor:pointer;outline:none;}
@@ -558,8 +569,6 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
 }
 @media (max-width:560px){
   .art-grid{grid-template-columns:1fr;}
-  .catalog-col{flex-basis:82vw;width:82vw;min-width:82vw;}
-  .catalog-board.filtered .catalog-col-cards{grid-template-columns:1fr;}
   .hero{padding:56px 18px 46px;}
   .catalog-controls{top:0;}
 }
@@ -647,7 +656,7 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
     <div class="section-head">
       <div class="eyebrow">Seção 04 · O coração do catálogo</div>
       <h2 class="section-title">143 obras, uma busca</h2>
-      <p class="section-desc">Filtre por mídia, busque por título, autor ou conceito. Cada coluna é um tipo de obra; dentro dela, as fichas sobem no tempo. Clique para abrir a ficha completa.</p>
+      <p class="section-desc">Filtre por mídia, busque por título, autor ou conceito. As linhas alinham as obras pelo período; cada coluna é um tipo de mídia. Clique para abrir a ficha completa.</p>
     </div>
 
     <div class="catalog-controls">
@@ -661,7 +670,7 @@ footer .foot-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:va
       </div>
     </div>
 
-    <div class="catalog-board" id="catalog-grid"></div>
+    <div class="catalog-matrix-scroll" id="catalog-grid"></div>
   </div>
 </section>
 
