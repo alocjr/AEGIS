@@ -53,7 +53,7 @@ function renderFrontiers(){
    ========================================================= */
 var LIN_BY_ID = {};
 function renderGenealogy(){
-  var W = 1080, H = 1024;
+  var W = 1100, H = 1660;
   var wrap = document.getElementById('genealogy-wrap');
 
   (DATA.graph.lineages||[]).forEach(function(L){ LIN_BY_ID[L.id] = L; });
@@ -63,67 +63,145 @@ function renderGenealogy(){
     return L ? L.members.length : 0;
   }
 
-  function node(linId,x,y,w,label,sub,fill,textFill){
-    var h = 70;
-    textFill = textFill || '#F7F3EB';
-    var n = count(linId);
-    var bw = 104, bh = 19, by = y + 14;
-    return '<g class="tree-node" data-lin="'+linId+'" tabindex="0" role="button" ' +
-             'aria-label="Explorar '+esc(label)+'">' +
-      '<rect class="tn-box" x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="6" fill="'+fill+'" stroke="#C9A227" stroke-width="1"/>' +
-      '<text x="'+x+'" y="'+(y-16)+'" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11.5" font-weight="700" fill="'+textFill+'" letter-spacing="0.4">'+esc(label)+'</text>' +
-      (sub ? '<text x="'+x+'" y="'+(y-3)+'" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" fill="'+textFill+'" opacity="0.72">'+esc(sub)+'</text>' : '') +
-      '<g class="tn-btn">' +
+  var stroke = 'stroke="#C9A227" stroke-width="1.6" opacity="0.72"';
+  function v(x,y1,y2){ return '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" '+stroke+'/>'; }
+  function hline(x1,x2,y){ return '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" '+stroke+'/>'; }
+  function fork(parentX, parentBottom, children){
+    var tops = children.map(function(c){ return c.y - c.t; });
+    var barY = Math.min.apply(null, tops) - 22;
+    if(barY < parentBottom + 10) barY = parentBottom + 16;
+    var xs = children.map(function(c){ return c.x; });
+    var s = v(parentX, parentBottom, barY);
+    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    if(minX !== maxX) s += hline(minX, maxX, barY);
+    children.forEach(function(c){ s += v(c.x, barY, c.y - c.t); });
+    return s;
+  }
+  function down(a, b){
+    return v(a.x, a.y + a.t, b.y - b.t);
+  }
+  function merge(parents, child){
+    var bottoms = parents.map(function(p){ return p.y + p.t; });
+    var barY = Math.max.apply(null, bottoms) + 22;
+    var childTop = child.y - child.t;
+    if(barY > childTop - 10) barY = (Math.max.apply(null, bottoms) + childTop) / 2;
+    var xs = parents.map(function(p){ return p.x; });
+    var s = '';
+    parents.forEach(function(p){ s += v(p.x, p.y + p.t, barY); });
+    s += hline(Math.min.apply(null, xs), Math.max.apply(null, xs), barY);
+    s += v(child.x, barY, childTop);
+    return s;
+  }
+  function branchRight(stemX, parentBottom, children){
+    var last = children[children.length-1];
+    var s = v(stemX, parentBottom, last.y);
+    children.forEach(function(c){
+      s += hline(stemX, c.x - c.w/2, c.y);
+    });
+    return s;
+  }
+
+  function node(cfg){
+    var boxH = cfg.h != null ? cfg.h : ((cfg.lin || cfg.sub) ? 68 : 54);
+    var t = boxH/2;
+    var textFill = cfg.textFill || '#F7F3EB';
+    var interactive = !!(cfg.lin || cfg.work);
+    var n = cfg.lin ? count(cfg.lin) : 0;
+    var x = cfg.x, y = cfg.y, w = cfg.w;
+    var cls = interactive ? ' class="tree-node"' : '';
+    var extra = '';
+    if(cfg.lin) extra += ' data-lin="'+cfg.lin+'"';
+    if(cfg.work) extra += ' data-work="'+cfg.work+'" data-kind="full"';
+    if(interactive) extra += ' tabindex="0" role="button" aria-label="'+(cfg.work?'Abrir ':'Explorar ')+esc(cfg.label)+'"';
+    var titleY = cfg.sub ? y - (cfg.lin ? 16 : 8) : (cfg.lin ? y - 8 : y + 4);
+    var s = '<g'+cls+extra+'>' +
+      '<rect class="tn-box" x="'+(x-w/2)+'" y="'+(y-t)+'" width="'+w+'" height="'+boxH+'" rx="6" fill="'+cfg.fill+'" stroke="#C9A227" stroke-width="'+(cfg.dash?'1.4':'1')+'"'+(cfg.dash?' stroke-dasharray="4 3"':'')+'/>' +
+      '<text x="'+x+'" y="'+titleY+'" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="'+(cfg.small?10.5:11.5)+'" font-weight="700" fill="'+textFill+'" letter-spacing="0.4">'+esc(cfg.label)+'</text>';
+    if(cfg.sub){
+      s += '<text x="'+x+'" y="'+(titleY+14)+'" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" fill="'+textFill+'" opacity="0.72">'+esc(cfg.sub)+'</text>';
+    }
+    if(cfg.lin){
+      var bw = 104, bh = 19, by = y + 14;
+      s += '<g class="tn-btn">' +
         '<rect x="'+(x-bw/2)+'" y="'+(by-bh/2)+'" width="'+bw+'" height="'+bh+'" rx="9.5" fill="#C9A227"/>' +
         '<text x="'+x+'" y="'+(by+3.6)+'" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" font-weight="700" fill="#0A1F33" letter-spacing="0.9">EXPLORAR · '+n+'</text>' +
-      '</g>' +
-    '</g>';
-  }
-  function link(x1,y1,x2,y2){
-    var midY = (y1+y2)/2;
-    return '<path d="M'+x1+','+y1+' C'+x1+','+midY+' '+x2+','+midY+' '+x2+','+y2+'" fill="none" stroke="#C9A227" stroke-width="1.4" opacity="0.5"/>';
-  }
-  function straight(x1,y1,x2,y2){
-    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#C9A227" stroke-width="1.4" opacity="0.5"/>';
+      '</g>';
+    }
+    s += '</g>';
+    return s;
   }
 
   var navy='#13293D', navyDark='#0A1F33', stone='#33506B', ochre='#8A6A16', slate='#4A4F55';
-  var yR=48, y2=168, y3=282, y4=386, y5=500, y6=620, y7=734, y8=848, y9=962;
-  var T=35; // half height
+  var T = 34, Tc = 27;
 
-  var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="min-width:880px;display:block;font-family:Inter,sans-serif;">';
+  var raiz   = {x:550, y:48,   t:T};
+  var vida   = {x:270, y:158,  t:T};
+  var auto   = {x:830, y:158,  t:T};
+  var frank  = {x:270, y:262,  t:Tc};
+  var robos  = {x:830, y:262,  t:T};
+  var robot  = {x:830, y:366,  t:T};
+  var comp   = {x:550, y:480,  t:T};
+  var ciber  = {x:195, y:594,  t:T};
+  var ia     = {x:550, y:594,  t:T};
+  var redes  = {x:905, y:594,  t:T};
+  var dl     = {x:905, y:698,  t:T};
+  var gen    = {x:728, y:802,  t:T};
+  var agent  = {x:728, y:906,  t:T};
+  var cyb    = {x:338, y:1008, t:T, w:188};
+  var sist   = {x:358, y:1112, t:T, w:228};
+  var iarob  = {x:550, y:1240, t:Tc};
+  var andr   = {x:550, y:1336, t:T};
+  var humano = {x:550, y:1434, t:Tc};
+  var trans  = {x:300, y:1538, t:T};
+  var pos    = {x:800, y:1538, t:T};
+  var sing   = {x:550, y:1630, t:Tc};
 
-  // links first (drawn under nodes)
-  svg += link(W/2,yR+T, 300,y2-T) + link(W/2,yR+T, 740,y2-T);
-  svg += link(740,y2+T, 740,y3-T);
-  svg += link(740,y3+T, 740,y4-T);
-  svg += link(300,y2+T, 520,y5-T) + link(740,y4+T, 520,y5-T);
-  svg += link(520,y5+T, 250,y6-T) + link(520,y5+T, 540,y6-T) + link(520,y5+T, 830,y6-T);
-  svg += link(540,y6+T, 660,y7-T) + link(830,y6+T, 660,y7-T);
-  svg += link(250,y6+T, 250,y7-T);
-  svg += straight(520,y5+T, 520,y8-T);
-  svg += link(520,y8+T, 340,y9-T) + link(520,y8+T, 700,y9-T);
+  var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="min-width:920px;display:block;font-family:Inter,sans-serif;">';
 
-  // nodes
-  svg += node('raiz',        W/2, yR, 258, 'CRIAÇÃO ARTIFICIAL', 'a rede completa', navyDark);
-  svg += node('vida',        300, y2, 232, 'VIDA ARTIFICIAL', 'Golem · Frankenstein', stone);
-  svg += node('automatos',   740, y2, 232, 'AUTÔMATOS', 'Talos · Pigmalião', stone);
-  svg += node('robos',       740, y3, 206, 'ROBÔS', 'R.U.R., 1920', navy);
-  svg += node('robotica',    740, y4, 206, 'ROBÓTICA', 'Asimov, 1942', navy);
-  svg += node('computacao',  520, y5, 244, 'COMPUTAÇÃO', 'Babbage · Lovelace · Turing', navyDark);
-  svg += node('cibernetica', 250, y6, 218, 'CIBERNÉTICA', 'Wiener, 1948', stone);
-  svg += node('ia',          540, y6, 228, 'INTELIGÊNCIA ARTIFICIAL', 'Dartmouth, 1956', ochre);
-  svg += node('redes',       830, y6, 218, 'REDES NEURAIS', 'McCulloch–Pitts', stone);
-  svg += node('ciborgues',   250, y7, 232, 'CIBORGUES', 'RoboCop · Ghost in the Shell', slate);
-  svg += node('generativa',  660, y7, 228, 'IA GENERATIVA', 'Agentes · LLMs', ochre);
-  svg += node('androides',   520, y8, 244, 'ANDROIDES', '"O que é humano?"', navy);
-  svg += node('transumanismo',340,y9, 228, 'TRANSUMANISMO', 'enhancement · Kurzweil', ochre);
-  svg += node('poshumanismo',700, y9, 240, 'PÓS-HUMANISMO', 'upload · consciência distribuída', ochre);
+  svg += fork(raiz.x, raiz.y+raiz.t, [vida, auto]);
+  svg += down(vida, frank);
+  svg += down(auto, robos);
+  svg += down(robos, robot);
+  svg += merge([frank, robot], comp);
+  svg += fork(comp.x, comp.y+comp.t, [ciber, ia, redes]);
+  svg += down(redes, dl);
+  svg += merge([ia, dl], gen);
+  svg += down(gen, agent);
+  svg += branchRight(ciber.x, ciber.y+ciber.t, [cyb, sist]);
+
+  svg += down(iarob, andr);
+  svg += down(andr, humano);
+  svg += fork(humano.x, humano.y+humano.t, [trans, pos]);
+  svg += merge([trans, pos], sing);
+
+  svg += node({lin:'raiz',        x:raiz.x, y:raiz.y, w:258, label:'CRIAÇÃO ARTIFICIAL', sub:'a rede completa', fill:navyDark});
+  svg += node({lin:'vida',        x:vida.x, y:vida.y, w:228, label:'VIDA ARTIFICIAL', sub:'Golem · Pigmalião', fill:stone});
+  svg += node({lin:'automatos',   x:auto.x, y:auto.y, w:228, label:'AUTÔMATOS', sub:'Talos · Hefesto', fill:stone});
+  svg += node({work:'w7',         x:frank.x, y:frank.y, w:210, h:54, label:'Frankenstein', sub:'Shelley · 1818', fill:stone});
+  svg += node({lin:'robos',       x:robos.x, y:robos.y, w:206, label:'ROBÔS', sub:'R.U.R., 1920', fill:navy});
+  svg += node({lin:'robotica',    x:robot.x, y:robot.y, w:206, label:'ROBÓTICA', sub:'Asimov, 1942', fill:navy});
+  svg += node({lin:'computacao',  x:comp.x, y:comp.y, w:248, label:'COMPUTAÇÃO', sub:'Babbage · Lovelace · Turing', fill:navyDark});
+  svg += node({lin:'cibernetica', x:ciber.x, y:ciber.y, w:210, label:'CIBERNÉTICA', sub:'Wiener, 1948', fill:stone});
+  svg += node({lin:'ia',          x:ia.x, y:ia.y, w:210, label:'IA', sub:'Dartmouth, 1956', fill:ochre});
+  svg += node({lin:'redes',       x:redes.x, y:redes.y, w:210, label:'REDES NEURAIS', sub:'McCulloch–Pitts', fill:stone});
+  svg += node({lin:'redes',       x:dl.x, y:dl.y, w:210, label:'DEEP LEARNING', sub:'o ramo conexionista', fill:ochre});
+  svg += node({lin:'generativa',  x:gen.x, y:gen.y, w:220, h:68, label:'IA GENERATIVA', fill:ochre});
+  svg += node({lin:'generativa',  x:agent.x, y:agent.y, w:220, h:68, label:'AGENTES / LLMs', fill:ochre});
+  svg += node({lin:'ciborgues',   x:cyb.x, y:cyb.y, w:188, label:'CYBORGUES', sub:'corpo + máquina', fill:slate});
+  svg += node({lin:'cibernetica', x:sist.x, y:sist.y, w:228, h:68, small:true, label:'SISTEMAS HOMEM-MÁQUINA', fill:slate});
+  svg += node({x:iarob.x, y:iarob.y, w:228, h:54, label:'IA + ROBÓTICA', dash:true, fill:navyDark});
+  svg += node({lin:'androides',   x:andr.x, y:andr.y, w:228, h:68, label:'ANDROIDES', fill:navy});
+  svg += node({x:humano.x, y:humano.y, w:248, h:54, label:'"O que é humano?"', dash:true, fill:navy});
+  svg += node({lin:'transumanismo', x:trans.x, y:trans.y, w:230, label:'TRANSUMANISMO', sub:'enhancement', fill:ochre});
+  svg += node({lin:'poshumanismo',  x:pos.x, y:pos.y, w:240, label:'PÓS-HUMANISMO', sub:'upload / consciência', fill:ochre});
+  svg += node({x:sing.x, y:sing.y, w:228, h:54, label:'SINGULARIDADE', fill:navyDark});
 
   svg += '</svg>';
   wrap.innerHTML = svg;
 
   function fire(el){
+    var work = el.getAttribute('data-work');
+    if(work){ openModal(work, el.getAttribute('data-kind')||'full'); return; }
     var lin = el.getAttribute('data-lin');
     if(lin) openGraph(lin);
   }
