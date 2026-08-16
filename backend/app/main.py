@@ -236,6 +236,18 @@ def universo_da_ia_js():
     return _public_static_file("universo-da-ia-interativo.js", "application/javascript; charset=utf-8")
 
 
+@app.get("/ficcao-realidade-catalogo-interativo.html")
+@app.get("/ficcao-realidade-catalogo-interativo")
+def ficcao_realidade_catalogo_html():
+    """Catálogo interativo Ficção & Realidade (HTML estático em public/)."""
+    return _public_static_file("ficcao-realidade-catalogo-interativo.html", "text/html; charset=utf-8")
+
+
+@app.get("/ficcao-realidade-catalogo-interativo.js")
+def ficcao_realidade_catalogo_js():
+    return _public_static_file("ficcao-realidade-catalogo-interativo.js", "application/javascript; charset=utf-8")
+
+
 @app.get("/401.png")
 def unauthorized_png():
     """Ilustração da página HTTP 401 (public/401.png → dist/401.png no build)."""
