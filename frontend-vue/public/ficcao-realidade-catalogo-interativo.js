@@ -358,6 +358,19 @@ function renderChips(){
   });
 }
 
+function yearKey(e){
+  var y = e.year;
+  if(y===undefined || y===null || y==='') return -1e9;
+  var n = Number(y);
+  return isNaN(n) ? -1e9 : n;
+}
+
+function sortByDate(a,b){
+  var ya = yearKey(a), yb = yearKey(b);
+  if(ya!==yb) return ya-yb;
+  return (a.title||a.name||'').localeCompare(b.title||b.name||'', 'pt-BR');
+}
+
 function cardHTML(e){
   var color = CAT_COLOR[e.media] || 'var(--cat-mitos)';
   var title = e.kind==='quick' ? e.name : e.title.replace(/\s*\(\d{4}[^)]*\)\s*$/,'').replace(/\s*\([^)]*\d{4}[^)]*\)\s*$/,'');
@@ -394,21 +407,36 @@ function renderCatalog(){
     return true;
   });
 
-  // sort: chronological when possible, else alphabetical
-  list.sort(function(a,b){
-    var ya = a.year||9999, yb = b.year||9999;
-    if(ya!==yb) return ya-yb;
-    return (a.title||'').localeCompare(b.title||'', 'pt-BR');
-  });
+  list.sort(sortByDate);
 
   var grid = document.getElementById('catalog-grid');
   document.getElementById('result-count').textContent = list.length + ' obra' + (list.length===1?'':'s');
 
   if(list.length===0){
+    grid.className = 'catalog-board';
     grid.innerHTML = '<div class="empty-state">Nenhuma obra encontrada. Tente outro termo ou limpe os filtros.</div>';
     return;
   }
-  grid.innerHTML = list.map(cardHTML).join('');
+
+  var byCat = {};
+  list.forEach(function(e){
+    var k = e.media || 'literatura';
+    (byCat[k] = byCat[k] || []).push(e);
+  });
+  var cats = CAT_ORDER.filter(function(c){ return byCat[c] && byCat[c].length; });
+  Object.keys(byCat).forEach(function(c){
+    if(cats.indexOf(c)===-1) cats.push(c);
+  });
+
+  var filtered = cats.length===1;
+  grid.className = 'catalog-board'+(filtered?' filtered':'');
+  grid.innerHTML = cats.map(function(c){
+    var items = byCat[c];
+    return '<div class="catalog-col" data-cat="'+c+'">' +
+      '<div class="catalog-col-head"><span class="chip-dot" style="background:'+CAT_COLOR[c]+'"></span>'+esc(CAT_LABEL[c]||c)+'<span class="catalog-col-n">'+items.length+'</span></div>' +
+      '<div class="catalog-col-cards">'+items.map(cardHTML).join('')+'</div>' +
+    '</div>';
+  }).join('');
 }
 
 function openModal(id, kind){
