@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AEGIS · frontend-vue — System Design e Auditoria de Consistência</title>
+<style>
+:root{
+  --navy:#0c2340; --navy-2:#132d52; --navy-deep:#081729;
+  --gold:#9b7e46; --gold-2:#b8975a; --gold-text:#7d6437;
+  --ivory:#f6f1e7; --ivory-2:#fbf8f1; --paper:#fdfcfa;
+  --ink:#1c1c1c; --ink-2:#3a3a3a; --muted:#5a5a5a; --faint:#8a8a8a;
+  --line:rgba(12,35,64,.12); --line-soft:rgba(12,35,64,.07);
+  --crit:#8f2b2b; --high:#b06a1f; --med:#9a8420; --low:#5b7a86;
+  --ok:#2f6e4a;
+  --serif:"Palatino Linotype","Book Antiqua",Palatino,"Iowan Old Style",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --w:1080px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+
+/* ---------- COVER ---------- */
+.cover{background:linear-gradient(165deg,var(--navy-deep) 0%,var(--navy) 55%,var(--navy-2) 100%);color:#fff;padding:76px 32px 64px;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,transparent,var(--gold) 18%,var(--gold-2) 50%,var(--gold) 82%,transparent)}
+.cover-in{max-width:var(--w);margin:0 auto}
+.eyebrow{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-2);font-weight:600;margin-bottom:26px}
+.cover h1{font-family:var(--serif);font-size:44px;line-height:1.14;font-weight:400;letter-spacing:-.015em;max-width:20ch}
+.cover h1 em{font-style:normal;color:var(--gold-2)}
+.cover .lede{margin-top:20px;font-size:16.5px;line-height:1.66;color:rgba(255,255,255,.8);max-width:64ch;font-weight:300}
+.cover-meta{margin-top:38px;padding-top:22px;border-top:1px solid rgba(255,255,255,.14);display:flex;flex-wrap:wrap;gap:38px}
+.cm-item .k{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:5px}
+.cm-item .v{font-family:var(--serif);font-size:19px;color:#fff}
+.cm-item .v small{font-size:12px;color:rgba(255,255,255,.55);font-family:var(--sans);margin-left:5px}
+
+/* ---------- NAV ---------- */
+nav.toc{position:sticky;top:0;z-index:50;background:rgba(12,35,64,.97);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.1)}
+nav.toc ul{max-width:var(--w);margin:0 auto;padding:0 32px;display:flex;gap:2px;list-style:none;overflow-x:auto}
+nav.toc a{display:block;padding:13px 14px;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.62);text-decoration:none;white-space:nowrap;border-bottom:2px solid transparent;transition:.18s}
+nav.toc a:hover{color:#fff;border-bottom-color:var(--gold)}
+
+/* ---------- LAYOUT ---------- */
+main{max-width:var(--w);margin:0 auto;padding:0 32px 90px}
+section{padding-top:64px}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:8px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sec-num{font-family:var(--serif);font-size:13px;color:var(--gold-text);letter-spacing:.1em;flex-shrink:0}
+.sec-head h2{font-family:var(--serif);font-size:29px;font-weight:400;letter-spacing:-.01em;color:var(--navy)}
+.sec-sub{color:var(--muted);font-size:14.5px;margin:16px 0 26px;max-width:76ch}
+h3{font-family:var(--serif);font-size:20px;font-weight:400;color:var(--navy);margin:36px 0 12px}
+h4{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold-text);font-weight:700;margin:28px 0 10px}
+p{margin-bottom:13px;color:var(--ink-2)}
+p.tight{margin-bottom:8px}
+ul.bul,ol.bul{margin:0 0 15px 20px;color:var(--ink-2)}
+ul.bul li,ol.bul li{margin-bottom:7px}
+code{font-family:var(--mono);font-size:.88em;background:var(--ivory);padding:1.5px 5px;border-radius:3px;color:var(--navy-2);border:1px solid rgba(155,126,70,.16)}
+strong{color:var(--ink);font-weight:640}
+
+/* ---------- EXEC SUMMARY ---------- */
+.exec{background:var(--ivory-2);border:1px solid rgba(155,126,70,.24);border-left:3px solid var(--gold);padding:30px 34px;margin:8px 0 0;border-radius:2px}
+.exec p:last-child{margin-bottom:0}
+.exec .lead{font-family:var(--serif);font-size:17.5px;line-height:1.6;color:var(--navy);margin-bottom:16px}
+
+/* ---------- STAT ROW ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:28px 0}
+.stat{background:#fff;padding:19px 20px}
+.stat .n{font-family:var(--serif);font-size:29px;color:var(--navy);line-height:1.1}
+.stat .n.warn{color:var(--crit)}
+.stat .l{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);margin-top:7px;line-height:1.4}
+
+/* ---------- TABLES ---------- */
+.tw{overflow-x:auto;margin:18px 0 24px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
+th{background:var(--navy);color:#fff;text-align:left;padding:11px 14px;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line-soft);color:var(--ink-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:nth-child(even){background:#fcfbf9}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.mono{font-family:var(--mono);font-size:12px}
+
+/* ---------- DIAGRAM ---------- */
+pre.diagram{background:var(--navy);color:#dfe6f0;font-family:var(--mono);font-size:12px;line-height:1.55;padding:24px 26px;overflow-x:auto;margin:20px 0 26px;border-radius:2px;border-left:3px solid var(--gold)}
+
+/* ---------- FINDINGS ---------- */
+.finding{border:1px solid var(--line);border-left:3px solid var(--med);background:#fff;padding:20px 24px;margin:14px 0;border-radius:2px}
+.finding.crit{border-left-color:var(--crit)}
+.finding.high{border-left-color:var(--high)}
+.finding.low{border-left-color:var(--low)}
+.f-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:9px}
+.sev{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:2px;color:#fff;background:var(--med)}
+.crit .sev{background:var(--crit)}.high .sev{background:var(--high)}.low .sev{background:var(--low)}
+.f-id{font-family:var(--mono);font-size:11.5px;color:var(--gold-text);font-weight:600}
+.f-title{font-family:var(--serif);font-size:17px;color:var(--navy);flex:1;min-width:240px}
+.finding p{font-size:14px;margin-bottom:11px}
+.fix{background:var(--ivory);border-top:1px solid rgba(155,126,70,.2);margin:14px -24px -20px;padding:14px 24px 16px;border-radius:0 0 2px 2px}
+.fix .lbl{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold-text);font-weight:700;margin-bottom:6px}
+.fix p,.fix li{font-size:13.5px;margin-bottom:6px;color:var(--ink-2)}
+.fix ol,.fix ul{margin-left:18px}
+.fix p:last-child,.fix li:last-child{margin-bottom:0}
+
+/* ---------- GOOD ---------- */
+.good{border:1px solid rgba(47,110,74,.28);background:#f6faf7;padding:20px 24px;border-radius:2px;margin:20px 0}
+.good h4{color:var(--ok);margin-top:0}
+.good ul{margin:0 0 0 19px}
+.good li{font-size:14px;margin-bottom:6px;color:var(--ink-2)}
+
+/* ---------- WAVES ---------- */
+.wave{border:1px solid var(--line);margin:20px 0;background:#fff}
+.wave-h{background:var(--navy);color:#fff;padding:14px 22px;display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
+.wave-h .t{font-family:var(--serif);font-size:19px}
+.wave-h .t span{color:var(--gold-2);margin-right:9px}
+.wave-h .d{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.wave table{border:none}
+.wave .exit{background:var(--ivory);padding:12px 22px;font-size:13px;color:var(--ink-2);border-top:1px solid rgba(155,126,70,.2)}
+.wave .exit b{color:var(--gold-text);font-size:10px;letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:3px}
+
+.chain{background:var(--ivory-2);border:1px solid rgba(155,126,70,.22);padding:22px 26px;margin:20px 0;border-radius:2px}
+.chain pre{font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--navy-2);overflow-x:auto}
+
+footer{background:var(--navy);color:rgba(255,255,255,.55);padding:34px 32px;font-size:12.5px;margin-top:60px}
+footer .fin{max-width:var(--w);margin:0 auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer b{color:var(--gold-2);font-weight:500}
+
+@media (max-width:720px){
+  .cover{padding:52px 20px 44px}.cover h1{font-size:31px}
+  main{padding:0 20px 60px}nav.toc ul{padding:0 20px}
+  .exec{padding:22px 20px}.finding{padding:17px 18px}
+  .fix{margin:12px -18px -17px;padding:13px 18px}
+}
+@media print{
+  nav.toc{display:none}body{font-size:11pt}.cover{padding:40px 0}
+  section{page-break-inside:avoid}.finding{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="cover-in">
+    <div class="eyebrow">AEGIS · Valorian 4 Future · Auditoria de Engenharia</div>
+    <h1>System Design do <em>frontend-vue</em><br>e os 41 itens que destoam</h1>
+    <p class="lede">A espinha dorsal está correta — camada de API isolada, autorização em três eixos, domínio estratégico rastreável. O que destoa está quase todo em uma camada só: a de apresentação. Este documento descreve o sistema como ele é, cataloga cada divergência com evidência em arquivo e linha, e propõe um plano de ajuste em quatro ondas.</p>
+    <div class="cover-meta">
+      <div class="cm-item"><div class="k">Escopo</div><div class="v">30.898 <small>linhas · 73 arquivos</small></div></div>
+      <div class="cm-item"><div class="k">Superfície</div><div class="v">35 views <small>· 39 rotas</small></div></div>
+      <div class="cm-item"><div class="k">Achados</div><div class="v">41 <small>4 críticos · 12 altos</small></div></div>
+      <div class="cm-item"><div class="k">Commit base</div><div class="v">d99b26b <small>· 18 ago 2026</small></div></div>
+    </div>
+  </div>
+</header>
+
+<nav class="toc"><ul>
+  <li><a href="#resumo">Resumo</a></li>
+  <li><a href="#arquitetura">Arquitetura</a></li>
+  <li><a href="#rotas">Rotas &amp; domínios</a></li>
+  <li><a href="#acesso">Modelo de acesso</a></li>
+  <li><a href="#cadeia">Cadeia de valor</a></li>
+  <li><a href="#ds">Design System</a></li>
+  <li><a href="#componentes">Componentes</a></li>
+  <li><a href="#ux">UX</a></li>
+  <li><a href="#a11y">Responsivo &amp; A11y</a></li>
+  <li><a href="#build">Build</a></li>
+  <li><a href="#plano">Plano</a></li>
+</ul></nav>
+
+<main>
+
+<section id="resumo">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Resumo executivo</h2></div>
+  <div class="exec">
+    <p class="lead">O <code>frontend-vue</code> entrega quatro produtos dentro de um mesmo shell: a mentoria, o AI Hub estratégico, a Governança de IA e o painel administrativo. A arquitetura que sustenta isso é sólida. A camada que o usuário vê não acompanhou.</p>
+    <p><strong>O que está certo e deve ser preservado:</strong> nenhuma view chama <code>fetch</code> diretamente — tudo passa por <code>api/client.ts</code>, com erro unificado em <code>ApiError</code>. Zero <code>any</code> em 30.898 linhas. Zero <code>v-html</code>. Sessão por cookie <em>HttpOnly</em>, nunca token em <code>localStorage</code>. Toda a autorização de navegação vive num único <code>beforeEach</code>, com três eixos independentes. E <code>lib/strategicMapGraph.ts</code> mostra que o time sabe extrair regra de domínio para fora da view — 1.201 linhas de lógica pura e testável.</p>
+    <p><strong>O que destoa:</strong> não existe biblioteca de componentes. 35 views para 5 componentes. Cada tela reimplementou botão, card, modal, tabela e estados de carregamento com CSS próprio — <strong>13.288 linhas de CSS dentro de arquivos <code>.vue</code>, 43% de todo o código-fonte</strong>. Disso decorre o resto: três sistemas de tokens que dão dois dourados e duas serifas à mesma marca, 82 cores fora do sistema, 27 tamanhos de fonte, e a cor de texto secundário mais usada do produto (227 ocorrências) com contraste de 2,29:1 — menos da metade do mínimo WCAG.</p>
+    <p><strong>Dois bloqueios de entrega:</strong> o build de produção não passa (48 erros de tipo registrados em <code>tsc5.txt</code>), e o cache está desligado para todos os assets com hash.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n warn">48</div><div class="l">Erros de tipo · build falha</div></div>
+    <div class="stat"><div class="n warn">13.288</div><div class="l">Linhas de CSS em .vue</div></div>
+    <div class="stat"><div class="n warn">82</div><div class="l">Cores fora do sistema</div></div>
+    <div class="stat"><div class="n warn">227</div><div class="l">Textos com 2,29:1</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Componentes p/ 35 views</div></div>
+    <div class="stat"><div class="n">27</div><div class="l">Views sem media query</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">Usos de <code>any</code></div></div>
+    <div class="stat"><div class="n">0</div><div class="l">Views com fetch solto</div></div>
+  </div>
+</section>
+
+<section id="arquitetura">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Arquitetura em camadas</h2></div>
+  <p class="sec-sub">Vue 3.5 com <code>&lt;script setup&gt;</code>, TypeScript 5.6 em <code>strict</code> + <code>noUncheckedIndexedAccess</code>, Vite 6, Pinia 2, vue-router 4 com <em>lazy loading</em> por rota. CSS puro com custom properties, sem pré-processador e sem framework de utilitários.</p>
+
+<pre class="diagram">                    ┌──────────────────────────────────────────┐
+   Navegador  ─────►│  index.html → main.ts → App.vue          │
+                    │  createPinia() · router · main.css       │
+                    └────────────────┬─────────────────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+  ┌──────▼───────┐           ┌───────▼────────┐          ┌───────▼───────┐
+  │ DefaultLayout│           │  AdminLayout   │          │ rotas soltas  │
+  │  Topbar fixa │           │ sidebar 220px  │          │ /login  /401  │
+  │  (pílulas)   │           │  (sem topbar)  │          │               │
+  └──────┬───────┘           └───────┬────────┘          └───────────────┘
+         │                           │
+    25 views de produto        10 views de admin
+         │                           │
+         └────────────┬──────────────┘
+                      │
+        ┌─────────────▼──────────────┐      ┌────────────────────────┐
+        │  stores/  (Pinia)          │      │  lib/                  │
+        │   auth · courses           │◄────►│   tools · track        │
+        └─────────────┬──────────────┘      │   strategicMapGraph    │
+                      │                     │   accessFormat         │
+        ┌─────────────▼──────────────┐      └────────────────────────┘
+        │  api/  (16 módulos)        │
+        │  client.ts: fetch, cookie, │
+        │  ApiError, 401 → /401      │
+        └─────────────┬──────────────┘
+                      │  cookie HttpOnly · credentials: include
+                ┌─────▼──────┐
+                │  FastAPI   │
+                └────────────┘</pre>
+
+  <div class="good">
+    <h4>Regra de dependência respeitada</h4>
+    <ul>
+      <li>views → api → client. <strong>Nenhuma view chama <code>fetch</code> diretamente.</strong> A única exceção é <code>lib/track.ts</code>, e é intencional: telemetria <em>fire-and-forget</em> que não pode propagar erro de rede para a UI.</li>
+      <li><code>ApiError { message, code, status }</code> unifica o contrato de erro, com suporte ao formato <code>detail: { code, message }</code> do backend para erros de negócio com código estável.</li>
+      <li>Um <code>401</code> em qualquer chamada que não seja sonda de sessão dispara logout e redireciona para <code>/401</code> — regra única, em <code>api/client.ts</code>.</li>
+    </ul>
+  </div>
+
+  <h3>Distribuição do código</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Camada</th><th class="num">Linhas</th><th class="num">% do src</th><th>Leitura</th></tr></thead>
+    <tbody>
+      <tr><td>Views (35 arquivos)</td><td class="num">25.644</td><td class="num">83%</td><td>concentração excessiva</td></tr>
+      <tr><td>&nbsp;&nbsp;<em>dos quais, CSS em <code>&lt;style&gt;</code></em></td><td class="num">13.288</td><td class="num">43%</td><td>sintoma direto da ausência de componentes</td></tr>
+      <tr><td>API (16 módulos)</td><td class="num">2.182</td><td class="num">7%</td><td>bem dimensionada</td></tr>
+      <tr><td><code>lib/</code></td><td class="num">1.336</td><td class="num">4%</td><td>quase toda em <code>strategicMapGraph.ts</code></td></tr>
+      <tr><td>Componentes (5 arquivos)</td><td class="num">1.153</td><td class="num">3,7%</td><td><strong>o gargalo</strong></td></tr>
+      <tr><td>Stores · types · router · composables</td><td class="num">583</td><td class="num">2%</td><td>enxuto</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="rotas">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Mapa de rotas e domínios</h2></div>
+  <p class="sec-sub">39 rotas em quatro domínios de produto. As sete maiores views concentram 11.722 linhas — 38% de todo o código-fonte.</p>
+
+  <h4>Mentoria</h4>
+  <div class="tw"><table>
+    <thead><tr><th>Rota</th><th>View</th><th class="num">LOC</th><th>Papel</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">/</td><td>LandingView</td><td class="num">54</td><td>embute <code>public/lp.html</code> num <code>&lt;iframe&gt;</code></td></tr>
+      <tr><td class="mono">/programa</td><td>ProgramaView</td><td class="num">1.949</td><td>progresso na trilha, check de materiais, conclusão de encontro</td></tr>
+      <tr><td class="mono">/materiais</td><td>MateriaisView</td><td class="num">330</td><td>biblioteca de apoio por encontro</td></tr>
+      <tr><td class="mono">/agenda</td><td>AgendaView</td><td class="num">601</td><td>calendário da jornada</td></tr>
+      <tr><td class="mono">/trilhas · /trilhas/:slug</td><td>TrilhasView · TrilhaShowcaseView</td><td class="num">839</td><td>catálogo e vitrine</td></tr>
+      <tr><td class="mono">/quiz/:encontroId · /quiz/q/:quizId</td><td>QuizView</td><td class="num">1.225</td><td>aplicação do quiz</td></tr>
+      <tr><td class="mono">/quiz-respostas</td><td>QuizRespostasView</td><td class="num">688</td><td>histórico de respostas</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>AI Hub — a cadeia estratégica</h4>
+  <div class="tw"><table>
+    <thead><tr><th>Rota</th><th>View</th><th class="num">LOC</th><th>Artefato produzido</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">/ai-maturity</td><td>AiMaturityListView</td><td class="num">443</td><td>lista de autoavaliações</td></tr>
+      <tr><td class="mono">/ai-maturity/new · /:id/edit</td><td>AiMaturityView</td><td class="num">1.318</td><td><strong>Diagnóstico</strong> — 4 dimensões × 3 tiers</td></tr>
+      <tr><td class="mono">/ai-maturity/:id</td><td>AiMaturityDetailView</td><td class="num">972</td><td>resultado + geração da SWOT</td></tr>
+      <tr><td class="mono">/swot/:id?</td><td>SwotAnalysisView</td><td class="num">2.255</td><td><strong>SWOT + TOWS</strong> — quadrantes, pilares, watchlist</td></tr>
+      <tr><td class="mono">/okrs · /okrs/:id</td><td>OkrCyclesListView · OkrCycleEditorView</td><td class="num">1.709</td><td><strong>Ciclo de OKR</strong> — objetivos e KRs</td></tr>
+      <tr><td class="mono">/projetos · /projetos/:id</td><td>ProjetosListView · ProjetoCanvasView</td><td class="num">3.242</td><td><strong>AI Canvas</strong> do projeto</td></tr>
+      <tr><td class="mono">/mapa-estrategico</td><td>MapaEstrategicoView</td><td class="num">1.624</td><td><strong>Mapa</strong> com lentes e linhagem</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Governança de IA · Organização · Administração</h4>
+  <div class="tw"><table>
+    <thead><tr><th>Rota</th><th>View</th><th class="num">LOC</th><th>Papel</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">/governanca/dashboard</td><td>GovernanceDashboardView</td><td class="num">448</td><td>métricas, profundidade, evidências</td></tr>
+      <tr><td class="mono">/governanca/inventario</td><td>GovernanceInventoryView</td><td class="num">376</td><td>inventário de sistemas de IA</td></tr>
+      <tr><td class="mono">/governanca/sistemas/:id</td><td>GovernanceSystemView</td><td class="num">888</td><td>ficha do sistema + avaliação de risco</td></tr>
+      <tr><td class="mono">/governanca/gate/:id</td><td>GovernanceGateView</td><td class="num">517</td><td>checklist e decisão do gate</td></tr>
+      <tr><td class="mono">/organizacao/usuarios</td><td>OrgMembersView</td><td class="num">595</td><td>gestão de membros (org admin)</td></tr>
+      <tr><td class="mono">/admin + 9 subrotas</td><td>10 views</td><td class="num">5.408</td><td>dashboard, acessos, trilhas, landing, usuários, quiz, progresso</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="acesso">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Modelo de acesso — três eixos</h2></div>
+  <p class="sec-sub">Toda a autorização de navegação vive num único <code>router.beforeEach</code>. É o desenho correto e vale documentá-lo explicitamente, porque é a regra mais sutil do produto.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Eixo</th><th>Fonte</th><th>Escopo</th><th>Falha leva a</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Sessão</strong></td><td>cookie HttpOnly → <code>auth.loadUser()</code></td><td>12 prefixos protegidos</td><td class="mono">/401</td></tr>
+      <tr><td><strong>Papel · plataforma</strong></td><td><code>user.is_admin</code></td><td><code>/admin/*</code></td><td class="mono">/401 ou /</td></tr>
+      <tr><td><strong>Papel · organização</strong></td><td><code>user.is_org_admin</code></td><td><code>/organizacao/*</code></td><td class="mono">/401 ou /</td></tr>
+      <tr><td><strong>Ferramenta liberada</strong></td><td><code>user.tools[]</code> × <code>lib/tools.ts</code></td><td>6 ferramentas do AI Hub</td><td class="mono">/acesso-negado?tool=…</td></tr>
+      <tr><td><strong>E-mail verificado</strong></td><td><code>user.email_verified</code></td><td>rotas protegidas</td><td class="mono">/login</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Há ainda uma regra de <strong>destino</strong>: em <code>/</code>, um usuário logado com trilha vai para <code>/programa</code>; sem trilha — caso típico de membro criado por um admin de organização — cai na primeira ferramenta liberada segundo <code>TOOL_HOME_ORDER</code>. É o que permite vender o AI Hub sem a mentoria.</p>
+
+  <p>As seis ferramentas: <code>maturity</code> → <code>/ai-maturity</code>, <code>swot</code> → <code>/swot</code>, <code>canvas</code> → <code>/projetos</code>, <code>okr</code> → <code>/okrs</code>, <code>strategic_map</code> → <code>/mapa-estrategico</code>, <code>governance</code> → <code>/governanca</code>. A mentoria não entra nesse eixo: usa <code>course_slugs</code>.</p>
+</section>
+
+<section id="cadeia">
+  <div class="sec-head"><span class="sec-num">05</span><h2>A cadeia de valor rastreável</h2></div>
+  <p class="sec-sub">O diferencial do produto não são as telas — é o fato de que os artefatos se referenciam. Do diagnóstico ao mapa, cada etapa consome a anterior por identidade, não por cópia.</p>
+
+  <div class="chain"><pre>  Maturidade ──► SWOT ──► TOWS ──► OKR ──────┐
+   (4 dimensões)  (4 quadrantes) (4 cruzamentos)  ├──► Mapa Estratégico
+                     └────► AI Canvas ────────────┘     lentes pan/ges/lin
+                                                        linhagem por nó
+                     Governança ──► Gates ──► Evidências</pre></div>
+
+  <ul class="bul">
+    <li><code>AiMaturityDetailView</code> chama <code>createSwotFromMaturity</code> — o diagnóstico vira SWOT sem redigitação.</li>
+    <li><code>SwotAnalysisView</code> reconstrói o TOWS sob demanda: <code>updateSwotAnalysis(payload, id, { rebuildTows })</code>.</li>
+    <li><code>OkrCycleEditorView</code> e <code>ProjetoCanvasView</code> importam iniciativas TOWS diretamente da SWOT ativa.</li>
+    <li><code>MapaEstrategicoView</code> consome <code>fetchStrategicMap</code> e monta o grafo em <code>lib/strategicMapGraph.ts</code> — 1.201 linhas de lógica pura, com <code>lineageOf()</code> para rastrear a linhagem de qualquer nó.</li>
+  </ul>
+
+  <div class="good">
+    <h4>O padrão a replicar</h4>
+    <ul><li><code>strategicMapGraph.ts</code> é a única parte do projeto onde a regra de domínio foi extraída da view. É testável, reutilizável e deixou <code>MapaEstrategicoView</code> com metade do tamanho que teria. <strong>Este é o modelo para os outros seis god components.</strong></li></ul>
+  </div>
+</section>
+
+<section id="ds">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Design System — o que destoa</h2></div>
+  <p class="sec-sub"><code>assets/main.css</code> define 32 tokens, e todos os 32 são usados — nenhum token morto. O problema não é o que existe: é o que foi criado por fora.</p>
+
+  <div class="finding crit">
+    <div class="f-head"><span class="sev">Crítico</span><span class="f-id">DS-01</span><span class="f-title">Três sistemas de tokens concorrentes — a marca renderiza dois dourados e duas serifas</span></div>
+    <p><code>AiMaturityView.vue:591-613</code> e <code>SwotAnalysisView.vue:1168-1178</code> <strong>redefinem tokens globais com outros valores</strong>. O mesmo nome significa coisas diferentes conforme a rota:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Token</th><th>Global (main.css)</th><th>Maturidade / SWOT</th><th>Mapa Estratégico</th><th>Canvas</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">--gold</td><td class="mono">#9b7e46</td><td class="mono"><strong>#c6a15b</strong></td><td>herda</td><td>—</td></tr>
+        <tr><td class="mono">--navy</td><td class="mono">#0c2340 <small>(via --k0)</small></td><td class="mono"><strong>#0e1b33</strong></td><td class="mono">#0c2340</td><td>—</td></tr>
+        <tr><td class="mono">--serif</td><td>Palatino Linotype…</td><td><strong>Cambria, Hoefler Text…</strong></td><td>herda</td><td>—</td></tr>
+        <tr><td class="mono">--ink</td><td>—</td><td class="mono">#242a33</td><td>—</td><td class="mono">#12232e</td></tr>
+        <tr><td class="mono">--line</td><td>—</td><td class="mono">rgba(198,161,91,.32)</td><td>—</td><td class="mono">#d8d2c6</td></tr>
+        <tr><td class="mono">--muted</td><td>—</td><td class="mono">#6e6a60</td><td class="mono">var(--k3)</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+    <p>Consequência prática: SWOT e Maturidade são visualmente um produto; Mapa, Governança e Admin são outro. Um cliente que percorre a cadeia atravessa duas identidades.</p>
+    <div class="fix"><div class="lbl">Ajuste</div>
+      <p>Decidir qual é a marca — a leitura editorial de SWOT/Maturidade é a que mais se aproxima de <em>premium, executivo e sóbrio</em>. Promover esses valores a <code>main.css</code> sob nomes explícitos (<code>--brand-navy</code>, <code>--brand-gold</code>, <code>--brand-serif</code>, <code>--ink</code>, <code>--line</code>, <code>--muted</code>), remover os quatro blocos locais e migrar as demais telas. Proibir redefinição de token global em <code>&lt;style scoped&gt;</code> na revisão de PR.</p>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">DS-02</span><span class="f-title">82 cores hex distintas em 346 ocorrências fora do sistema</span></div>
+    <p>Concentração: <code>SwotAnalysisView</code> 52 · <code>ProjetoCanvasView</code> 48 · <code>ProjetosListView</code> 47 · <code>AiMaturityView</code> 38 · <code>GovernanceInventoryView</code> 14 · <code>GovernanceSystemView</code> 14 · <code>MapaEstrategicoView</code> 13.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Fechar uma paleta semântica de ~24 tokens (4 superfícies, 4 níveis de texto, 3 bordas, 4 dimensões de maturidade, 5 níveis, 4 estados) e substituir por codemod. Travar com <code>stylelint</code> (<code>color-no-hex</code>) no CI para não voltar.</p></div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">DS-03</span><span class="f-title">Sem escala tipográfica — 27 tamanhos, incluindo fracionários</span></div>
+    <p><code>13px</code> (129×), <code>12px</code> (125×), <code>14px</code> (117×), <code>11px</code> (94×), <code>10px</code> (29×)… e <strong><code>12.5px</code>, <code>11.5px</code>, <code>10.5px</code>, <code>9.5px</code>, <code>13.5px</code>, <code>14.5px</code>, <code>8px</code></strong>. Meio pixel não é decisão de design — é resíduo de ajuste visual manual.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Escala de 8 degraus em tokens: <code>--fs-xs 11</code> / <code>--fs-sm 12</code> / <code>--fs-base 13</code> / <code>--fs-md 14</code> / <code>--fs-lg 16</code> / <code>--fs-xl 20</code> / <code>--fs-2xl 26</code> / <code>--fs-3xl 34</code>. Zero fracionários.</p></div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">DS-05</span><span class="f-title">Terceira família tipográfica, carregada de dentro de um componente</span></div>
+    <p><code>ProjetoCanvasView.vue:1155</code> faz <code>@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk…')</code> <strong>dentro de <code>&lt;style scoped&gt;</code></strong>, e usa a fonte em 13 declarações. É a única view com identidade tipográfica própria, e o <code>@import</code> é uma requisição render-blocking disparada no meio do CSS da rota.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Se Space Grotesk entra na marca: <code>&lt;link rel="preconnect"&gt;</code> + <code>preload</code> no <code>index.html</code> e token <code>--display</code>. Se não entra: remover as 13 declarações e o <code>@import</code>. Não deixar como está.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">DS-04</span><span class="f-title">13 raios de borda e 31 sombras distintas</span></div>
+    <p>Raios: 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 20, 99, 999px. Sombras: 31 valores únicos, incluindo três variações quase idênticas de <code>0 4px 1Xpx rgba(12,35,64,.08)</code>.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>--r-sm 4</code> / <code>--r-md 8</code> / <code>--r-lg 12</code> / <code>--r-pill 999px</code>; e <code>--shadow-1</code> (repouso), <code>--shadow-2</code> (elevado), <code>--shadow-3</code> (modal).</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">DS-06</span><span class="f-title">Variáveis usadas sem definição — uma delas é bug silencioso</span></div>
+    <p><code>MateriaisView.vue:287</code> → <code>color: var(--k2)</code>. <strong><code>--k2</code> não existe</strong> — a escala pula de <code>--k1</code> para <code>--k3</code>. A declaração é inócua e o texto herda a cor do pai, sem erro visível.</p>
+    <p>Além disso: <code>LoginView.vue:21</code> usa <code>var(--navy-deep, #0C1827)</code> e os dois admins de landing usam <code>var(--bg, #f7f5f0)</code> em 4 pontos — funcionam apenas pelo fallback.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Definir <code>--k2</code> (ou trocar a chamada por <code>--k1</code>) e promover <code>--navy-deep</code> e <code>--bg</code> a tokens reais.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">DS-07</span><span class="f-title">Oito larguras de página diferentes</span></div>
+    <p>520 · 860 · 900 · 920 · 980 · 1000 · 1100 · 1200px, sem regra que explique a escolha.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Três larguras: <code>--w-read 860px</code> (leitura e formulário), <code>--w-app 1120px</code> (painéis e tabelas) e full-bleed (mapa, canvas).</p></div>
+  </div>
+</section>
+
+<section id="componentes">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Arquitetura de componentes</h2></div>
+
+  <div class="finding crit">
+    <div class="f-head"><span class="sev">Crítico</span><span class="f-id">AR-01</span><span class="f-title">Não existe biblioteca de componentes</span></div>
+    <p>35 views para <strong>5 componentes</strong> (1.153 linhas, 3,7% do código). <strong>13.288 linhas de CSS dentro de arquivos <code>.vue</code></strong> — 43% de todo o <code>src/</code>. Classes reimplementadas do zero, contadas por arquivo distinto:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Classe</th><th class="num">Arquivos</th><th>Classe</th><th class="num">Arquivos</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">.error-msg</td><td class="num">23</td><td class="mono">.card</td><td class="num">10</td></tr>
+        <tr><td class="mono">.loading</td><td class="num">20</td><td class="mono">.input</td><td class="num">10</td></tr>
+        <tr><td class="mono">.page-title</td><td class="num">18</td><td class="mono">.btn-secondary</td><td class="num">10</td></tr>
+        <tr><td class="mono">.page-header</td><td class="num">17</td><td class="mono">.modal-backdrop</td><td class="num">8</td></tr>
+        <tr><td class="mono">.wrap</td><td class="num">12</td><td class="mono">.btn-danger</td><td class="num">8</td></tr>
+        <tr><td class="mono">.btn-primary</td><td class="num">12</td><td class="mono">.data-table</td><td class="num">6</td></tr>
+        <tr><td class="mono">.muted · .empty</td><td class="num">11</td><td class="mono">.modal-* (9 classes)</td><td class="num">4 cada</td></tr>
+      </tbody>
+    </table></div>
+    <div class="fix"><div class="lbl">Ajuste — a intervenção de maior alavancagem do projeto</div>
+      <p>Criar <code>src/components/ui/</code> com 12 primitivos, <strong>nesta ordem de impacto</strong>:</p>
+      <ol>
+        <li><code>StateBlock</code> (loading / empty / error) — mata 43 reimplementações de uma vez</li>
+        <li><code>PageHeader</code> (título + subtítulo + ações) — 35 telas</li>
+        <li><code>AppButton</code> (primary / secondary / danger / ghost / sm) — 30+ telas</li>
+        <li><code>AppModal</code> com foco, Escape e trap (ver UX-03) — 8 telas</li>
+        <li><code>DataTable</code> · <code>FormField</code> · <code>AppCard</code> · <code>Badge</code> · <code>Toolbar</code> · <code>Tabs</code> · <code>SaveIndicator</code> · <code>Toast</code></li>
+      </ol>
+      <p><strong>Meta mensurável:</strong> reduzir as 13.288 linhas de CSS local para menos de 6.000.</p>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">AR-03</span><span class="f-title">Autosave implementado 5 vezes, de 4 maneiras — uma delas com corrida</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>View</th><th>Debounce</th><th>Guarda de concorrência</th><th>Proteção ao sair</th><th class="num">saveState</th></tr></thead>
+      <tbody>
+        <tr><td>OkrCycleEditorView</td><td>1.200 ms</td><td>fila de 1</td><td>✅ beforeunload + onBeforeRouteLeave</td><td class="num">3 estados</td></tr>
+        <tr><td>AiMaturityView</td><td>280 ms</td><td>persisting/pendingPersist</td><td>❌</td><td class="num">4 estados</td></tr>
+        <tr><td>SwotAnalysisView</td><td>nenhum</td><td>saving/pendingSave</td><td>❌</td><td class="num">4 estados</td></tr>
+        <tr><td>ProjetoCanvasView</td><td>nenhum</td><td>saving/pendingSave</td><td>❌</td><td class="num">4 estados</td></tr>
+        <tr><td><strong>GovernanceSystemView</strong></td><td>nenhum</td><td><strong>nenhuma</strong></td><td>❌</td><td class="num">4 estados</td></tr>
+      </tbody>
+    </table></div>
+    <p><code>GovernanceSystemView.vue:92</code> chama <code>updateAiSystem</code> sem qualquer guarda: duas edições rápidas disparam dois PATCH concorrentes e vence a resposta que chegar por último — que pode ser a mais antiga. <strong>É bug de perda de dado, não questão de estilo.</strong></p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Um único <code>composables/useAutosave(fn, { delay })</code> padronizando debounce, fila de uma gravação, união <code>'idle' | 'saving' | 'saved' | 'error'</code>, indicador visual e guarda de saída. Adotar nas 5 views — resolve também o UX-01.</p></div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">AR-02</span><span class="f-title">Sete god components somam 11.722 linhas</span></div>
+    <p>SwotAnalysisView 2.255 · ProjetoCanvasView 2.105 · ProgramaView 1.949 (207 seletores de classe) · MapaEstrategicoView 1.624 · AiMaturityView 1.318 · OkrCycleEditorView 1.246 · QuizView 1.225.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>O projeto já tem o remédio: <code>lib/strategicMapGraph.ts</code> tirou 1.201 linhas de regra de domínio de dentro da view. Replicar — <code>lib/swotModel.ts</code>, <code>lib/canvasModel.ts</code>, <code>lib/maturityScore.ts</code> — e quebrar cada view em seções (<code>SwotQuadrant.vue</code>, <code>TowsMatrix.vue</code>, <code>CanvasBand.vue</code>). Meta: nenhuma view acima de 600 linhas.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AR-04</span><span class="f-title">Domínio duplicado no cliente</span></div>
+    <ul class="bul">
+      <li><strong>Membros da organização em dois módulos e dois tipos:</strong> <code>orgAdmin.listOrgMembers()</code> → <code>/api/org-admin/members</code> (<code>OrgMember</code>) e <code>governance.listOrganizationMembers()</code> → <code>/api/governance/organization-members</code> (<code>OrganizationMember</code>).</li>
+      <li><strong>Dimensões de maturidade em 4 lugares:</strong> <code>AiMaturityDetailView:40-43</code> (hex cru), <code>AiMaturityView:47-56</code> (vars locais), <code>MapaEstrategicoView:931-934</code> (vars locais), <code>strategicMapGraph:150-154</code> (classes CSS).</li>
+      <li><strong>Rótulos dos quadrantes SWOT em 4 views:</strong> GovernanceSystemView:38, MapaEstrategicoView:60, ProjetoCanvasView:216, SwotAnalysisView:66.</li>
+    </ul>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>src/lib/domain/</code> como fonte única: <code>MATURITY_DIMENSIONS</code> (id, rótulo, abreviação, cor), <code>SWOT_QUADRANTS</code>, <code>TOWS_META</code>. Parte já vive em <code>api/swotAnalysis.ts</code> — consolidar ali ou migrar tudo, mas em <strong>um</strong> lugar.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AR-07</span><span class="f-title">Duas stacks de frontend no mesmo produto</span></div>
+    <p>A landing é HTML/JS estático (<code>public/lp.html</code> + <code>lp.js</code>, além de <code>calc.html</code>, <code>tutorial-tokens.html</code>, <code>universo-da-ia-interativo.html</code>, <code>ficcao-realidade-catalogo-interativo.html</code>) e o app Vue <strong>a embute num <code>&lt;iframe&gt;</code></strong> (<code>LandingView.vue</code>), passando <code>loginBase</code> e <code>apiBase</code> por querystring.</p>
+    <p>Custos: marca e componentes existem duas vezes; a telemetria precisa de exceção documentada (<code>lib/track.ts</code> exclui a rota <code>Landing</code> para não contar duas vezes); e a home do app não é uma página indexável.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Manter a LP estática é legítimo (performance e CSP). Mas servir <code>/</code> diretamente no edge/backend e <strong>remover a rota <code>Landing</code> do router</strong>, em vez de encapsular num iframe.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AR-05</span><span class="f-title">types/ cobre só um domínio dos treze</span></div>
+    <p><code>types/index.ts</code> tem 72 linhas e cobre apenas o domínio "curso". Os outros 12 domínios declaram tipos dentro de <code>api/*.ts</code> (governance 32, admin 25, maturity 18…). Dois lugares para a mesma decisão.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Manter a convenção majoritária (tipo junto do módulo de API) e <strong>esvaziar</strong> <code>types/index.ts</code>, movendo os tipos de curso para <code>api/course.ts</code>. Ou o inverso — mas não os dois.</p></div>
+  </div>
+
+  <div class="finding low">
+    <div class="f-head"><span class="sev">Baixo</span><span class="f-id">AR-06</span><span class="f-title">Nomenclatura da API mistura três verbos e dois idiomas</span></div>
+    <p>Verbos: <code>fetchX</code> (18) · <code>getX</code> (10) · <code>listX</code> (9). Idioma: <code>aprovarPortfolio</code>, <code>confirmarProfundidade</code>, <code>liberarEncontro</code>, <code>getProfundidade</code>, <code>emptyPilares</code> convivem com <code>createGate</code>, <code>listAiSystems</code>. Endpoints: <code>/api/swot-analysis</code>, <code>/api/canvas-projects</code>, <code>/api/org-admin</code> (kebab) vs <code>/api/okrs</code>, <code>/api/maturity</code>, <code>/api/governance</code>.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Convenção <code>list / get / create / update / delete</code> e identificadores em inglês (português apenas em rótulos de UI). O padrão de endpoint é contrato do backend — registrar como dívida conjunta, não mudar unilateralmente.</p></div>
+  </div>
+</section>
+
+<section id="ux">
+  <div class="sec-head"><span class="sec-num">08</span><h2>UX e fluxo</h2></div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">UX-01</span><span class="f-title">Perda de dados silenciosa em quatro editores</span></div>
+    <p>SWOT, Canvas, Maturidade e Governança não avisam ao sair com gravação pendente. Só <code>OkrCycleEditorView</code> registra <code>beforeunload</code> e <code>onBeforeRouteLeave</code>. Em telas onde o usuário passa meia hora preenchendo um diagnóstico, um clique na topbar pode descartar a última edição.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Guarda embutida no <code>useAutosave</code> (AR-03) — resolve os quatro de uma vez.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">UX-02</span><span class="f-title">Estados de carregamento, vazio e erro artesanais em 28 telas</span></div>
+    <p>28 views declaram <code>loading</code>, 26 declaram <code>error</code>, cada uma com marcação e microcópia próprias: <code>"Carregando..."</code> (18×) convive com <code>"Carregando…"</code>, <code>"Carregando trilhas..."</code>, <code>"Carregando o mapa…"</code>, <code>"Carregando diagnóstico…"</code> — <strong>reticências ASCII e Unicode misturadas no mesmo produto</strong>. Nenhuma tela usa skeleton.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>&lt;StateBlock :state&gt;</code> com cópia padrão e skeleton opcional. Guia de microcópia: reticências tipográficas (<code>…</code>) sempre; "Carregando…" sem complemento, porque o contexto já é a tela.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">UX-03</span><span class="f-title">Modais sem contrato de acessibilidade</span></div>
+    <p>8 views implementam modal; apenas 2 tratam <code>Escape</code>; nenhuma tem focus-trap, retorno de foco ao fechar, ou <code>role="dialog"</code> + <code>aria-modal</code> de forma consistente. Com teclado, o foco continua navegando o conteúdo atrás do modal.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>AppModal</code> único: <code>role="dialog" aria-modal="true"</code>, trap de foco, <code>Escape</code>, restauração do foco de origem, <code>inert</code> no conteúdo de fundo e bloqueio de scroll.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">UX-05</span><span class="f-title">Dois padrões de navegação — e uma exceção sem par no menu</span></div>
+    <p>A área logada usa topbar fixa de 64px com pílulas; <code>/admin</code> usa sidebar escura de 220px <strong>sem topbar, sem marca e sem caminho de volta para as ferramentas do AI Hub</strong> (só um "← Início"). São dois produtos visuais para o mesmo usuário.</p>
+    <p>Além disso, em <code>Topbar.vue:40-50</code> o link do SWOT é o único que <strong>não</strong> é <code>RouterLink</code>: é <code>&lt;a href="/swot"&gt;</code> com <code>preventDefault</code>, <code>router.push</code> manual e fallback <code>window.location.assign('/swot')</code>. Os outros 8 itens são <code>RouterLink</code> simples.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Unificar o shell: mesma topbar em todo o produto, com sidebar contextual dentro do <code>/admin</code>. E converter o item SWOT em <code>RouterLink</code> — se o <code>try/catch</code> existe por causa de uma falha real de navegação, tratar a causa (provavelmente o parâmetro opcional <code>/swot/:id?</code>), não o sintoma.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">UX-04</span><span class="f-title">Menu do admin não reflete o router — e duas telas são stubs em produção</span></div>
+    <p><code>AdminLayout.vue</code> expõe <strong>7</strong> destinos; o router declara <strong>10</strong> rotas em <code>/admin</code>. <code>/admin/alunos</code> e <code>/admin/progresso</code> só existem por URL direta — e ambas são placeholders de 14 linhas: <em>"Gestão de alunos (em migração)"</em> e <em>"Progresso dos alunos (em migração)"</em>, servidos em produção.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Concluir ou remover as duas telas; derivar o menu de uma constante compartilhada com o router, para que menu e rotas não possam divergir de novo.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">UX-07</span><span class="f-title">Não existe rota 404</span></div>
+    <p>O router não declara catch-all. Qualquer caminho inválido resulta em tela em branco dentro do layout.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>{ path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView }</code>, reaproveitando o layout de estado de acesso do UX-06.</p></div>
+  </div>
+
+  <div class="finding low">
+    <div class="f-head"><span class="sev">Baixo</span><span class="f-id">UX-06</span><span class="f-title">Dois tratamentos visuais para o mesmo tipo de evento</span></div>
+    <p><code>/401</code> é uma ilustração de tela cheia sobre <code>#0c1827</code>, com botões em hex cru (<code>#9b7e46</code>, <code>#b8975a</code>, <code>#e2e2e7</code>), sem topbar e sem tipografia da marca. <code>/acesso-negado</code> é um card claro, discreto, com <code>var(--serif)</code>. Mesma família de evento — acesso barrado — resolvida de dois jeitos opostos.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Um <code>AccessStateLayout</code> com variantes <code>401</code>, <code>tool-disabled</code> e <code>404</code>.</p></div>
+  </div>
+</section>
+
+<section id="a11y">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Responsividade e acessibilidade</h2></div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">AC-02</span><span class="f-title">Texto secundário reprova em contraste WCAG AA — em 227 pontos do produto</span></div>
+    <p>Contraste real dos tokens sobre o fundo padrão <code>--k9 #f8f8f6</code>:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Token</th><th>Valor</th><th class="num">Contraste</th><th>WCAG AA (texto normal)</th><th class="num">Usos como cor de texto</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">--k3</td><td class="mono">#505050</td><td class="num">7,58:1</td><td>✅ passa</td><td class="num">—</td></tr>
+        <tr><td class="mono">--k4</td><td class="mono">#7a7a7a</td><td class="num">4,04:1</td><td>❌ só em texto grande</td><td class="num">41</td></tr>
+        <tr><td class="mono"><strong>--k5</strong></td><td class="mono"><strong>#a6a6a6</strong></td><td class="num"><strong>2,29:1</strong></td><td>❌ <strong>reprova até em texto grande</strong></td><td class="num"><strong>227</strong></td></tr>
+        <tr><td class="mono">--k6</td><td class="mono">#c8c8c8</td><td class="num">1,57:1</td><td>❌</td><td class="num">3</td></tr>
+        <tr><td class="mono">--gold</td><td class="mono">#9b7e46</td><td class="num">3,61:1</td><td>❌</td><td class="num">64</td></tr>
+        <tr><td class="mono">--gold2</td><td class="mono">#b8975a</td><td class="num">2,59:1</td><td>❌</td><td class="num">17</td></tr>
+        <tr><td class="mono">--success</td><td class="mono">#1e8a4f</td><td class="num">4,11:1</td><td>❌ marginal</td><td class="num">17</td></tr>
+        <tr><td class="mono">--warn</td><td class="mono">#c17a2c</td><td class="num">3,24:1</td><td>❌</td><td class="num">9</td></tr>
+      </tbody>
+    </table></div>
+    <p><code>color: var(--k5)</code> aparece <strong>227 vezes em 29 arquivos</strong> — é a cor padrão de metadados, legendas e dos textos <code>.loading</code>/<code>.empty</code>. E <code>UnauthorizedView</code> põe <code>#fff</code> sobre <code>#9b7e46</code> (3,84:1) no botão primário.</p>
+    <div class="fix"><div class="lbl">Ajuste</div>
+      <ul>
+        <li>Rebaixar <code>--k5</code> a papel decorativo (bordas, ícones, separadores) e trocar <strong>todo</strong> texto em <code>--k5</code> por <code>--k3</code>.</li>
+        <li>Escurecer <code>--k4</code> para ~<code>#6b6b6b</code> (≥ 4,5:1).</li>
+        <li>Criar <code>--gold-text</code> (<code>#7d6437</code>, ~5,3:1) para dourado tipográfico, mantendo <code>--gold</code> para preenchimentos e bordas.</li>
+        <li>Escurecer <code>--success</code> e <code>--warn</code> quando usados como texto.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="finding high">
+    <div class="f-head"><span class="sev">Alto</span><span class="f-id">AC-01</span><span class="f-title">27 dos 42 arquivos de UI não têm nenhuma media query</span></div>
+    <p>Sem qualquer tratamento responsivo: <strong>todo o <code>/admin</code></strong> (10 telas), <strong>toda a Governança</strong> (4 telas), o editor de OKR, <code>OrgMembersView</code>, <code>AiMaturityListView</code>, <code>AdminLayout</code> (sidebar rígida de 220px) e os 4 componentes de landing. Onde existe responsividade, há <strong>13 breakpoints diferentes</strong>: 520, 560, 640, 700, 720, 760, 800, 820, 860, 900, 980, 1100, 1180px.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Três breakpoints em tokens (640 / 1024 / 1280). Prioridade: (1) <code>AdminLayout</code> → sidebar vira drawer abaixo de 1024; (2) <code>DataTable</code> → scroll horizontal contido e cards empilhados abaixo de 640; (3) formulários de Governança e OKR em coluna única.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AC-03</span><span class="f-title">Foco de teclado praticamente inexistente</span></div>
+    <p>Duas ocorrências de <code>:focus-visible</code> em toda a base; 19 de <code>:focus</code>. Como muitos botões e pílulas removem a borda padrão, a navegação por teclado fica sem indicação de posição em boa parte do produto.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Anel de foco global em <code>main.css</code>: <code>:where(a,button,input,select,textarea,[tabindex]):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }</code></p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AC-04</span><span class="f-title">Nenhum tratamento de prefers-reduced-motion</span></div>
+    <p>Zero ocorrências em toda a base, apesar de haver transições, <code>@keyframes</code> e o mapa estratégico com transições de layout.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Bloco global de redução de movimento em <code>main.css</code>.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">AC-05</span><span class="f-title">Formulários com rotulagem irregular</span></div>
+    <p>102 <code>&lt;label&gt;</code> para 168 atributos <code>for=</code> — a contagem não fecha, indicando <code>for</code> sem <code>&lt;label&gt;</code> correspondente ou reutilizado. Só 33 <code>aria-label</code> em 18 arquivos, para 8 modais e dezenas de botões-ícone.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>eslint-plugin-vuejs-accessibility</code> no CI; o <code>FormField</code> do AR-01 resolve a associação <code>label</code>↔<code>input</code> estruturalmente.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Build, entrega e higiene</h2></div>
+
+  <div class="finding crit">
+    <div class="f-head"><span class="sev">Crítico</span><span class="f-id">CD-01</span><span class="f-title">O build de produção não passa — 48 erros de tipo</span></div>
+    <p><code>tsc5.txt</code> (registro de <code>npm run type-check</code>) contém <strong>48 erros em 10 arquivos</strong>. Como o script é <code>vue-tsc -b &amp;&amp; vite build</code>, o build falha antes de gerar bundle. O <code>dist/</code> versionado é de 02/08.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Arquivo</th><th class="num">Erros</th><th>Código</th><th class="num">Ocorr.</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td>AdminQuizView.vue</td><td class="num">21</td><td class="mono">TS2532</td><td class="num">16</td><td>objeto possivelmente <code>undefined</code></td></tr>
+        <tr><td>SwotAnalysisView.vue</td><td class="num">6</td><td class="mono">TS18048</td><td class="num">14</td><td>variável possivelmente <code>undefined</code></td></tr>
+        <tr><td>QuizView.vue</td><td class="num">6</td><td class="mono">TS6196</td><td class="num">6</td><td>tipo declarado e não usado</td></tr>
+        <tr><td>ProgramaView.vue</td><td class="num">6</td><td class="mono">TS6133</td><td class="num">4</td><td>variável declarada e não usada</td></tr>
+        <tr><td>TrilhaShowcaseView.vue</td><td class="num">3</td><td class="mono">TS2345</td><td class="num">3</td><td>argumento incompatível</td></tr>
+        <tr><td>AiMaturityListView.vue</td><td class="num">2</td><td class="mono">TS2322</td><td class="num">3</td><td>atribuição incompatível</td></tr>
+        <tr><td>AdminUsuarios · QuizRespostas · Agenda · stores/auth.ts</td><td class="num">4</td><td class="mono">TS7053 · TS2339</td><td class="num">2</td><td>índice implícito · propriedade inexistente</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>30 dos 48 são consequência direta de <code>noUncheckedIndexedAccess: true</code></strong> — acesso a <code>array[i]</code> sem guarda.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Zerar os 48 (é trabalho mecânico: guarda de índice e remoção de declarações mortas). <strong>Não relaxar <code>noUncheckedIndexedAccess</code></strong> — é exatamente ele que está evitando uma classe inteira de bugs em runtime. Depois: <code>npm run type-check</code> obrigatório no CI e <code>dist/</code> fora do repositório.</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">CD-03</span><span class="f-title">Cache desligado para todos os assets</span></div>
+    <p><code>public/_headers</code> aplica <code>Cache-Control: no-cache, no-store, must-revalidate</code> em <code>/*</code>, e <code>index.html</code> repete via três <code>&lt;meta http-equiv&gt;</code>. Como o Vite já emite assets com hash de conteúdo no nome, isso força rebaixar <strong>todo</strong> o JS/CSS a cada visita — inclusive os bundles grandes das telas estratégicas.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>/index.html → Cache-Control: no-store</code> e <code>/assets/* → public, max-age=31536000, immutable</code>. E remover as três metas <code>http-equiv</code> do <code>index.html</code> (não confiáveis e agora redundantes).</p></div>
+  </div>
+
+  <div class="finding">
+    <div class="f-head"><span class="sev">Médio</span><span class="f-id">CD-02</span><span class="f-title">Dependência morta de 4,7 MB</span></div>
+    <p><code>plotly.js-dist-min@^3.4.0</code> está em <code>dependencies</code> e <strong>não é importado em nenhum arquivo</strong> de <code>src/</code> nem de <code>public/</code>.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Remover do <code>package.json</code> e regenerar o lock.</p></div>
+  </div>
+
+  <div class="finding low">
+    <div class="f-head"><span class="sev">Baixo</span><span class="f-id">CD-04</span><span class="f-title">Artefatos de build convivendo com o fonte</span></div>
+    <p><code>dist/</code>, <code>tsconfig.tsbuildinfo</code>, <code>tsconfig.node.tsbuildinfo</code>, <code>vite.config.js</code>, <code>vite.config.d.ts</code> (compilados do <code>vite.config.ts</code>), <code>tsc5.txt</code> e <code>.DS_Store</code> — inclusive dentro de <code>src/</code> — estão soltos no diretório.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p><code>.gitignore</code> cobrindo os seis padrões; manter só <code>vite.config.ts</code>.</p></div>
+  </div>
+
+  <div class="finding low">
+    <div class="f-head"><span class="sev">Baixo</span><span class="f-id">CD-05 · CD-06</span><span class="f-title">index.html sem metadados · README desatualizado</span></div>
+    <p><code>index.html</code> tem só <code>&lt;title&gt;</code> — sem <code>description</code>, <code>og:*</code> ou <code>theme-color</code>. O README descreve <code>src/api</code> com o exemplo <code>courses.ts</code> e uma estrutura de 8 pastas, sem mencionar as 6 ferramentas do AI Hub, o modelo de acesso por ferramenta, a governança ou a cadeia de rastreabilidade — que <em>são</em> o produto.</p>
+    <div class="fix"><div class="lbl">Ajuste</div><p>Bloco de meta base no <code>index.html</code>, com <code>description</code>/<code>og</code> atualizados no <code>router.afterEach</code> (que já gerencia <code>document.title</code>). README reescrito com o mapa de rotas por domínio e o modelo de acesso em três eixos.</p></div>
+  </div>
+
+  <div class="good">
+    <h4>O que já está correto em segurança</h4>
+    <ul>
+      <li>Sessão por cookie <em>HttpOnly</em> — nunca token em <code>localStorage</code>.</li>
+      <li>CSP restritiva, HSTS com <code>preload</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code> em <code>public/_headers</code>.</li>
+      <li>Zero <code>v-html</code> em toda a base — sem superfície de XSS por template.</li>
+      <li>Todos os 9 <code>target="_blank"</code> acompanham <code>rel="noopener"</code>.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="plano">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Plano de ajuste</h2></div>
+  <p class="sec-sub">Quatro ondas, cada uma com critério de saída verificável. A ordem não é por severidade: é por dependência — não adianta extrair componentes antes de fechar os tokens, e não adianta refatorar com o build vermelho.</p>
+
+  <div class="wave">
+    <div class="wave-h"><div class="t"><span>Onda 1</span>Desbloquear</div><div class="d">1 semana</div></div>
+    <div class="tw"><table>
+      <thead><tr><th class="num">#</th><th>Ação</th><th>Item</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Zerar os 48 erros de tipo; <code>type-check</code> obrigatório no CI</td><td class="mono">CD-01</td></tr>
+        <tr><td class="num">2</td><td>Corrigir cache: <code>no-store</code> só no index, <code>immutable</code> em <code>/assets/*</code></td><td class="mono">CD-03</td></tr>
+        <tr><td class="num">3</td><td>Remover <code>plotly.js-dist-min</code>; <code>.gitignore</code> para artefatos</td><td class="mono">CD-02 · CD-04</td></tr>
+        <tr><td class="num">4</td><td>Guarda de concorrência em <code>GovernanceSystemView.persist()</code></td><td class="mono">AR-03</td></tr>
+      </tbody>
+    </table></div>
+    <div class="exit"><b>Critério de saída</b><code>npm run build</code> verde · <code>dist/</code> fora do repo · sem gravação concorrente em Governança</div>
+  </div>
+
+  <div class="wave">
+    <div class="wave-h"><div class="t"><span>Onda 2</span>Fundação visual</div><div class="d">2 semanas</div></div>
+    <div class="tw"><table>
+      <thead><tr><th class="num">#</th><th>Ação</th><th>Item</th></tr></thead>
+      <tbody>
+        <tr><td class="num">5</td><td>Decidir a marca única e consolidar tokens em <code>main.css</code>; remover os 4 blocos locais</td><td class="mono">DS-01</td></tr>
+        <tr><td class="num">6</td><td>Corrigir contraste: <code>--k5</code> vira decorativo, <code>--k4</code> escurece, criar <code>--gold-text</code></td><td class="mono">AC-02</td></tr>
+        <tr><td class="num">7</td><td>Escala tipográfica de 8 degraus; raios e sombras em tokens; 3 larguras de página</td><td class="mono">DS-03 · DS-04 · DS-07</td></tr>
+        <tr><td class="num">8</td><td>Definir <code>--k2</code>, <code>--navy-deep</code>, <code>--bg</code>; decidir sobre Space Grotesk</td><td class="mono">DS-06 · DS-05</td></tr>
+        <tr><td class="num">9</td><td>Foco visível global + <code>prefers-reduced-motion</code> em <code>main.css</code></td><td class="mono">AC-03 · AC-04</td></tr>
+      </tbody>
+    </table></div>
+    <div class="exit"><b>Critério de saída</b>Nenhum token global redefinido em <code>&lt;style scoped&gt;</code> · zero texto abaixo de 4,5:1</div>
+  </div>
+
+  <div class="wave">
+    <div class="wave-h"><div class="t"><span>Onda 3</span>Biblioteca de componentes</div><div class="d">3–4 semanas</div></div>
+    <div class="tw"><table>
+      <thead><tr><th class="num">#</th><th>Ação</th><th>Item</th></tr></thead>
+      <tbody>
+        <tr><td class="num">10</td><td><code>StateBlock</code>, <code>PageHeader</code>, <code>AppButton</code> → migrar as 35 views</td><td class="mono">AR-01 · UX-02</td></tr>
+        <tr><td class="num">11</td><td><code>AppModal</code> com foco, Escape e trap → migrar os 8 modais</td><td class="mono">AR-01 · UX-03</td></tr>
+        <tr><td class="num">12</td><td><code>DataTable</code>, <code>FormField</code>, <code>AppCard</code>, <code>Badge</code>, <code>SaveIndicator</code></td><td class="mono">AR-01 · AC-05</td></tr>
+        <tr><td class="num">13</td><td><code>useAutosave()</code> único → migrar as 5 views com autosave</td><td class="mono">AR-03 · UX-01</td></tr>
+        <tr><td class="num">14</td><td>Codemod de cores hex → tokens; <code>stylelint</code> no CI</td><td class="mono">DS-02</td></tr>
+      </tbody>
+    </table></div>
+    <div class="exit"><b>Critério de saída</b>CSS local abaixo de 6.000 linhas (de 13.288) · zero hex fora de <code>main.css</code></div>
+  </div>
+
+  <div class="wave">
+    <div class="wave-h"><div class="t"><span>Onda 4</span>Estrutura e cobertura</div><div class="d">3 semanas</div></div>
+    <div class="tw"><table>
+      <thead><tr><th class="num">#</th><th>Ação</th><th>Item</th></tr></thead>
+      <tbody>
+        <tr><td class="num">15</td><td>Responsividade: <code>AdminLayout</code> drawer, tabelas em card, 3 breakpoints</td><td class="mono">AC-01</td></tr>
+        <tr><td class="num">16</td><td>Unificar o shell de navegação (topbar única + sidebar contextual)</td><td class="mono">UX-05</td></tr>
+        <tr><td class="num">17</td><td>Quebrar os 7 god components; regra de domínio para <code>lib/</code></td><td class="mono">AR-02</td></tr>
+        <tr><td class="num">18</td><td><code>lib/domain/</code> como fonte única (dimensões, quadrantes, TOWS)</td><td class="mono">AR-04</td></tr>
+        <tr><td class="num">19</td><td>Rota 404 + <code>AccessStateLayout</code> (401 / ferramenta / 404)</td><td class="mono">UX-06 · UX-07</td></tr>
+        <tr><td class="num">20</td><td>Resolver <code>/admin/alunos</code> e <code>/admin/progresso</code>; menu derivado do router</td><td class="mono">UX-04</td></tr>
+        <tr><td class="num">21</td><td>Unificar membros da organização; convenção de nomes na API</td><td class="mono">AR-04 · AR-06</td></tr>
+        <tr><td class="num">22</td><td>Tirar a landing do iframe; servir <code>/</code> no edge</td><td class="mono">AR-07</td></tr>
+        <tr><td class="num">23</td><td>Consolidar <code>types/</code>; atualizar README; meta tags</td><td class="mono">AR-05 · CD-05 · CD-06</td></tr>
+      </tbody>
+    </table></div>
+    <div class="exit"><b>Critério de saída</b>Nenhuma view acima de 600 linhas · todas as telas usáveis em 768px</div>
+  </div>
+
+  <h3>Métricas de acompanhamento</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Indicador</th><th class="num">Hoje</th><th class="num">Meta</th></tr></thead>
+    <tbody>
+      <tr><td>Erros de tipo (<code>vue-tsc</code>)</td><td class="num">48</td><td class="num">0</td></tr>
+      <tr><td>Linhas de CSS dentro de <code>.vue</code></td><td class="num">13.288</td><td class="num">&lt; 6.000</td></tr>
+      <tr><td>Componentes reutilizáveis</td><td class="num">5</td><td class="num">≥ 17</td></tr>
+      <tr><td>Cores hex fora do sistema</td><td class="num">82</td><td class="num">0</td></tr>
+      <tr><td>Tamanhos de fonte distintos</td><td class="num">27</td><td class="num">8</td></tr>
+      <tr><td>Tokens globais redefinidos localmente</td><td class="num">3</td><td class="num">0</td></tr>
+      <tr><td>Textos abaixo de 4,5:1 (WCAG AA)</td><td class="num">268</td><td class="num">0</td></tr>
+      <tr><td>Views sem media query</td><td class="num">27 de 42</td><td class="num">0</td></tr>
+      <tr><td>Maior view (linhas)</td><td class="num">2.255</td><td class="num">&lt; 600</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</main>
+
+<footer><div class="fin">
+  <div><b>AEGIS · Valorian 4 Future</b> — System Design e Auditoria de Consistência do <code>frontend-vue</code></div>
+  <div>30.898 linhas · 73 arquivos · commit <b>d99b26b</b> · 18 ago 2026</div>
+</div></footer>
+
+</body>
+</html>
