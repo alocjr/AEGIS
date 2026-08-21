@@ -20,6 +20,8 @@ import type {
   PlatformTool,
 } from '@/api/admin'
 import { useAuthStore } from '@/stores/auth'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.id ?? '')
@@ -383,16 +385,9 @@ onMounted(async () => {
     </div>
 
     <!-- Modal Criar / Editar -->
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal-box">
-          <div class="modal-header">
-            <h2>{{ modalMode === 'create' ? 'Novo usuário' : 'Editar usuário' }}</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="closeModal">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-            <div class="form-group">
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Novo usuário' : 'Editar usuário'" size="lg" @close="closeModal">
+      <div v-if="modalError" class="modal-error">{{ modalError }}</div>
+      <div class="form-group">
               <label for="user-name">Nome</label>
               <input id="user-name" v-model="form.name" type="text" class="input" placeholder="Nome completo" />
             </div>
@@ -510,40 +505,27 @@ onMounted(async () => {
                 Pode criar/editar/remover membros da própria organização (sem atribuir trilha/mentoria).
               </span>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
+        </AppButton>
+      </template>
+    </AppModal>
 
     <!-- Confirmação excluir -->
-    <Teleport to="body">
-      <div v-if="deleteConfirming && deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal-box modal-confirm">
-          <div class="modal-header">
-            <h2>Excluir usuário</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="cancelDelete">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
-            <p>
-              Tem certeza que deseja excluir o usuário
-              <strong>{{ deleteTarget.name }}</strong> ({{ deleteTarget.email }})?
-              O progresso e respostas associados também serão removidos. Esta ação não pode ser desfeita.
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AppModal :open="deleteConfirming && !!deleteTarget" title="Excluir usuário" size="sm" @close="cancelDelete">
+      <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
+      <p v-if="deleteTarget">
+        Tem certeza que deseja excluir o usuário
+        <strong>{{ deleteTarget.name }}</strong> ({{ deleteTarget.email }})?
+        O progresso e respostas associados também serão removidos. Esta ação não pode ser desfeita.
+      </p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

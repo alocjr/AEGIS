@@ -8,6 +8,8 @@ import {
   fetchCourseList,
   fetchCourse,
 } from '@/api/admin'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import type {
   AdminQuizListItem,
   AdminQuizGroup,
@@ -313,16 +315,9 @@ onMounted(async () => {
     </div>
 
     <!-- Modal Criar / Editar -->
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal-box modal-quiz">
-          <div class="modal-header">
-            <h2>{{ modalMode === 'create' ? 'Novo quiz' : 'Editar quiz' }}</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="closeModal">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-            <div class="form-row">
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Novo quiz' : 'Editar quiz'" size="lg" @close="closeModal">
+      <div v-if="modalError" class="modal-error">{{ modalError }}</div>
+      <div class="form-row">
               <div class="form-group">
                 <label for="quiz-trilha">Trilha</label>
                 <select
@@ -460,16 +455,13 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
+        </AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

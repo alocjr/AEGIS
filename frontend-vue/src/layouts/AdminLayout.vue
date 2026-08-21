@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ADMIN_NAV_ITEMS } from '@/lib/adminNav'
 
 const auth = useAuthStore()
 
@@ -15,13 +16,13 @@ function onLogout() {
   <div class="admin-layout">
     <aside class="admin-sidebar">
       <RouterLink to="/" class="admin-sidebar-link">← Início</RouterLink>
-      <RouterLink to="/admin" class="admin-sidebar-link" exact-active-class="active">Dashboard</RouterLink>
-      <RouterLink to="/admin/acessos" class="admin-sidebar-link" active-class="active">Acessos</RouterLink>
-      <RouterLink to="/admin/trilhas" class="admin-sidebar-link" active-class="active">Trilhas</RouterLink>
-      <RouterLink to="/admin/materiais-landing" class="admin-sidebar-link" active-class="active">Materiais da Landing</RouterLink>
-      <RouterLink to="/admin/prompts-landing" class="admin-sidebar-link" active-class="active">Prompts da Landing</RouterLink>
-      <RouterLink to="/admin/usuarios" class="admin-sidebar-link" active-class="active">Usuários</RouterLink>
-      <RouterLink to="/admin/quiz" class="admin-sidebar-link" active-class="active">Quiz</RouterLink>
+      <RouterLink
+        v-for="item in ADMIN_NAV_ITEMS"
+        :key="item.to"
+        :to="item.to"
+        class="admin-sidebar-link"
+        v-bind="item.exact ? { 'exact-active-class': 'active' } : { 'active-class': 'active' }"
+      >{{ item.label }}</RouterLink>
       <button type="button" class="admin-sidebar-link admin-sidebar-logout" @click="onLogout">Sair</button>
     </aside>
     <main class="admin-main">

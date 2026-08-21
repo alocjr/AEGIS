@@ -11,6 +11,7 @@ import type { OrgMember } from '@/api/orgAdmin'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppModal from '@/components/ui/AppModal.vue'
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.id ?? '')
@@ -237,72 +238,52 @@ onMounted(async () => {
       </p>
     </div>
 
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal-box">
-          <div class="modal-header">
-            <h2>{{ modalMode === 'create' ? 'Adicionar membro' : 'Editar membro' }}</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="closeModal">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-            <div class="form-group">
-              <label for="member-name">Nome</label>
-              <input id="member-name" v-model="form.name" type="text" class="input" placeholder="Nome completo" />
-            </div>
-            <div class="form-group">
-              <label for="member-email">E-mail</label>
-              <input id="member-email" v-model="form.email" type="email" class="input" placeholder="email@empresa.com" />
-            </div>
-            <div class="form-group">
-              <label for="member-password">
-                {{ modalMode === 'create' ? 'Senha (obrigatória)' : 'Nova senha (deixe em branco para manter)' }}
-              </label>
-              <input
-                id="member-password"
-                v-model="form.password"
-                type="password"
-                class="input"
-                :placeholder="modalMode === 'edit' ? '••••••••' : 'Mínimo 6 caracteres'"
-                autocomplete="new-password"
-              />
-            </div>
-            <div class="form-group">
-              <label for="member-phone">Telefone (opcional)</label>
-              <input id="member-phone" v-model="form.phone" type="text" class="input" placeholder="ex: 5511987654321" />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Adicionar' : 'Salvar') }}
-            </button>
-          </div>
-        </div>
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Adicionar membro' : 'Editar membro'" @close="closeModal">
+      <div v-if="modalError" class="modal-error">{{ modalError }}</div>
+      <div class="form-group">
+        <label for="member-name">Nome</label>
+        <input id="member-name" v-model="form.name" type="text" class="input" placeholder="Nome completo" />
       </div>
-    </Teleport>
+      <div class="form-group">
+        <label for="member-email">E-mail</label>
+        <input id="member-email" v-model="form.email" type="email" class="input" placeholder="email@empresa.com" />
+      </div>
+      <div class="form-group">
+        <label for="member-password">
+          {{ modalMode === 'create' ? 'Senha (obrigatória)' : 'Nova senha (deixe em branco para manter)' }}
+        </label>
+        <input
+          id="member-password"
+          v-model="form.password"
+          type="password"
+          class="input"
+          :placeholder="modalMode === 'edit' ? '••••••••' : 'Mínimo 6 caracteres'"
+          autocomplete="new-password"
+        />
+      </div>
+      <div class="form-group">
+        <label for="member-phone">Telefone (opcional)</label>
+        <input id="member-phone" v-model="form.phone" type="text" class="input" placeholder="ex: 5511987654321" />
+      </div>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Adicionar' : 'Salvar') }}
+        </AppButton>
+      </template>
+    </AppModal>
 
-    <Teleport to="body">
-      <div v-if="deleteConfirming && deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal-box modal-confirm">
-          <div class="modal-header">
-            <h2>Remover membro</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="cancelDelete">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
-            <p>
-              Tem certeza que deseja remover <strong>{{ deleteTarget.name }}</strong> ({{ deleteTarget.email }})
-              da organização? Esta ação não pode ser desfeita.
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Remover</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AppModal :open="deleteConfirming && !!deleteTarget" title="Remover membro" size="sm" @close="cancelDelete">
+      <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
+      <p v-if="deleteTarget">
+        Tem certeza que deseja remover <strong>{{ deleteTarget.name }}</strong> ({{ deleteTarget.email }})
+        da organização? Esta ação não pode ser desfeita.
+      </p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Remover</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

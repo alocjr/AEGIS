@@ -99,11 +99,21 @@ const routes: RouteRecordRaw[] = [
       { path: 'materiais-landing', name: 'AdminMateriaisLanding', component: () => import('@/views/admin/AdminMateriaisLandingView.vue'), meta: { title: 'Admin · Materiais Landing' } },
       { path: 'prompts-landing', name: 'AdminPromptsLanding', component: () => import('@/views/admin/AdminPromptsLandingView.vue'), meta: { title: 'Admin · Prompts Landing' } },
       { path: 'usuarios', name: 'AdminUsuarios', component: () => import('@/views/admin/AdminUsuariosView.vue'), meta: { title: 'Admin · Usuários' } },
-      { path: 'alunos', name: 'AdminAlunos', component: () => import('@/views/admin/AdminAlunosView.vue'), meta: { title: 'Admin · Alunos' } },
-      { path: 'progresso', name: 'AdminProgresso', component: () => import('@/views/admin/AdminProgressoView.vue'), meta: { title: 'Admin · Progresso' } },
+      // UX-04: 'alunos' e 'progresso' (listas) foram removidas — eram stubs
+      // "em migração" sem link algum no menu nem em nenhuma outra tela,
+      // servidos em produção só por URL direta. 'progresso/:userId' é uma
+      // tela real (drill-down a partir do Dashboard e de Usuários) e continua.
       { path: 'progresso/:userId', name: 'AdminProgressoAluno', component: () => import('@/views/admin/AdminProgressoAlunoView.vue'), meta: { title: 'Admin · Progresso do aluno' } },
       { path: 'quiz', name: 'AdminQuiz', component: () => import('@/views/admin/AdminQuizView.vue'), meta: { title: 'Admin · Quiz' } },
     ],
+  },
+  {
+    // UX-07: não havia rota catch-all — qualquer caminho inválido caía em
+    // tela em branco dentro do layout. Precisa ser a última entrada.
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: { title: 'Página não encontrada' },
   },
 ]
 

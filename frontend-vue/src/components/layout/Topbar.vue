@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
   TOOL_CANVAS,
@@ -14,7 +14,6 @@ import {
 const auth = useAuthStore()
 const menuOpen = ref(false)
 const route = useRoute()
-const router = useRouter()
 
 /** Membros de organização sem trilha (ex.: criados por um admin de organização) não têm
  * progresso/materiais/agenda/quiz de mentoria — só as ferramentas do AI Hub. */
@@ -36,17 +35,6 @@ function onLogout() {
 
 function toggleMenu() {
   menuOpen.value = !menuOpen.value
-}
-
-async function goSwot(ev: Event) {
-  ev.preventDefault()
-  menuOpen.value = false
-  try {
-    await router.push({ name: 'SwotAnalysis' })
-  } catch (err) {
-    console.error('Falha ao abrir SWOT', err)
-    window.location.assign('/swot')
-  }
 }
 </script>
 
@@ -80,7 +68,12 @@ async function goSwot(ev: Event) {
           class="tb-pill"
           @click="menuOpen = false"
         >Modelo de Maturidade</RouterLink>
-        <a v-if="auth.hasTool(TOOL_SWOT)" href="/swot" class="tb-pill" @click="goSwot">SWOT</a>
+        <RouterLink
+          v-if="auth.hasTool(TOOL_SWOT)"
+          to="/swot"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >SWOT</RouterLink>
         <RouterLink
           v-if="auth.hasTool(TOOL_OKR)"
           to="/okrs"

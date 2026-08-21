@@ -9,6 +9,8 @@ import {
 } from '@/api/admin'
 import type { LandingMaterial } from '@/api/admin'
 import { formatCount, formatLastAccess } from '@/lib/accessFormat'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 type UrlField = 'material_url' | 'summary_url' | 'audio_url'
 
@@ -245,123 +247,111 @@ onMounted(async () => {
       </table>
     </div>
 
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mat-modal-title">
-          <h2 id="mat-modal-title" class="modal-title">
-            {{ modalMode === 'create' ? 'Novo material' : 'Editar material' }}
-          </h2>
-          <div class="form-grid">
-            <label class="field">
-              <span>Título</span>
-              <input v-model="form.title" type="text" class="input" maxlength="200" />
-            </label>
-            <label class="field">
-              <span>Ordem</span>
-              <input v-model.number="form.order" type="number" class="input" min="0" max="9999" />
-            </label>
-            <label class="field field-full">
-              <span>Descrição</span>
-              <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
-            </label>
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Novo material' : 'Editar material'" size="lg" @close="closeModal">
+      <div class="form-grid">
+        <label class="field">
+          <span>Título</span>
+          <input v-model="form.title" type="text" class="input" maxlength="200" />
+        </label>
+        <label class="field">
+          <span>Ordem</span>
+          <input v-model.number="form.order" type="number" class="input" min="0" max="9999" />
+        </label>
+        <label class="field field-full">
+          <span>Descrição</span>
+          <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
+        </label>
 
-            <div class="field field-full">
-              <span>Material (PDF, HTML ou link)</span>
-              <div class="url-upload-row">
-                <input
-                  v-model="form.material_url"
-                  type="text"
-                  class="input"
-                  placeholder="/material_gratuito/arquivo.pdf ou https://..."
-                />
-                <label class="btn-upload" :class="{ disabled: uploading.material_url }">
-                  {{ uploading.material_url ? 'Enviando…' : 'Upload' }}
-                  <input
-                    type="file"
-                    class="file-input"
-                    accept=".pdf,.html,.htm,.doc,.docx,.ppt,.pptx,application/pdf,text/html"
-                    :disabled="uploading.material_url"
-                    @change="onUpload('material_url', $event)"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div class="field field-full">
-              <span>Resumo executivo (PDF ou link)</span>
-              <div class="url-upload-row">
-                <input
-                  v-model="form.summary_url"
-                  type="text"
-                  class="input"
-                  placeholder="/material_gratuito/resumo.pdf ou https://..."
-                />
-                <label class="btn-upload" :class="{ disabled: uploading.summary_url }">
-                  {{ uploading.summary_url ? 'Enviando…' : 'Upload' }}
-                  <input
-                    type="file"
-                    class="file-input"
-                    accept=".pdf,.doc,.docx,application/pdf"
-                    :disabled="uploading.summary_url"
-                    @change="onUpload('summary_url', $event)"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div class="field field-full">
-              <span>Áudio narrado (opcional)</span>
-              <div class="url-upload-row">
-                <input
-                  v-model="form.audio_url"
-                  type="text"
-                  class="input"
-                  placeholder="/material_gratuito/narracao.mp3 ou https://..."
-                />
-                <label class="btn-upload" :class="{ disabled: uploading.audio_url }">
-                  {{ uploading.audio_url ? 'Enviando…' : 'Upload' }}
-                  <input
-                    type="file"
-                    class="file-input"
-                    accept=".mp3,.m4a,.wav,.ogg,.aac,audio/*"
-                    :disabled="uploading.audio_url"
-                    @change="onUpload('audio_url', $event)"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <label class="field checkbox-field">
-              <input v-model="form.active" type="checkbox" />
-              <span>Ativo na landing</span>
+        <div class="field field-full">
+          <span>Material (PDF, HTML ou link)</span>
+          <div class="url-upload-row">
+            <input
+              v-model="form.material_url"
+              type="text"
+              class="input"
+              placeholder="/material_gratuito/arquivo.pdf ou https://..."
+            />
+            <label class="btn-upload" :class="{ disabled: uploading.material_url }">
+              {{ uploading.material_url ? 'Enviando…' : 'Upload' }}
+              <input
+                type="file"
+                class="file-input"
+                accept=".pdf,.html,.htm,.doc,.docx,.ppt,.pptx,application/pdf,text/html"
+                :disabled="uploading.material_url"
+                @change="onUpload('material_url', $event)"
+              />
             </label>
-          </div>
-          <p v-if="modalError" class="error-msg">{{ modalError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" :disabled="modalSaving" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando...' : 'Salvar' }}
-            </button>
           </div>
         </div>
-      </div>
-    </Teleport>
 
-    <Teleport to="body">
-      <div v-if="deleteConfirming" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal modal-sm" role="dialog" aria-modal="true">
-          <h2 class="modal-title">Excluir material?</h2>
-          <p class="modal-text">
-            Remover <strong>{{ deleteTarget?.title }}</strong> da vitrine da landing.
-          </p>
-          <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
+        <div class="field field-full">
+          <span>Resumo executivo (PDF ou link)</span>
+          <div class="url-upload-row">
+            <input
+              v-model="form.summary_url"
+              type="text"
+              class="input"
+              placeholder="/material_gratuito/resumo.pdf ou https://..."
+            />
+            <label class="btn-upload" :class="{ disabled: uploading.summary_url }">
+              {{ uploading.summary_url ? 'Enviando…' : 'Upload' }}
+              <input
+                type="file"
+                class="file-input"
+                accept=".pdf,.doc,.docx,application/pdf"
+                :disabled="uploading.summary_url"
+                @change="onUpload('summary_url', $event)"
+              />
+            </label>
           </div>
         </div>
+
+        <div class="field field-full">
+          <span>Áudio narrado (opcional)</span>
+          <div class="url-upload-row">
+            <input
+              v-model="form.audio_url"
+              type="text"
+              class="input"
+              placeholder="/material_gratuito/narracao.mp3 ou https://..."
+            />
+            <label class="btn-upload" :class="{ disabled: uploading.audio_url }">
+              {{ uploading.audio_url ? 'Enviando…' : 'Upload' }}
+              <input
+                type="file"
+                class="file-input"
+                accept=".mp3,.m4a,.wav,.ogg,.aac,audio/*"
+                :disabled="uploading.audio_url"
+                @change="onUpload('audio_url', $event)"
+              />
+            </label>
+          </div>
+        </div>
+
+        <label class="field checkbox-field">
+          <input v-model="form.active" type="checkbox" />
+          <span>Ativo na landing</span>
+        </label>
       </div>
-    </Teleport>
+      <p v-if="modalError" class="error-msg">{{ modalError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" :disabled="modalSaving" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : 'Salvar' }}
+        </AppButton>
+      </template>
+    </AppModal>
+
+    <AppModal :open="deleteConfirming" title="Excluir material?" size="sm" @close="cancelDelete">
+      <p>
+        Remover <strong>{{ deleteTarget?.title }}</strong> da vitrine da landing.
+      </p>
+      <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

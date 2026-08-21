@@ -9,6 +9,8 @@ import {
 } from '@/api/admin'
 import type { LandingPrompt } from '@/api/admin'
 import { formatCount, formatLastAccess } from '@/lib/accessFormat'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 /** Detalhe do acesso no tooltip: a coluna precisa caber, mas o número sozinho engana —
  * cliques repetidos da mesma pessoa contam, e visitantes únicos é que dizem o alcance. */
@@ -230,83 +232,71 @@ onMounted(async () => {
       </table>
     </div>
 
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title">
-          <h2 id="prompt-modal-title" class="modal-title">
-            {{ modalMode === 'create' ? 'Novo prompt' : 'Editar prompt' }}
-          </h2>
-          <div class="form-grid">
-            <label class="field">
-              <span>Título</span>
-              <input v-model="form.title" type="text" class="input" maxlength="200" />
-            </label>
-            <label class="field">
-              <span>Ordem</span>
-              <input v-model.number="form.order" type="number" class="input" min="0" max="9999" />
-            </label>
-            <label class="field field-full">
-              <span>Rótulo (ex.: Prompt · SWOT de IA)</span>
-              <input v-model="form.meta_label" type="text" class="input" maxlength="200" />
-            </label>
-            <label class="field field-full">
-              <span>Descrição</span>
-              <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
-            </label>
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Novo prompt' : 'Editar prompt'" size="lg" @close="closeModal">
+      <div class="form-grid">
+        <label class="field">
+          <span>Título</span>
+          <input v-model="form.title" type="text" class="input" maxlength="200" />
+        </label>
+        <label class="field">
+          <span>Ordem</span>
+          <input v-model.number="form.order" type="number" class="input" min="0" max="9999" />
+        </label>
+        <label class="field field-full">
+          <span>Rótulo (ex.: Prompt · SWOT de IA)</span>
+          <input v-model="form.meta_label" type="text" class="input" maxlength="200" />
+        </label>
+        <label class="field field-full">
+          <span>Descrição</span>
+          <textarea v-model="form.description" class="input textarea" rows="3" maxlength="2000" />
+        </label>
 
-            <div class="field field-full">
-              <span>Arquivo do prompt (.md ou .txt)</span>
-              <div class="url-upload-row">
-                <input
-                  v-model="form.prompt_url"
-                  type="text"
-                  class="input"
-                  placeholder="/material_gratuito/prompt.md ou https://..."
-                />
-                <label class="btn-upload" :class="{ disabled: uploading }">
-                  {{ uploading ? 'Enviando…' : 'Upload' }}
-                  <input
-                    type="file"
-                    class="file-input"
-                    accept=".md,.txt,text/markdown,text/plain"
-                    :disabled="uploading"
-                    @change="onUpload"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <label class="field checkbox-field">
-              <input v-model="form.active" type="checkbox" />
-              <span>Ativo na landing</span>
+        <div class="field field-full">
+          <span>Arquivo do prompt (.md ou .txt)</span>
+          <div class="url-upload-row">
+            <input
+              v-model="form.prompt_url"
+              type="text"
+              class="input"
+              placeholder="/material_gratuito/prompt.md ou https://..."
+            />
+            <label class="btn-upload" :class="{ disabled: uploading }">
+              {{ uploading ? 'Enviando…' : 'Upload' }}
+              <input
+                type="file"
+                class="file-input"
+                accept=".md,.txt,text/markdown,text/plain"
+                :disabled="uploading"
+                @change="onUpload"
+              />
             </label>
-          </div>
-          <p v-if="modalError" class="error-msg">{{ modalError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" :disabled="modalSaving" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando...' : 'Salvar' }}
-            </button>
           </div>
         </div>
-      </div>
-    </Teleport>
 
-    <Teleport to="body">
-      <div v-if="deleteConfirming" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal modal-sm" role="dialog" aria-modal="true">
-          <h2 class="modal-title">Excluir prompt?</h2>
-          <p class="modal-text">
-            Remover <strong>{{ deleteTarget?.title }}</strong> da lista de prompts da landing.
-          </p>
-          <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
-          </div>
-        </div>
+        <label class="field checkbox-field">
+          <input v-model="form.active" type="checkbox" />
+          <span>Ativo na landing</span>
+        </label>
       </div>
-    </Teleport>
+      <p v-if="modalError" class="error-msg">{{ modalError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" :disabled="modalSaving" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : 'Salvar' }}
+        </AppButton>
+      </template>
+    </AppModal>
+
+    <AppModal :open="deleteConfirming" title="Excluir prompt?" size="sm" @close="cancelDelete">
+      <p>
+        Remover <strong>{{ deleteTarget?.title }}</strong> da lista de prompts da landing.
+      </p>
+      <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

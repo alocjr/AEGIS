@@ -13,6 +13,8 @@ import {
 } from '@/api/canvasProjects'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -589,21 +591,16 @@ onMounted(async () => {
       </div>
     </Teleport>
 
-    <Teleport to="body">
-      <div v-if="deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal" role="dialog" aria-modal="true">
-          <h2 class="modal-title">Excluir projeto?</h2>
-          <p class="modal-text">
-            Remover <strong>{{ deleteTarget.title }}</strong> e o canvas preenchido. Esta ação não pode ser desfeita.
-          </p>
-          <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AppModal :open="!!deleteTarget" title="Excluir projeto?" size="sm" @close="cancelDelete">
+      <p v-if="deleteTarget">
+        Remover <strong>{{ deleteTarget.title }}</strong> e o canvas preenchido. Esta ação não pode ser desfeita.
+      </p>
+      <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

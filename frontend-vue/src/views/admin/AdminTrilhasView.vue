@@ -11,6 +11,7 @@ import type { CourseListItem } from '@/api/admin'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppModal from '@/components/ui/AppModal.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -177,70 +178,50 @@ onMounted(async () => {
     </div>
 
     <!-- Modal Criar / Editar -->
-    <Teleport to="body">
-      <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
-        <div class="modal-box">
-          <div class="modal-header">
-            <h2>{{ modalMode === 'create' ? 'Nova trilha' : 'Editar trilha' }}</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="closeModal">×</button>
-          </div>
-          <div class="modal-body">
-            <div v-if="modalError" class="modal-error">{{ modalError }}</div>
-            <div class="form-group">
-              <label for="trilha-slug">Slug (identificador único)</label>
-              <input
-                id="trilha-slug"
-                v-model="modalSlug"
-                type="text"
-                placeholder="ex: trilha-ia-executiva"
-                :readonly="modalMode === 'edit'"
-                class="input"
-              />
-              <span v-if="modalMode === 'edit'" class="form-hint">Slug não pode ser alterado na edição.</span>
-            </div>
-            <div class="form-group">
-              <label for="trilha-json">Programa (JSON)</label>
-              <textarea
-                id="trilha-json"
-                v-model="modalJson"
-                class="input textarea-json"
-                rows="18"
-                spellcheck="false"
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-            <button type="button" class="btn-primary" :disabled="modalSaving" @click="saveModal">
-              {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
-            </button>
-          </div>
-        </div>
+    <AppModal :open="modalOpen" :title="modalMode === 'create' ? 'Nova trilha' : 'Editar trilha'" size="lg" @close="closeModal">
+      <div v-if="modalError" class="modal-error">{{ modalError }}</div>
+      <div class="form-group">
+        <label for="trilha-slug">Slug (identificador único)</label>
+        <input
+          id="trilha-slug"
+          v-model="modalSlug"
+          type="text"
+          placeholder="ex: trilha-ia-executiva"
+          :readonly="modalMode === 'edit'"
+          class="input"
+        />
+        <span v-if="modalMode === 'edit'" class="form-hint">Slug não pode ser alterado na edição.</span>
       </div>
-    </Teleport>
+      <div class="form-group">
+        <label for="trilha-json">Programa (JSON)</label>
+        <textarea
+          id="trilha-json"
+          v-model="modalJson"
+          class="input textarea-json"
+          rows="18"
+          spellcheck="false"
+        />
+      </div>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeModal">Cancelar</AppButton>
+        <AppButton variant="primary" :disabled="modalSaving" @click="saveModal">
+          {{ modalSaving ? 'Salvando…' : (modalMode === 'create' ? 'Criar' : 'Salvar') }}
+        </AppButton>
+      </template>
+    </AppModal>
 
     <!-- Confirmação excluir -->
-    <Teleport to="body">
-      <div v-if="deleteConfirming && deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal-box modal-confirm">
-          <div class="modal-header">
-            <h2>Excluir trilha</h2>
-            <button type="button" class="modal-close" aria-label="Fechar" @click="cancelDelete">×</button>
-          </div>
-          <div class="modal-body">
-            <p>
-              Tem certeza que deseja excluir a trilha
-              <strong>{{ deleteTarget.titulo || deleteTarget.slug }}</strong>
-              (<code>{{ deleteTarget.slug }}</code>)? Esta ação não pode ser desfeita.
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AppModal :open="deleteConfirming && !!deleteTarget" title="Excluir trilha" size="sm" @close="cancelDelete">
+      <p v-if="deleteTarget">
+        Tem certeza que deseja excluir a trilha
+        <strong>{{ deleteTarget.titulo || deleteTarget.slug }}</strong>
+        (<code>{{ deleteTarget.slug }}</code>)? Esta ação não pode ser desfeita.
+      </p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 
