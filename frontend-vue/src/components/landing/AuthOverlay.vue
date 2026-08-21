@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { login, forgotPassword, resetPassword, verifyEmail, resendVerification } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import FormField from '@/components/ui/FormField.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 type AuthView = 'login' | 'forgot' | 'reset'
 
@@ -34,6 +36,14 @@ const viewTitle = computed(() => {
   if (view.value === 'forgot') return 'Recuperar senha'
   if (view.value === 'reset') return 'Nova senha'
   return 'Entrar'
+})
+
+const viewLead = computed(() => {
+  if (view.value === 'forgot') return 'Informe seu email para receber as instruções de recuperação.'
+  if (view.value === 'reset') {
+    return 'Defina sua nova senha. O token do email já foi preenchido quando você clicou no link.'
+  }
+  return 'Use o email da sua conta para acessar o programa e os instrumentos do AI Hub.'
 })
 
 const dialogAriaLabel = computed(() => viewTitle.value)
@@ -249,320 +259,247 @@ async function submitResendVerification() {
 function onClose() {
   emit('close')
 }
-
-function onOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).id === 'auth-overlay') onClose()
-}
-
-function onLoginKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') doLogin()
-}
-
-function onForgotKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') submitForgot()
-}
-
-function onResetKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter') submitReset()
-}
 </script>
 
 <template>
-  <div
-    id="auth-overlay"
-    class="auth-overlay"
-    :class="{ show: show }"
-    v-show="show"
-    role="dialog"
-    aria-modal="true"
-    :aria-label="dialogAriaLabel"
-    @click="onOverlayClick"
-  >
-    <div class="auth-card">
-      <div class="auth-head">
-        <span class="auth-title">{{ viewTitle }}</span>
-        <button type="button" class="auth-close" aria-label="Fechar" @click="onClose">×</button>
+  <section class="auth-panel" :aria-label="dialogAriaLabel">
+    <p class="auth-eyebrow">Acesso à plataforma</p>
+    <h1 class="auth-title">{{ viewTitle }}</h1>
+    <p class="auth-lead">{{ viewLead }}</p>
+
+    <form v-if="view === 'login'" class="auth-form" @submit.prevent="doLogin">
+      <FormField label="Email" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="email"
+            type="email"
+            class="auth-input"
+            autocomplete="email"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <FormField label="Senha" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="password"
+            type="password"
+            class="auth-input"
+            autocomplete="current-password"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <button type="button" class="auth-link" @click="goToForgot">Esqueci minha senha</button>
+      <p v-if="error" class="auth-error" role="alert">{{ error }}</p>
+      <p v-if="success" class="auth-success">{{ success }}</p>
+      <div v-if="authStore.user?.email_verified === false" class="auth-actions">
+        <AppButton variant="secondary" :disabled="loading" @click="submitResendVerification">
+          {{ loading ? 'Enviando…' : 'Reenviar email de confirmação' }}
+        </AppButton>
       </div>
+      <div class="auth-submit">
+        <AppButton variant="primary" type="submit" :disabled="loading">
+          {{ loading ? 'Entrando…' : 'Entrar' }}
+        </AppButton>
+      </div>
+      <button type="button" class="auth-back" @click="onClose">Voltar ao início</button>
+    </form>
 
-      <!-- login -->
-      <template v-if="view === 'login'">
-        <input
-          v-model="email"
-          type="email"
-          class="auth-input"
-          placeholder="Email"
-          autocomplete="email"
-        />
-        <input
-          v-model="password"
-          type="password"
-          class="auth-input"
-          placeholder="Senha"
-          autocomplete="current-password"
-          @keydown="onLoginKeydown"
-        />
-        <button type="button" class="auth-link" @click="goToForgot">Esqueci minha senha</button>
-        <div class="auth-error">{{ error }}</div>
-        <div v-if="success" class="auth-success">{{ success }}</div>
-        <div v-if="authStore.user?.email_verified === false" class="auth-actions">
-          <button type="button" class="auth-btn alt" :disabled="loading" @click="submitResendVerification">
-            {{ loading ? 'Enviando…' : 'Reenviar email de confirmação' }}
-          </button>
-        </div>
-        <div>
-          <button type="button" class="auth-btn" :disabled="loading" @click="doLogin">
-            {{ loading ? 'Entrando…' : 'Entrar' }}
-          </button>
-          <button type="button" class="auth-btn alt" @click="onClose">Fechar</button>
-        </div>
-      </template>
+    <form v-else-if="view === 'forgot'" class="auth-form" @submit.prevent="submitForgot">
+      <FormField label="Email" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="forgotEmail"
+            type="email"
+            class="auth-input"
+            autocomplete="email"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <p v-if="error" class="auth-error" role="alert">{{ error }}</p>
+      <p v-if="success" class="auth-success">{{ success }}</p>
+      <div class="auth-submit">
+        <AppButton variant="primary" type="submit" :disabled="loading">
+          {{ loading ? 'Enviando…' : 'Enviar instruções' }}
+        </AppButton>
+      </div>
+      <div class="auth-nav">
+        <button type="button" class="auth-link" @click="goToLogin">Voltar ao login</button>
+        <button v-if="success" type="button" class="auth-link" @click="goToReset">Já tenho o token</button>
+      </div>
+    </form>
 
-      <!-- forgot -->
-      <template v-else-if="view === 'forgot'">
-        <p class="auth-desc">Informe seu email para receber instruções de recuperação.</p>
-        <input
-          v-model="forgotEmail"
-          type="email"
-          class="auth-input"
-          placeholder="Email"
-          autocomplete="email"
-          @keydown="onForgotKeydown"
-        />
-        <div class="auth-error">{{ error }}</div>
-        <div v-if="success" class="auth-success">{{ success }}</div>
-        <div class="auth-actions">
-          <button type="button" class="auth-btn" :disabled="loading" @click="submitForgot">
-            {{ loading ? 'Enviando…' : 'Enviar instruções' }}
-          </button>
-        </div>
-        <div class="auth-nav">
-          <button type="button" class="auth-link" @click="goToLogin">Voltar ao login</button>
-          <button
-            v-if="success"
-            type="button"
-            class="auth-link"
-            @click="goToReset"
-          >
-            Já tenho o token
-          </button>
-        </div>
-      </template>
-
-      <!-- reset -->
-      <template v-else>
-        <p class="auth-desc">
-          Defina sua nova senha abaixo. O token do email já foi preenchido quando você clicou no link.
-        </p>
-        <input
-          v-if="!resetToken"
-          v-model="resetToken"
-          type="text"
-          class="auth-input"
-          placeholder="Token de recuperação"
-          autocomplete="one-time-code"
-          @keydown="onResetKeydown"
-        />
-        <input
-          v-model="newPassword"
-          type="password"
-          class="auth-input"
-          placeholder="Nova senha"
-          autocomplete="new-password"
-          @keydown="onResetKeydown"
-        />
-        <input
-          v-model="confirmPassword"
-          type="password"
-          class="auth-input"
-          placeholder="Confirmar nova senha"
-          autocomplete="new-password"
-          @keydown="onResetKeydown"
-        />
-        <div class="auth-error">{{ error }}</div>
-        <div v-if="success" class="auth-success">{{ success }}</div>
-        <div class="auth-actions">
-          <button
-            v-if="!success"
-            type="button"
-            class="auth-btn"
-            :disabled="loading"
-            @click="submitReset"
-          >
-            {{ loading ? 'Salvando…' : 'Redefinir senha' }}
-          </button>
-          <button v-else type="button" class="auth-btn" @click="resetOverlayState">
-            Ir para login
-          </button>
-        </div>
-        <div class="auth-nav">
-          <button type="button" class="auth-link" @click="goToLogin">Voltar ao login</button>
-          <button type="button" class="auth-link" @click="goToForgot">Solicitar novo token</button>
-        </div>
-      </template>
-    </div>
-  </div>
+    <form v-else class="auth-form" @submit.prevent="submitReset">
+      <FormField v-if="!resetToken" label="Token de recuperação" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="resetToken"
+            type="text"
+            class="auth-input"
+            autocomplete="one-time-code"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <FormField label="Nova senha" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="newPassword"
+            type="password"
+            class="auth-input"
+            autocomplete="new-password"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <FormField label="Confirmar nova senha" required>
+        <template #default="{ fieldId, describedBy }">
+          <input
+            :id="fieldId"
+            v-model="confirmPassword"
+            type="password"
+            class="auth-input"
+            autocomplete="new-password"
+            :aria-describedby="describedBy"
+          />
+        </template>
+      </FormField>
+      <p v-if="error" class="auth-error" role="alert">{{ error }}</p>
+      <p v-if="success" class="auth-success">{{ success }}</p>
+      <div class="auth-submit">
+        <AppButton v-if="!success" variant="primary" type="submit" :disabled="loading">
+          {{ loading ? 'Salvando…' : 'Redefinir senha' }}
+        </AppButton>
+        <AppButton v-else variant="primary" type="button" @click="resetOverlayState">
+          Ir para login
+        </AppButton>
+      </div>
+      <div class="auth-nav">
+        <button type="button" class="auth-link" @click="goToLogin">Voltar ao login</button>
+        <button type="button" class="auth-link" @click="goToForgot">Solicitar novo token</button>
+      </div>
+    </form>
+  </section>
 </template>
 
 <style scoped>
-.auth-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
+.auth-panel {
+  width: min(100%, 400px);
 }
-.auth-overlay.show {
-  display: flex;
+
+.auth-eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
 }
-.auth-card {
-  width: min(92vw, 420px);
-  background: var(--wh);
-  border: 1px solid var(--bd);
-  border-radius: var(--r-md);
-  padding: 28px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-}
-.auth-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
+
 .auth-title {
   font-family: var(--serif);
-  font-size: 22px;
+  font-weight: 400;
+  font-size: var(--fs-3xl);
+  line-height: 1.15;
   color: var(--k0);
+  margin-bottom: 10px;
 }
-.auth-close {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--k5);
-  font-size: 20px;
-  cursor: pointer;
-  border-radius: var(--r-xs);
+
+.auth-lead {
+  font-size: var(--fs-md);
+  color: var(--k3);
+  line-height: 1.55;
+  margin: 0 0 28px;
+}
+
+.auth-form {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
 }
-.auth-close:hover {
-  background: var(--k8);
-  color: var(--k0);
-}
-.auth-desc {
-  font-size: 14px;
-  color: var(--k5);
-  margin: 0 0 16px;
-  line-height: 1.45;
-}
+
 .auth-input {
   width: 100%;
-  height: 44px;
+  height: 46px;
   padding: 0 14px;
   border: 1px solid var(--bd);
-  border-radius: var(--r-xs);
+  border-radius: var(--r-sm);
+  background: var(--wh);
   font-size: 15px;
-  margin-bottom: 12px;
+  color: var(--k0);
   box-sizing: border-box;
 }
 .auth-input:focus {
   outline: none;
   border-color: var(--k0);
+  box-shadow: 0 0 0 3px rgba(12, 35, 64, 0.08);
 }
+
 .auth-error {
-  font-size: 13px;
-  color: #8f2b2b;
-  min-height: 20px;
-  margin-bottom: 8px;
-}
-.auth-success {
-  font-size: 13px;
-  color: #1f5c3a;
-  margin-bottom: 12px;
+  font-size: var(--fs-sm);
+  color: var(--low);
+  margin: 0;
   line-height: 1.45;
 }
-.auth-hint {
-  font-size: 12px;
-  color: var(--k5);
-  background: var(--k8, #f5f5f5);
-  border: 1px dashed var(--bd);
-  border-radius: var(--r-xs);
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  line-height: 1.4;
+.auth-success {
+  font-size: var(--fs-sm);
+  color: var(--success);
+  margin: 0;
+  line-height: 1.45;
 }
-.auth-hint-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-.auth-hint-token {
-  display: block;
-  word-break: break-all;
-  font-size: 11px;
-  margin-bottom: 6px;
-}
-.auth-hint-copy {
-  display: block;
-  font-size: 11px;
-  color: #1f5c3a;
-  margin-top: 4px;
-}
+
 .auth-link {
   display: block;
   width: fit-content;
-  margin: 0 0 12px;
+  margin: -4px 0 0;
   padding: 0;
   border: none;
   background: none;
-  color: var(--k0);
-  font-size: 13px;
-  text-decoration: underline;
+  color: var(--gold);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   cursor: pointer;
 }
-.auth-link.inline {
-  display: inline;
-  margin: 0 0 0 8px;
-}
 .auth-link:hover {
-  opacity: 0.85;
+  color: var(--gold2);
 }
+
 .auth-actions {
-  margin-bottom: 8px;
+  display: flex;
 }
+
+.auth-submit :deep(.app-btn) {
+  width: 100%;
+  height: 46px;
+}
+
 .auth-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 16px;
-  margin-top: 4px;
 }
 .auth-nav .auth-link {
   margin: 0;
 }
-.auth-btn {
-  height: 44px;
-  padding: 0 20px;
-  border: 1px solid var(--k0);
-  background: var(--k0);
-  color: var(--wh);
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: var(--r-xs);
+
+.auth-back {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--k4);
+  font-size: var(--fs-sm);
   cursor: pointer;
+  width: fit-content;
 }
-.auth-btn:hover:not(:disabled) {
-  opacity: 0.92;
-}
-.auth-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-.auth-btn.alt {
-  background: transparent;
+.auth-back:hover {
   color: var(--k0);
-  margin-left: 8px;
 }
 </style>
