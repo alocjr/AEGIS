@@ -8,6 +8,10 @@ import {
   type OkrCycleSummary,
   type OkrCycleTipo,
 } from '@/api/okrs'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppModal from '@/components/ui/AppModal.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -107,16 +111,13 @@ onMounted(async () => {
 
 <template>
   <div class="wrap">
-    <div class="page-header">
-      <h1 class="page-title">OKR</h1>
-      <p class="page-desc">
-        Objetivos nascem das iniciativas TOWS da SWOT; os Resultados-Chave são o que os
-        projetos do AI Canvas endereçam. Ative um ciclo para que ele apareça no Mapa Estratégico.
-      </p>
-    </div>
+    <PageHeader
+      title="OKR"
+      subtitle="Objetivos nascem das iniciativas TOWS da SWOT; os Resultados-Chave são o que os projetos do AI Canvas endereçam. Ative um ciclo para que ele apareça no Mapa Estratégico."
+    />
 
-    <div v-if="loading" class="card">Carregando...</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
       <div class="card card-new">
@@ -185,22 +186,17 @@ onMounted(async () => {
       </ul>
     </template>
 
-    <Teleport to="body">
-      <div v-if="deleteTarget" class="modal-backdrop" @click.self="cancelDelete">
-        <div class="modal" role="dialog" aria-modal="true">
-          <h2 class="modal-title">Excluir ciclo?</h2>
-          <p class="modal-text">
-            Remover <strong>{{ deleteTarget.label }}</strong> e todos os seus Objectives/Key Results.
-            Esta ação não pode ser desfeita.
-          </p>
-          <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="cancelDelete">Cancelar</button>
-            <button type="button" class="btn-danger" @click="confirmDelete">Excluir</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AppModal :open="!!deleteTarget" title="Excluir ciclo?" size="sm" @close="cancelDelete">
+      <p class="modal-text">
+        Remover <strong>{{ deleteTarget?.label }}</strong> e todos os seus Objectives/Key Results.
+        Esta ação não pode ser desfeita.
+      </p>
+      <p v-if="deleteError" class="error-msg">{{ deleteError }}</p>
+      <template #footer>
+        <AppButton variant="secondary" @click="cancelDelete">Cancelar</AppButton>
+        <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 

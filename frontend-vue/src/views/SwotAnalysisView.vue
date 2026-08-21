@@ -23,13 +23,26 @@ import {
   type SwotImportDocument,
   type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
+import { useAutosave } from '@/composables/useAutosave'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
-const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
-const saveError = ref<string | null>(null)
+let pendingRebuildTows = false
+// AR-03: fila de gravação, debounce e guarda de saída vêm do composable
+// compartilhado — ver src/composables/useAutosave.ts. Nesta tela, cada
+// alteração salva na hora (sem debounce), como já era o caso; o composable
+// só corrige a fila de concorrência e acrescenta a guarda de saída.
+const autosave = useAutosave(async () => {
+  const rebuildTows = pendingRebuildTows
+  pendingRebuildTows = false
+  const payload: SwotAnalysisPayload = { ...form.value }
+  const updated = await updateSwotAnalysis(payload, currentSwotId.value, { rebuildTows })
+  applyDoc(updated)
+})
+const saveState = autosave.saveState
+const saveError = autosave.error
 const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
 const importError = ref<string | null>(null)
 const showMethod = ref(true)
@@ -42,8 +55,6 @@ const currentSwotId = ref<string | null>(null)
 const maturityResponseId = ref<string | null>(null)
 /** Pontos de Atenção (nota 3) — só leitura; fora do form de autosave. */
 const watchlist = ref<SwotWatchlistItem[]>([])
-let saving = false
-let pendingSave = false
 
 const PILLARS = SWOT_PILLARS
 const PILLAR_BY_ID = Object.fromEntries(PILLARS.map((p) => [p.id, p])) as Record<
@@ -457,37 +468,9 @@ async function loadSwot() {
   }
 }
 
-let pendingRebuildTows = false
-
-async function persist(opts?: { rebuildTows?: boolean }) {
+function persist(opts?: { rebuildTows?: boolean }) {
   if (opts?.rebuildTows) pendingRebuildTows = true
-  if (saving) {
-    pendingSave = true
-    return
-  }
-  saving = true
-  saveState.value = 'saving'
-  saveError.value = null
-  const rebuildTows = pendingRebuildTows
-  pendingRebuildTows = false
-  const payload: SwotAnalysisPayload = { ...form.value }
-  try {
-    const updated = await updateSwotAnalysis(payload, currentSwotId.value, { rebuildTows })
-    applyDoc(updated)
-    saveState.value = 'saved'
-    window.setTimeout(() => {
-      if (saveState.value === 'saved') saveState.value = 'idle'
-    }, 1600)
-  } catch (e) {
-    saveState.value = 'error'
-    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
-  } finally {
-    saving = false
-    if (pendingSave) {
-      pendingSave = false
-      void persist()
-    }
-  }
+  void autosave.save()
 }
 
 function itemsForPilar(field: SwotListField, pilar: string): { item: SwotItem; index: number }[] {

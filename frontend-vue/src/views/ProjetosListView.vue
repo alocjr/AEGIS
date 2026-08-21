@@ -11,6 +11,8 @@ import {
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -271,16 +273,13 @@ onMounted(async () => {
 
 <template>
   <div class="wrap">
-    <div class="page-header">
-      <h1 class="page-title">Projetos · Canvas de Oportunidades</h1>
-      <p class="page-desc">
-        Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08),
-        ou importe o JSON gerado pelo prompt do Canvas de Oportunidades.
-      </p>
-    </div>
+    <PageHeader
+      title="Projetos · Canvas de Oportunidades"
+      subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08), ou importe o JSON gerado pelo prompt do Canvas de Oportunidades."
+    />
 
-    <div v-if="loading" class="card">Carregando...</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
       <div class="card card-chart">

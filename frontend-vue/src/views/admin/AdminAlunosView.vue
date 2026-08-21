@@ -1,14 +1,9 @@
 <script setup lang="ts">
+import PageHeader from '@/components/ui/PageHeader.vue'
 </script>
 
 <template>
   <div>
-    <h1>Admin · Alunos</h1>
-    <p class="muted">Gestão de alunos (em migração).</p>
+    <PageHeader title="Admin · Alunos" subtitle="Gestão de alunos (em migração)." />
   </div>
 </template>
-
-<style scoped>
-h1 { font-size: 22px; margin-bottom: 8px; }
-.muted { color: var(--k3); font-size: 14px; }
-</style>

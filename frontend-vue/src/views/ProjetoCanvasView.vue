@@ -21,6 +21,7 @@ import {
   type SwotTowsField,
 } from '@/api/swotAnalysis'
 import { getActiveOkrCycle, type OkrCycle } from '@/api/okrs'
+import { useAutosave } from '@/composables/useAutosave'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,16 +29,21 @@ const projectId = computed(() => String(route.params.id || ''))
 
 const loading = ref(true)
 const error = ref<string | null>(null)
-const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
-const saveError = ref<string | null>(null)
+// AR-03: fila de gravação, debounce e guarda de saída vêm do composable
+// compartilhado — ver src/composables/useAutosave.ts.
+const autosave = useAutosave(async () => {
+  const payload: CanvasProjectPayload = { ...form.value }
+  const updated = await updateCanvasProject(projectId.value, payload)
+  applyProject(updated)
+})
+const saveState = autosave.saveState
+const saveError = autosave.error
 const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
 const importError = ref<string | null>(null)
 const importOkMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const project = ref<CanvasProject | null>(null)
 const openHelp = ref<CanvasListField | null>(null)
-let saving = false
-let pendingSave = false
 
 type EvalField = 'valor' | 'dados' | 'custo' | 'riscos'
 
@@ -589,33 +595,9 @@ async function onImportFile(ev: Event) {
   }
 }
 
-async function persist() {
-  if (!projectId.value) return
-  if (saving) {
-    pendingSave = true
-    return
-  }
-  saving = true
-  saveState.value = 'saving'
-  saveError.value = null
-  const payload: CanvasProjectPayload = { ...form.value }
-  try {
-    const updated = await updateCanvasProject(projectId.value, payload)
-    applyProject(updated)
-    saveState.value = 'saved'
-    window.setTimeout(() => {
-      if (saveState.value === 'saved') saveState.value = 'idle'
-    }, 1600)
-  } catch (e) {
-    saveState.value = 'error'
-    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
-  } finally {
-    saving = false
-    if (pendingSave) {
-      pendingSave = false
-      void persist()
-    }
-  }
+function persist(): Promise<void> {
+  if (!projectId.value) return Promise.resolve()
+  return autosave.save()
 }
 
 onMounted(async () => {

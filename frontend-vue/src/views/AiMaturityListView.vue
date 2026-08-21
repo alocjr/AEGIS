@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchMyMaturityResponses, fetchMaturityModel, type MaturityResponseListItem, type MaturityModel } from '@/api/maturity'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -101,13 +103,13 @@ onMounted(async () => {
 
 <template>
   <div class="wrap">
-    <div class="page-header">
-      <h1 class="page-title">{{ model?.assessment_title || model?.title || 'Modelo de Maturidade em IA' }}</h1>
-      <p class="page-desc">Suas autoavaliações. Realize novas avaliações para acompanhar sua evolução.</p>
-    </div>
+    <PageHeader
+      :title="model?.assessment_title || model?.title || 'Modelo de Maturidade em IA'"
+      subtitle="Suas autoavaliações. Realize novas avaliações para acompanhar sua evolução."
+    />
 
-    <div v-if="loading" class="card">Carregando...</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
       <div class="card card-cta">

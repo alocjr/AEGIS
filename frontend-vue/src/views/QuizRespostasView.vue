@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import { fetchQuizList } from '@/api/quiz'
 import { ApiError } from '@/api/client'
 import type { QuizListItem } from '@/api/quiz'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -97,14 +99,9 @@ function ringStrokeOffset(pct: number | null): number {
 
 <template>
   <div class="wrap">
-    <header class="page-header">
-      <h1>Desempenho nos Quizzes</h1>
-      <p class="muted">
-        Acompanhe suas respostas por encontro. Clique em &ldquo;Abrir&rdquo; para responder ou rever.
-      </p>
-    </header>
+    <PageHeader title="Desempenho nos Quizzes" subtitle="Acompanhe suas respostas por encontro. Clique em &ldquo;Abrir&rdquo; para responder ou rever." />
 
-    <div v-if="loading" class="loading">Carregando...</div>
+    <StateBlock v-if="loading" state="loading" />
 
     <div v-else-if="noTrilha" class="empty-trilha">
       <h2>Você ainda não tem uma trilha de mentoria</h2>

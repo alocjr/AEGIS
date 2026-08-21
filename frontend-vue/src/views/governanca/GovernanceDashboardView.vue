@@ -9,6 +9,8 @@ import {
   confirmarProfundidade,
 } from '@/api/governance'
 import type { MetricsResponse, ProfundidadeSettings, Profundidade, EvidenceMetrics } from '@/api/governance'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -130,17 +132,14 @@ onMounted(async () => {
 
 <template>
   <div class="dashboard-page">
-    <header class="page-header">
-      <nav class="subnav">
-        <RouterLink to="/governanca/inventario" class="subnav-link">Inventário</RouterLink>
-        <RouterLink to="/governanca/dashboard" class="subnav-link active">Dashboard</RouterLink>
-      </nav>
-      <h1 class="page-title">Governança de IA · Dashboard</h1>
-      <p class="page-sub">Indicadores de evidência dos 4 pilares e profundidade de implantação vigente.</p>
-    </header>
+    <nav class="subnav">
+      <RouterLink to="/governanca/inventario" class="subnav-link">Inventário</RouterLink>
+      <RouterLink to="/governanca/dashboard" class="subnav-link active">Dashboard</RouterLink>
+    </nav>
+    <PageHeader title="Governança de IA · Dashboard" subtitle="Indicadores de evidência dos 4 pilares e profundidade de implantação vigente." />
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <template v-else>
       <section v-if="profundidade" class="card profundidade-card">
         <h2 class="section-title">Profundidade de implantação</h2>

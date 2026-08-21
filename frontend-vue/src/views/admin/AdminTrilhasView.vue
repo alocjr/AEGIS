@@ -8,6 +8,9 @@ import {
   deleteCourse,
 } from '@/api/admin'
 import type { CourseListItem } from '@/api/admin'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -148,16 +151,14 @@ onMounted(async () => {
 
 <template>
   <div class="trilhas-page">
-    <header class="page-header">
-      <h1 class="page-title">Trilhas</h1>
-      <p class="page-sub">Criar e editar trilhas de formação (cursos).</p>
-      <div class="page-actions">
-        <button type="button" class="btn-primary" @click="openCreate">Nova trilha</button>
-      </div>
-    </header>
+    <PageHeader title="Trilhas" subtitle="Criar e editar trilhas de formação (cursos).">
+      <template #actions>
+        <AppButton variant="primary" @click="openCreate">Nova trilha</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <div v-else-if="trilhas.length === 0" class="empty">
       Nenhuma trilha cadastrada. Clique em <strong>Nova trilha</strong> para criar.
     </div>

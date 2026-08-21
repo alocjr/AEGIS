@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   fetchMaturityModel,
@@ -14,6 +14,7 @@ import {
   createSwotFromMaturity,
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
+import { useAutosave } from '@/composables/useAutosave'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,14 +28,22 @@ const isEditingExisting = computed(() => route.name === 'AiMaturityEdit')
 const editResponseId = computed(() =>
   isEditingExisting.value && typeof route.params.id === 'string' ? route.params.id : null
 )
-const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
-const saveError = ref<string | null>(null)
+// AR-03: fila de gravação, debounce e guarda de saída vêm do composable
+// compartilhado — ver src/composables/useAutosave.ts.
+const autosave = useAutosave(async () => {
+  const payload: Record<string, number> = { ...answers.value }
+  const result = await saveMaturityResponse(payload, selectedTier.value, responseId.value)
+  responseId.value = result.id
+  // Nova avaliação: após o 1º save, passa a editar o mesmo registro na URL
+  if (route.name === 'AiMaturityNew' && result.id) {
+    await router.replace({ name: 'AiMaturityEdit', params: { id: result.id } })
+  }
+})
+const saveState = autosave.saveState
+const saveError = autosave.error
 const swotId = ref<string | null>(null)
 const swotBusy = ref(false)
 const swotError = ref<string | null>(null)
-let persistTimer: ReturnType<typeof setTimeout> | null = null
-let persisting = false
-let pendingPersist = false
 
 const TIER_KEYS: MaturityTier[] = ['basico', 'completo', 'complementar']
 const TIER_ORDER: Record<MaturityTier, number> = { basico: 0, completo: 1, complementar: 2 }
@@ -173,49 +182,16 @@ function toggleSelect(qid: string, lvl: number) {
   schedulePersist()
 }
 
-async function persistAnswers() {
+/** Agenda a gravação (debounce de 280ms, como antes). Não cria registro
+ * vazio: só entra na fila quando há modelo carregado e ao menos 1 resposta
+ * (ou já existe um registro salvo para atualizar). */
+function schedulePersist() {
   if (!model.value) return
-  // Ainda sem respostas e sem documento: não cria registro vazio
   if (!responseId.value && Object.keys(answers.value).length === 0) {
     saveState.value = 'idle'
     return
   }
-  // Evita corrida: um save por vez; o mais recente roda em seguida
-  if (persisting) {
-    pendingPersist = true
-    return
-  }
-
-  persisting = true
-  saveState.value = 'saving'
-  saveError.value = null
-  try {
-    const payload: Record<string, number> = { ...answers.value }
-    const result = await saveMaturityResponse(payload, selectedTier.value, responseId.value)
-    responseId.value = result.id
-    // Nova avaliação: após o 1º save, passa a editar o mesmo registro na URL
-    if (route.name === 'AiMaturityNew' && result.id) {
-      await router.replace({ name: 'AiMaturityEdit', params: { id: result.id } })
-    }
-    saveState.value = 'saved'
-  } catch (e) {
-    saveState.value = 'error'
-    saveError.value = e instanceof Error ? e.message : 'Erro ao salvar.'
-  } finally {
-    persisting = false
-    if (pendingPersist) {
-      pendingPersist = false
-      void persistAnswers()
-    }
-  }
-}
-
-function schedulePersist() {
-  if (persistTimer) clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => {
-    persistTimer = null
-    void persistAnswers()
-  }, 280)
+  autosave.scheduleSave(280)
 }
 
 onMounted(async () => {
@@ -240,10 +216,6 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
-
-onUnmounted(() => {
-  if (persistTimer) clearTimeout(persistTimer)
 })
 
 function computeVerdict() {
@@ -288,13 +260,7 @@ async function openSwot() {
   swotError.value = null
   try {
     // Garante o rascunho salvo antes de gerar a SWOT
-    if (persisting || pendingPersist || persistTimer) {
-      if (persistTimer) {
-        clearTimeout(persistTimer)
-        persistTimer = null
-      }
-      await persistAnswers()
-    }
+    await autosave.flush()
     if (!responseId.value) {
       throw new Error('Salve as respostas antes de criar a SWOT.')
     }

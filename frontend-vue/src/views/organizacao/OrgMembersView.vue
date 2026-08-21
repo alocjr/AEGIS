@@ -8,6 +8,9 @@ import {
   deleteOrgMember,
 } from '@/api/orgAdmin'
 import type { OrgMember } from '@/api/orgAdmin'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.id ?? '')
@@ -169,26 +172,26 @@ onMounted(async () => {
 
 <template>
   <div class="org-page">
-    <header class="page-header">
-      <h1 class="page-title">Minha Organização</h1>
-      <p class="page-sub">
-        Adicione pessoas do seu time para usar as ferramentas do AI Hub (Canvas, SWOT, Maturidade,
-        Governança). Acesso à mentoria (trilhas) continua exclusivo da equipe Valorian.
-      </p>
-      <div class="page-actions">
-        <input
-          v-model="searchQuery"
-          type="search"
-          class="input search-input"
-          placeholder="Buscar por nome, e-mail ou telefone..."
-          aria-label="Buscar membros"
-        />
-        <button type="button" class="btn-primary" @click="openCreate">Adicionar membro</button>
-      </div>
-    </header>
+    <PageHeader
+      title="Minha Organização"
+      subtitle="Adicione pessoas do seu time para usar as ferramentas do AI Hub (Canvas, SWOT, Maturidade, Governança). Acesso à mentoria (trilhas) continua exclusivo da equipe Valorian."
+    >
+      <template #actions>
+        <AppButton variant="primary" @click="openCreate">Adicionar membro</AppButton>
+      </template>
+    </PageHeader>
+    <div class="page-actions">
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="input search-input"
+        placeholder="Buscar por nome, e-mail ou telefone..."
+        aria-label="Buscar membros"
+      />
+    </div>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <div v-else-if="members.length === 0" class="empty">
       Nenhum membro na organização ainda. Clique em <strong>Adicionar membro</strong> para criar o primeiro.
     </div>
@@ -332,6 +335,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .search-input {

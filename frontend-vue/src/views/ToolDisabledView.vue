@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { TOOL_HOME_ORDER } from '@/lib/tools'
+import AppCard from '@/components/ui/AppCard.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -29,14 +31,14 @@ const fallbackPath = computed(() => auth.homePathWithoutTrilha() || '/programa')
 
 <template>
   <div class="page">
-    <div class="card">
+    <AppCard>
       <h1>Ferramenta não disponível</h1>
       <p>
         <strong>{{ toolLabel }}</strong> não está habilitada para o seu acesso.
         Peça ao administrador da plataforma para liberar.
       </p>
-      <RouterLink :to="fallbackPath" class="btn">Voltar</RouterLink>
-    </div>
+      <AppButton :to="fallbackPath">Voltar</AppButton>
+    </AppCard>
   </div>
 </template>
 
@@ -46,31 +48,16 @@ const fallbackPath = computed(() => auth.homePathWithoutTrilha() || '/programa')
   margin: 48px auto;
   padding: 0 20px 60px;
 }
-.card {
-  background: var(--wh);
-  border: 1px solid var(--bd);
-  border-radius: var(--r-lg);
-  padding: 28px 24px;
-}
 h1 {
   font-family: var(--serif);
-  font-size: 22px;
+  font-size: var(--fs-xl);
   color: var(--k0);
   margin-bottom: 10px;
 }
 p {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--k3);
   line-height: 1.55;
   margin-bottom: 20px;
-}
-.btn {
-  display: inline-block;
-  padding: 8px 16px;
-  background: var(--k0);
-  color: var(--wh);
-  border-radius: var(--r-sm);
-  font-size: 13px;
-  text-decoration: none;
 }
 </style>

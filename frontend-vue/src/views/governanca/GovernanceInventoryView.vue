@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listAiSystems, createAiSystem } from '@/api/governance'
 import type { AiSystem, SistemaStatus, RiscoNivel, OrigemIA } from '@/api/governance'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
 
@@ -78,35 +81,35 @@ onMounted(async () => {
 
 <template>
   <div class="inventory-page">
-    <header class="page-header">
-      <nav class="subnav">
-        <RouterLink to="/governanca/inventario" class="subnav-link active">Inventário</RouterLink>
-        <RouterLink to="/governanca/dashboard" class="subnav-link">Dashboard</RouterLink>
-      </nav>
-      <h1 class="page-title">Inventário de Sistemas de IA</h1>
-      <p class="page-sub">Registro vivo de todo sistema de IA da organização — de onde veio, que dados usa, qual risco, quem é dono.</p>
-      <div class="page-actions">
-        <select v-model="filterStatus" class="input filter-select">
-          <option value="">Todos os status</option>
-          <option v-for="(label, value) in STATUS_LABEL" :key="value" :value="value">{{ label }}</option>
-        </select>
-        <select v-model="filterRisco" class="input filter-select">
-          <option value="">Todos os riscos</option>
-          <option v-for="(label, value) in RISCO_LABEL" :key="value" :value="value">{{ label }}</option>
-        </select>
-        <select v-model="filterOrigem" class="input filter-select">
-          <option value="">Toda origem</option>
-          <option v-for="(label, value) in ORIGEM_LABEL" :key="value" :value="value">{{ label }}</option>
-        </select>
-        <input v-model="filterArea" type="search" class="input filter-search" placeholder="Buscar por área..." />
-        <button type="button" class="btn-primary" :disabled="creating" @click="onCreate">
+    <nav class="subnav">
+      <RouterLink to="/governanca/inventario" class="subnav-link active">Inventário</RouterLink>
+      <RouterLink to="/governanca/dashboard" class="subnav-link">Dashboard</RouterLink>
+    </nav>
+    <PageHeader title="Inventário de Sistemas de IA" subtitle="Registro vivo de todo sistema de IA da organização — de onde veio, que dados usa, qual risco, quem é dono.">
+      <template #actions>
+        <AppButton variant="primary" :disabled="creating" @click="onCreate">
           {{ creating ? 'Registrando…' : 'Registrar sistema' }}
-        </button>
-      </div>
-    </header>
+        </AppButton>
+      </template>
+    </PageHeader>
+    <div class="page-actions">
+      <select v-model="filterStatus" class="input filter-select">
+        <option value="">Todos os status</option>
+        <option v-for="(label, value) in STATUS_LABEL" :key="value" :value="value">{{ label }}</option>
+      </select>
+      <select v-model="filterRisco" class="input filter-select">
+        <option value="">Todos os riscos</option>
+        <option v-for="(label, value) in RISCO_LABEL" :key="value" :value="value">{{ label }}</option>
+      </select>
+      <select v-model="filterOrigem" class="input filter-select">
+        <option value="">Toda origem</option>
+        <option v-for="(label, value) in ORIGEM_LABEL" :key="value" :value="value">{{ label }}</option>
+      </select>
+      <input v-model="filterArea" type="search" class="input filter-search" placeholder="Buscar por área..." />
+    </div>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <div v-else-if="systems.length === 0" class="empty">
       Nenhum sistema de IA registrado.
       <button type="button" class="link-btn" @click="onCreate">Registrar o primeiro →</button>
@@ -203,6 +206,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .filter-select {

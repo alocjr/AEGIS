@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { useCourses } from '@/composables/useCourses'
 import CourseCard from '@/components/course/CourseCard.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const { courses, loading, error } = useCourses()
 </script>
 
 <template>
   <div class="wrap">
-    <h1>Trilhas de Aprendizagem</h1>
-    <p class="muted">Conheça nossas trilhas.</p>
-    <div v-if="loading" class="loading">Carregando trilhas...</div>
-    <div v-else-if="error" class="empty">{{ error }}</div>
-    <div v-else-if="courses.length === 0" class="empty">Nenhuma trilha cadastrada.</div>
+    <PageHeader title="Trilhas de Aprendizagem" subtitle="Conheça nossas trilhas." />
+    <StateBlock v-if="loading" state="loading" message="Carregando trilhas…" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock v-else-if="courses.length === 0" state="empty" message="Nenhuma trilha cadastrada." />
     <div v-else class="card-grid">
       <CourseCard v-for="c in courses" :key="c.slug" :course="c" />
     </div>
@@ -20,8 +21,5 @@ const { courses, loading, error } = useCourses()
 
 <style scoped>
 .wrap { max-width: 980px; margin: 24px auto; padding: 0 20px; }
-h1 { font-size: 24px; margin-bottom: 8px; }
-.muted { color: var(--k3); font-size: 14px; margin-bottom: 24px; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-.loading, .empty { text-align: center; padding: 48px 20px; color: var(--k5); }
 </style>

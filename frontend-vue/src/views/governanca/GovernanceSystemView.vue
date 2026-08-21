@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '@/api/client'
+import { useAutosave } from '@/composables/useAutosave'
 import {
   getAiSystem,
   updateAiSystem,
@@ -69,8 +70,17 @@ const form = ref({
   hitl_obrigatorio: false,
   hitl_descricao: '',
 })
-const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
-let saveTimer: ReturnType<typeof setTimeout> | undefined
+// AR-03: antes desta extração, persist() não tinha NENHUMA guarda de
+// concorrência. Os 11 campos do formulário abaixo chamam persist() no
+// @blur/@change; tabular rápido por vários campos podia disparar PATCHs
+// simultâneos, com a resposta mais lenta vencendo por último — bug real de
+// perda de dado, não só duplicação de código. O composable compartilhado
+// serializa as gravações em fila — ver src/composables/useAutosave.ts.
+const autosave = useAutosave(async () => {
+  const updated = await updateAiSystem(systemId, { ...form.value })
+  system.value = updated
+})
+const saveState = autosave.saveState
 
 function applySystem(s: AiSystem) {
   system.value = s
@@ -89,20 +99,8 @@ function applySystem(s: AiSystem) {
   }
 }
 
-async function persist() {
-  saveState.value = 'saving'
-  try {
-    const updated = await updateAiSystem(systemId, { ...form.value })
-    system.value = updated
-    saveState.value = 'saved'
-  } catch {
-    saveState.value = 'error'
-  } finally {
-    clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-      saveState.value = 'idle'
-    }, 1600)
-  }
+function persist(): void {
+  void autosave.save()
 }
 
 // ——— Avaliação de risco ———
