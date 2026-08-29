@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { ANALYTICS_RANGES, fetchResourceAccessReport } from '@/api/admin'
 import type { ResourceAccessCategory, ResourceAccessItem, ResourceAccessReport } from '@/api/admin'
 import { formatCount, formatLastAccess } from '@/lib/accessFormat'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const RANGE_LABELS: Record<number, string> = {
   7: '7 dias',
@@ -108,27 +110,25 @@ watch(days, load, { immediate: true })
 
 <template>
   <div class="analytics">
-    <header class="analytics-head">
-      <div>
-        <h1 class="analytics-title">Acessos</h1>
-        <p class="analytics-sub">Quantas vezes cada recurso da plataforma foi aberto</p>
-      </div>
-      <div class="range-picker" role="group" aria-label="Período">
-        <button
-          v-for="range in ANALYTICS_RANGES"
-          :key="range"
-          type="button"
-          class="range-btn"
-          :class="{ active: days === range }"
-          @click="days = range"
-        >
-          {{ RANGE_LABELS[range] }}
-        </button>
-      </div>
-    </header>
+    <PageHeader title="Acessos" subtitle="Quantas vezes cada recurso da plataforma foi aberto">
+      <template #actions>
+        <div class="range-picker" role="group" aria-label="Período">
+          <button
+            v-for="range in ANALYTICS_RANGES"
+            :key="range"
+            type="button"
+            class="range-btn"
+            :class="{ active: days === range }"
+            @click="days = range"
+          >
+            {{ RANGE_LABELS[range] }}
+          </button>
+        </div>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="report">
       <div class="kpi-grid">
@@ -232,7 +232,7 @@ watch(days, load, { immediate: true })
 }
 .analytics-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .range-picker {
   display: flex;
@@ -265,7 +265,7 @@ watch(days, load, { immediate: true })
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -292,7 +292,7 @@ watch(days, load, { immediate: true })
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .kpi-value {
   font-family: var(--serif);
@@ -302,7 +302,7 @@ watch(days, load, { immediate: true })
 }
 .kpi-hint {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .chart-card {
@@ -317,7 +317,7 @@ watch(days, load, { immediate: true })
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .chart {
@@ -358,7 +358,7 @@ watch(days, load, { immediate: true })
 .cat-total {
   font-size: 12px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .group {
@@ -372,11 +372,11 @@ watch(days, load, { immediate: true })
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 6px;
 }
 .group-total {
-  color: var(--k5);
+  color: var(--k3);
   letter-spacing: 0;
 }
 
@@ -397,7 +397,7 @@ watch(days, load, { immediate: true })
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   border-bottom: 1px solid var(--bd2);
 }
 .data-table td {
@@ -418,7 +418,7 @@ watch(days, load, { immediate: true })
   color: var(--k0);
 }
 .muted {
-  color: var(--k5);
+  color: var(--k3);
   font-size: 12px;
 }
 .res-label {

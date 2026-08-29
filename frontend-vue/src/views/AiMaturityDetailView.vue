@@ -13,6 +13,8 @@ import {
   createSwotFromMaturity,
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
+import { maturityDimensionAccent } from '@/lib/domain/maturity'
+import { MATURITY_TIER_LABEL_SHORT } from '@/lib/maturityModel'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,19 +31,6 @@ const swotError = ref<string | null>(null)
 const isComplete = ref(false)
 const exportBusy = ref(false)
 const exportError = ref<string | null>(null)
-
-const TIER_LABELS: Record<string, string> = {
-  basico: 'Básico',
-  completo: 'Completo',
-  complementar: 'Complementar',
-}
-
-const DIMENSION_ACCENT: Record<string, string> = {
-  strategy: '#7a5aa3',
-  data_infra: '#3d6fa8',
-  people_culture: '#b9822f',
-  gov_risk: '#a3453f',
-}
 
 type DimRow = {
   id: string
@@ -107,7 +96,7 @@ const levelInfo = computed(() => {
 const tierLabel = computed(() => {
   const tier = displayedResult.value?.tier
   if (!tier) return null
-  return TIER_LABELS[tier] || tier
+  return MATURITY_TIER_LABEL_SHORT[tier as MaturityTier] || tier
 })
 
 const dimRows = computed<DimRow[]>(() => {
@@ -131,7 +120,7 @@ const dimRows = computed<DimRow[]>(() => {
       max,
       avg: ds.avg ?? 0,
       pct,
-      accent: DIMENSION_ACCENT[dim.id] || 'var(--gold)',
+      accent: maturityDimensionAccent(dim.id),
       initials: getInitials(ds.name || dim.name),
     }
   })
@@ -507,7 +496,7 @@ onMounted(async () => {
   border-radius: var(--r-sm);
   padding: 28px 20px;
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .state-card.error {
   color: var(--low);
@@ -522,7 +511,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin: 0 0 8px;
 }
 .page-title {
@@ -554,7 +543,7 @@ onMounted(async () => {
   text-transform: uppercase;
   background: var(--golddim);
   border: 1px solid var(--goldbd);
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .meta-pill.muted {
   background: var(--k8);
@@ -659,7 +648,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .level-desc {
   margin: 12px 0 0;
@@ -697,7 +686,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 6px;
 }
 .kpi-value {
@@ -708,11 +697,11 @@ onMounted(async () => {
   line-height: 1.1;
 }
 .kpi-value.gold {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .kpi-sub {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
   line-height: 1.35;
   overflow: hidden;
@@ -731,7 +720,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0 0 16px;
 }
 
@@ -855,7 +844,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .actions {

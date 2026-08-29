@@ -40,7 +40,7 @@ const LABEL: Record<AutosaveState, string> = {
   color: var(--k4);
 }
 .save-indicator--saved {
-  color: var(--success);
+  color: var(--success-text);
 }
 .save-indicator--error {
   color: var(--low);

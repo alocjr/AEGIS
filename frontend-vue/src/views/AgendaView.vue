@@ -2,7 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
 import { ApiError } from '@/api/client'
-import type { JornadaSemana, Encontro } from '@/types'
+import type { JornadaSemana, Encontro } from '@/api/courses'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 interface AgendaItem {
   semana: number
@@ -53,7 +56,7 @@ const nextEncontroId = computed<number | null>(() => {
   const future = arr.filter((x) => x.ts >= now).sort((a, b) => a.ts - b.ts)
   if (future[0]) return future[0].it.encontro.id
   arr.sort((a, b) => a.ts - b.ts)
-  return arr[0].it.encontro.id
+  return arr[0]?.it.encontro.id ?? null
 })
 
 function isNext(item: AgendaItem): boolean {
@@ -262,29 +265,27 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <div v-if="loading" class="loading">
-      <div class="spin"></div>
-      <span>Carregando agenda…</span>
-    </div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>A agenda de encontros fica disponível quando a equipe Valorian atribuir uma trilha à sua conta.</p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando agenda…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. A agenda de encontros fica disponível quando a equipe Valorian atribuir uma trilha à sua conta."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <template v-else>
-      <div class="agenda-head">
-        <div class="agenda-kicker">Sua trilha</div>
-        <h1 class="agenda-title">Agenda · {{ courseTitle }}</h1>
-        <p class="agenda-desc">
-          {{ numSemanas }} semanas · {{ numEncontros }} encontros. Passe o mouse sobre um dia para ver os detalhes.
-        </p>
-        <div v-if="exportableItems.length > 0" class="agenda-export">
-          <button type="button" class="btn-export" @click="exportToGoogleCalendar">
+      <PageHeader
+        :title="`Agenda · ${courseTitle}`"
+        :subtitle="`${numSemanas} semanas · ${numEncontros} encontros. Passe o mouse sobre um dia para ver os detalhes.`"
+      >
+        <template v-if="exportableItems.length > 0" #actions>
+          <AppButton variant="secondary" size="sm" @click="exportToGoogleCalendar">
             Exportar para Google Calendar
-          </button>
-          <span class="export-hint">Baixe o arquivo .ics e importe em calendar.google.com (Configurações → Importar)</span>
-        </div>
-      </div>
+          </AppButton>
+        </template>
+      </PageHeader>
+      <p v-if="exportableItems.length > 0" class="export-hint">
+        Baixe o arquivo .ics e importe em calendar.google.com (Configurações → Importar)
+      </p>
       <div class="calendar">
         <div v-for="w in weekNums" :key="w" class="week-col">
           <div class="week-label">Semana {{ w }}</div>
@@ -338,7 +339,7 @@ onMounted(async () => {
   justify-content: center;
   min-height: 50vh;
   gap: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .spin {
   width: 28px;
@@ -378,7 +379,7 @@ onMounted(async () => {
 
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 
@@ -390,7 +391,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 10px;
 }
 .agenda-title {
@@ -416,7 +417,7 @@ onMounted(async () => {
   padding: 10px 18px;
   border: 1px solid var(--gold);
   background: transparent;
-  color: var(--gold);
+  color: var(--gold-text);
   border-radius: var(--r-xs);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
@@ -427,7 +428,7 @@ onMounted(async () => {
 }
 .export-hint {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .calendar {
@@ -449,7 +450,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--bd);
 }
@@ -473,7 +474,7 @@ onMounted(async () => {
   border-left: 3px solid var(--gold);
 }
 .day-card.is-next {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   box-shadow: 0 8px 28px rgba(180, 140, 60, 0.4);
   transform: translateY(-1px);
   padding-top: 28px;
@@ -502,11 +503,11 @@ onMounted(async () => {
 }
 .day-date.undefined {
   font-style: italic;
-  color: var(--k5);
+  color: var(--k3);
 }
 .day-time {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 8px;
 }
 .day-enc-num {
@@ -514,7 +515,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-top: 6px;
 }
 .day-title {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPublicCourses, fetchPublicCourseBySlug } from '@/api/courses'
-import type { CoursePublic, ProgramaFormacaoExecutiva } from '@/types'
+import type { CoursePublic, ProgramaFormacaoExecutiva } from '@/api/courses'
 
 /** Deriva campos de resumo do programa para exibir no card da lista (evita bug ao voltar de /trilhas/:slug). */
 function toListCourse(slug: string, programa?: ProgramaFormacaoExecutiva): CoursePublic {

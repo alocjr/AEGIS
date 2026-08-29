@@ -13,6 +13,7 @@ import type {
   StrategicMapQuestion,
 } from '@/api/strategicMap'
 import type { SwotListField, SwotTowsField, SwotWatchlistItem } from '@/api/swotAnalysis'
+import { canvasQuadrantLabelLower } from '@/lib/domain/canvas'
 
 export type MapLens = 'pan' | 'ges' | 'lin'
 export type MapTone = 'ok' | 'warn' | 'risk' | 'neutral'
@@ -165,12 +166,6 @@ const PILAR_TO_DIM: Record<string, string> = {
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 const WATCH_ID = 'sm-watch'
-const CANVAS_QUADRANT_LABEL: Record<string, string> = {
-  ganho_rapido: 'ganho rápido',
-  aposta_estrategica: 'aposta estratégica',
-  incremental: 'incremental',
-  evitar: 'evitar',
-}
 
 function clip(text: string, max: number): string {
   const value = (text || '').trim()
@@ -413,7 +408,7 @@ function projectProgressHint(project: StrategicMapProject, objectives: Strategic
     return `${Math.round(avg)}% · ${progressLabel(avg)}`
   }
   if (project.quadrant) {
-    const label = CANVAS_QUADRANT_LABEL[project.quadrant]
+    const label = canvasQuadrantLabelLower(project.quadrant)
     if (label) return label
   }
   return project.area_negocio || 'canvas'
@@ -606,8 +601,8 @@ function projBody(project: StrategicMapProject, objectives: StrategicMapObjectiv
   )
   const bits = [
     project.area_negocio && `Área: ${project.area_negocio}`,
-    project.quadrant && CANVAS_QUADRANT_LABEL[project.quadrant]
-      ? `Matriz: ${CANVAS_QUADRANT_LABEL[project.quadrant]}`
+    project.quadrant && canvasQuadrantLabelLower(project.quadrant)
+      ? `Matriz: ${canvasQuadrantLabelLower(project.quadrant)}`
       : '',
     krs.length ? `Entrega: ${krs.join(', ')}` : '',
     project.proximo_passo ? `Próximo passo: ${clip(project.proximo_passo, 140)}` : '',

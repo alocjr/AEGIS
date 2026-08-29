@@ -14,15 +14,8 @@ export type SistemaStatus =
 
 // ——— Membros da organização (seletor de RACI na decisão do gate) ———
 
-export interface OrganizationMember {
-  id: string
-  name: string
-  is_admin: boolean
-}
-
-export function listOrganizationMembers(): Promise<{ items: OrganizationMember[] }> {
-  return get<{ items: OrganizationMember[] }>('/api/governance/organization-members')
-}
+export type { OrganizationMember } from './organizationMembers'
+export { listOrganizationMembers } from './organizationMembers'
 
 // ——— Sistemas de IA (inventário) ———
 
