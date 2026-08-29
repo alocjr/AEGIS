@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import Topbar from '@/components/layout/Topbar.vue'
 import { ADMIN_NAV_ITEMS } from '@/lib/adminNav'
 
-const auth = useAuthStore()
 const route = useRoute()
 const drawerOpen = ref(false)
 
@@ -14,20 +13,15 @@ watch(
     drawerOpen.value = false
   }
 )
-
-function onLogout() {
-  void auth.logout().then(() => {
-    window.location.replace('/')
-  })
-}
 </script>
 
 <template>
+  <Topbar />
   <div class="admin-layout" :class="{ 'admin-layout--drawer-open': drawerOpen }">
     <button
       type="button"
       class="admin-menu-toggle"
-      aria-label="Abrir menu"
+      aria-label="Abrir menu administrativo"
       :aria-expanded="drawerOpen"
       @click="drawerOpen = !drawerOpen"
     >
@@ -41,7 +35,7 @@ function onLogout() {
       @click="drawerOpen = false"
     />
     <aside class="admin-sidebar" aria-label="Menu administrativo">
-      <RouterLink to="/" class="admin-sidebar-link">← Início</RouterLink>
+      <p class="admin-sidebar-title">Administração</p>
       <RouterLink
         v-for="item in ADMIN_NAV_ITEMS"
         :key="item.to"
@@ -49,7 +43,6 @@ function onLogout() {
         class="admin-sidebar-link"
         v-bind="item.exact ? { 'exact-active-class': 'active' } : { 'active-class': 'active' }"
       >{{ item.label }}</RouterLink>
-      <button type="button" class="admin-sidebar-link admin-sidebar-logout" @click="onLogout">Sair</button>
     </aside>
     <main class="admin-main">
       <RouterView />
@@ -60,14 +53,15 @@ function onLogout() {
 <style scoped>
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--bar-h));
+  padding-top: var(--bar-h);
   position: relative;
 }
 
 .admin-menu-toggle {
   display: none;
   position: fixed;
-  top: 12px;
+  top: calc(var(--bar-h) + 12px);
   left: 12px;
   z-index: 120;
   width: 44px;
@@ -98,10 +92,19 @@ function onLogout() {
   flex-shrink: 0;
   background: var(--k0);
   color: var(--wh);
-  padding: 24px 0;
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
   z-index: 110;
+}
+
+.admin-sidebar-title {
+  padding: 0 24px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .admin-sidebar-link {
@@ -114,22 +117,6 @@ function onLogout() {
 
 .admin-sidebar-link:hover,
 .admin-sidebar-link.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--wh);
-}
-
-.admin-sidebar-logout {
-  margin-top: auto;
-  width: 100%;
-  border: none;
-  background: none;
-  text-align: left;
-  font-size: 14px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.admin-sidebar-logout:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--wh);
 }
@@ -149,7 +136,10 @@ function onLogout() {
   .admin-sidebar-backdrop {
     display: block;
     position: fixed;
-    inset: 0;
+    top: var(--bar-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 100;
     background: rgba(12, 35, 64, 0.45);
     opacity: 0;
@@ -164,7 +154,7 @@ function onLogout() {
 
   .admin-sidebar {
     position: fixed;
-    top: 0;
+    top: var(--bar-h);
     left: 0;
     bottom: 0;
     transform: translateX(-100%);
@@ -177,13 +167,13 @@ function onLogout() {
   }
 
   .admin-main {
-    padding: 64px 16px 24px;
+    padding: 56px 16px 24px;
   }
 }
 
 @media (max-width: 767px) {
   .admin-main {
-    padding: 60px 12px 20px;
+    padding: 52px 12px 20px;
   }
 }
 </style>

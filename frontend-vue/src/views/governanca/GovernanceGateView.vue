@@ -44,7 +44,7 @@ const openCriticalItems = computed(() =>
   )
 )
 
-const admins = computed(() => members.value.filter((m) => m.is_admin))
+const admins = computed(() => members.value.filter((m) => m.is_org_admin))
 
 // ——— edição de item ———
 
