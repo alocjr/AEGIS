@@ -53,7 +53,7 @@ const nextEncontroId = computed<number | null>(() => {
   const future = arr.filter((x) => x.ts >= now).sort((a, b) => a.ts - b.ts)
   if (future[0]) return future[0].it.encontro.id
   arr.sort((a, b) => a.ts - b.ts)
-  return arr[0].it.encontro.id
+  return arr[0]?.it.encontro.id ?? null
 })
 
 function isNext(item: AgendaItem): boolean {

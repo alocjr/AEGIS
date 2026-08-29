@@ -137,7 +137,7 @@ function ringStrokeOffset(pct: number | null): number {
               gold: dashboard.avgPct >= 50 && dashboard.avgPct < 80,
             }"
           >
-            {{ dashboard.sumTotal > 0 ? dashboard.avgPct + '%' : '—' }}
+            {{ dashboard.sumAnswered > 0 ? dashboard.avgPct + '%' : '—' }}
           </div>
           <div class="kpi-sub">
             {{ dashboard.sumAnswered > 0 ? dashboard.sumScore + '/' + dashboard.sumAnswered + ' questões' : '' }}

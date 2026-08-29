@@ -456,8 +456,8 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
               class="opt"
               :class="{
                 active: getAnswer(q.id) === op.index,
-                correct: getFb(q.id) && op.index === getFb(q.id).correct_index,
-                wrong: getFb(q.id) && getFb(q.id).selected_index === op.index && !getFb(q.id).is_correct,
+                correct: !!getFb(q.id) && op.index === getFb(q.id)!.correct_index,
+                wrong: !!getFb(q.id) && getFb(q.id)!.selected_index === op.index && !getFb(q.id)!.is_correct,
               }"
               @click="setAnswer(q.id, op.index)"
             >
@@ -465,8 +465,8 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
             </button>
           </div>
           <p v-if="q.hint" class="hint">Dica: {{ q.hint }}</p>
-          <div v-if="getFb(q.id)" class="fb" :class="getFb(q.id).is_correct ? 'ok' : 'bad'">
-            <strong>{{ getFb(q.id).is_correct ? 'Correta' : 'Incorreta' }}</strong><br>{{ getFb(q.id).rationale || '—' }}
+          <div v-if="getFb(q.id)" class="fb" :class="getFb(q.id)!.is_correct ? 'ok' : 'bad'">
+            <strong>{{ getFb(q.id)!.is_correct ? 'Correta' : 'Incorreta' }}</strong><br>{{ getFb(q.id)!.rationale || '—' }}
           </div>
         </div>
       </div>
