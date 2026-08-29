@@ -306,7 +306,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
   max-width: 640px;
 }
@@ -328,7 +328,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -375,7 +375,7 @@ onMounted(async () => {
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .badge {
@@ -406,14 +406,14 @@ onMounted(async () => {
 }
 
 .self-hint {
-  color: var(--k5);
+  color: var(--k3);
   font-size: 13px;
 }
 
 .filter-hint {
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   border-top: 1px solid var(--bd2);
 }
 
@@ -526,7 +526,7 @@ onMounted(async () => {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;

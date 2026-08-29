@@ -79,11 +79,11 @@ defineEmits<{
   border-color: rgba(255, 255, 255, 0.35);
 }
 .tb-pill-g {
-  color: var(--gold2);
+  color: var(--gold-text);
   border-color: rgba(155, 126, 70, 0.4);
 }
 .tb-pill-g:hover {
   background: rgba(155, 126, 70, 0.15);
-  border-color: var(--gold2);
+  border-color: var(--gold-text);
 }
 </style>

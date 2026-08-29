@@ -145,12 +145,12 @@ function cssVar(name: string, fallback: string): string {
 function edgeStyle(kind: MapEdge['kind']): { stroke: string; width: number; opacity: number; dash: string } {
   if (kind === 'hot') return { stroke: cssVar('--low', '#b63737'), width: 2, opacity: 0.8, dash: '' }
   if (kind === 'dash') {
-    return { stroke: cssVar('--gold', '#9b7e46'), width: 1.3, opacity: 0.55, dash: '4 4' }
+    return { stroke: cssVar('--gold', '#c6a15b'), width: 1.3, opacity: 0.55, dash: '4 4' }
   }
   if (kind === 'sec') {
     return { stroke: cssVar('--gold2', '#b8975a'), width: 1.1, opacity: 0.35, dash: '' }
   }
-  return { stroke: cssVar('--gold', '#9b7e46'), width: 1.4, opacity: 0.55, dash: '' }
+  return { stroke: cssVar('--gold', '#c6a15b'), width: 1.4, opacity: 0.55, dash: '' }
 }
 
 function redraw() {
@@ -924,16 +924,6 @@ watch([lens, graph, focusId], () => scheduleDraw())
 
 <style scoped>
 .wrap {
-  /* DS-01/DS-02: --navy, --mono e --dim-* removidos — já existem em main.css
-     com o mesmo valor (eram duplicação pura, não conflito). */
-  --navy: var(--k0);
-  --gold-strong: var(--gold);
-  --muted: var(--k3);
-  --s: var(--success);
-  --w: var(--warn);
-  --o: #3d6fa8;
-  --t: var(--low);
-  --a: #b9822f;
   max-width: 1320px;
   margin: 0 auto;
   padding: 16px 16px 72px;
@@ -948,7 +938,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin: 0 0 8px;
 }
 .page-title {
@@ -1007,7 +997,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 6px;
 }
 .select {
@@ -1040,7 +1030,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   text-transform: uppercase;
   background: var(--golddim);
   border: 1px solid var(--goldbd);
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .source-optica {
   margin: 12px 0 0;
@@ -1054,8 +1044,8 @@ watch([lens, graph, focusId], () => scheduleDraw())
   gap: 8px;
   margin-top: 14px;
 }
-.notice { margin: 12px 0 0; font-size: 13px; color: var(--success); }
-.notice.warn-note { color: var(--warn); }
+.notice { margin: 12px 0 0; font-size: 13px; color: var(--success-text); }
+.notice.warn-note { color: var(--warn-text); }
 
 .btn,
 .btn-mini {
@@ -1112,7 +1102,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 4px;
 }
 .kpi-value {
@@ -1121,8 +1111,8 @@ watch([lens, graph, focusId], () => scheduleDraw())
   color: var(--k0);
   line-height: 1.1;
 }
-.kpi-value.gold { color: var(--gold); }
-.kpi-sub { font-size: 12px; color: var(--k5); margin-top: 2px; }
+.kpi-value.gold { color: var(--gold-text); }
+.kpi-sub { font-size: 12px; color: var(--k3); margin-top: 2px; }
 
 .toolrow {
   display: flex;
@@ -1158,7 +1148,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
 .mobile-note {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 @media (min-width: 980px) {
   .mobile-note { display: none; }
@@ -1172,7 +1162,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 6px;
 }
 .reading p {
@@ -1197,15 +1187,15 @@ watch([lens, graph, focusId], () => scheduleDraw())
   border-top: 3px solid var(--gold);
 }
 .aposta.tone-risk { border-top-color: var(--low); }
-.aposta.tone-warn { border-top-color: var(--warn); }
-.aposta.tone-ok { border-top-color: var(--success); }
+.aposta.tone-warn { border-top-color: var(--warn-text); }
+.aposta.tone-ok { border-top-color: var(--success-text); }
 .aposta .ak {
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .aposta h3 {
   font-family: var(--serif);
@@ -1279,7 +1269,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 2px;
   display: flex;
   gap: 8px;
@@ -1295,7 +1285,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
 .m-empty {
   margin: 0;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   padding: 12px 10px;
   border: 1px dashed var(--bd);
   border-radius: var(--r-sm);
@@ -1335,14 +1325,14 @@ watch([lens, graph, focusId], () => scheduleDraw())
 .mnode.mn-data { border-left-color: var(--dim-data); }
 .mnode.mn-people { border-left-color: var(--dim-people); }
 .mnode.mn-gov { border-left-color: var(--dim-gov); }
-.mnode.mn-s { border-left-color: var(--s); }
-.mnode.mn-w { border-left-color: var(--w); }
-.mnode.mn-o { border-left-color: var(--o); }
-.mnode.mn-t { border-left-color: var(--t); }
-.mnode.mn-a { border-left-color: var(--a); }
+.mnode.mn-s { border-left-color: var(--success-text); }
+.mnode.mn-w { border-left-color: var(--warn-text); }
+.mnode.mn-o { border-left-color: var(--dim-data); }
+.mnode.mn-t { border-left-color: var(--low); }
+.mnode.mn-a { border-left-color: var(--dim-people); }
 .mnode:hover { border-color: var(--goldbd); background: var(--k9); }
 .mnode.lit {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   box-shadow: 0 0 0 2px var(--golddim);
   background: #fffdf8;
 }
@@ -1357,7 +1347,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   align-items: center;
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--k5);
+  color: var(--k3);
   padding: 12px 16px;
   border-top: 1px solid var(--bd);
 }
@@ -1386,7 +1376,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0 0 8px;
 }
 .panel-label {
@@ -1435,7 +1425,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 @media (min-width: 760px) {
@@ -1487,11 +1477,11 @@ watch([lens, graph, focusId], () => scheduleDraw())
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .dock .tag { border-radius: var(--r-pill); padding: 2px 8px; font-size: 11px; font-weight: 600; }
-.dock .tag--ok { background: var(--successBg); color: var(--success); border-color: transparent; }
-.dock .tag--warn { background: var(--warnBg); color: var(--warn); border-color: transparent; }
+.dock .tag--ok { background: var(--successBg); color: var(--success-text); border-color: transparent; }
+.dock .tag--warn { background: var(--warnBg); color: var(--warn-text); border-color: transparent; }
 .dock .tag--risk { background: var(--lowBg); color: var(--low); border-color: transparent; }
 .dock .dblock { margin-bottom: 16px; }
 .dock .dk {
@@ -1500,7 +1490,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 6px;
 }
 .dock .dblock p,
@@ -1530,7 +1520,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   gap: 12px;
 }
 .dock-item-title { margin: 0; font-size: 13px; color: var(--k0); }
-.dock-item-meta { margin: 2px 0 0; font-size: 11px; color: var(--k5); }
+.dock-item-meta { margin: 2px 0 0; font-size: 11px; color: var(--k3); }
 .dock .link-panel {
   margin-top: 8px;
   padding: 10px;
@@ -1544,7 +1534,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .dock .panel-empty { margin: 0; font-size: 13px; color: var(--k4); }
 .dock .panel-list {
@@ -1570,7 +1560,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   text-align: left;
   color: var(--k0);
 }
-.dock .panel-item.is-linked { border-color: var(--success); color: var(--success); }
+.dock .panel-item.is-linked { border-color: var(--success-text); color: var(--success-text); }
 
 .stage-bar {
   position: fixed;
@@ -1590,7 +1580,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
   font-size: 16px;
   font-weight: 600;
 }
-.stage-bar .st-t em { color: var(--gold2); font-style: italic; }
+.stage-bar .st-t em { color: var(--gold-text); font-style: italic; }
 .stage-bar p {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.72);
@@ -1616,6 +1606,6 @@ watch([lens, graph, focusId], () => scheduleDraw())
   color: var(--wh);
   background: transparent;
 }
-.sbtn:hover:not(:disabled) { border-color: var(--gold2); }
+.sbtn:hover:not(:disabled) { border-color: var(--gold-text); }
 .sbtn:disabled { opacity: 0.4; cursor: default; }
 </style>

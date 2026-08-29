@@ -317,7 +317,7 @@ function ringStrokeOffset(pct: number | null): number {
   border-radius: var(--r-sm);
   padding: 32px;
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   padding: 24px 0;
@@ -340,7 +340,7 @@ function ringStrokeOffset(pct: number | null): number {
 }
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 .empty-wrap {
@@ -348,7 +348,7 @@ function ringStrokeOffset(pct: number | null): number {
 }
 .empty {
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
   padding: 48px 20px;
   font-size: 15px;
 }
@@ -384,7 +384,7 @@ function ringStrokeOffset(pct: number | null): number {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 6px;
 }
 .kpi-value {
@@ -394,14 +394,14 @@ function ringStrokeOffset(pct: number | null): number {
   color: var(--k0);
 }
 .kpi-value.gold {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .kpi-value.success {
-  color: var(--success);
+  color: var(--success-text);
 }
 .kpi-sub {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
 }
 
@@ -417,7 +417,7 @@ function ringStrokeOffset(pct: number | null): number {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 12px;
 }
 .overall-bar-track {
@@ -448,7 +448,7 @@ function ringStrokeOffset(pct: number | null): number {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -499,7 +499,7 @@ function ringStrokeOffset(pct: number | null): number {
 }
 .quiz-card.locked .btn-open {
   background: var(--k5);
-  border-color: var(--k5);
+  border-color: var(--k3);
   cursor: default;
 }
 
@@ -559,7 +559,7 @@ function ringStrokeOffset(pct: number | null): number {
 }
 .quiz-score-frac {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   font-weight: 500;
   text-align: center;
   line-height: 1.3;
@@ -575,7 +575,7 @@ function ringStrokeOffset(pct: number | null): number {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 4px;
 }
 .quiz-card-body .quiz-title {
@@ -586,7 +586,7 @@ function ringStrokeOffset(pct: number | null): number {
 }
 .quiz-card-body .quiz-meta {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .quiz-card-body .quiz-meta.pending {
   font-style: italic;

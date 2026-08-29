@@ -78,7 +78,7 @@ defineEmits<{
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 20px;
 }
 .brand-story-text {

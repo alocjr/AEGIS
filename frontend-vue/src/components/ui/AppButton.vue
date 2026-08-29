@@ -78,7 +78,7 @@ defineEmits<{ click: [MouseEvent] }>()
   color: var(--k1);
 }
 .app-btn--secondary:hover:not(:disabled):not(.app-btn--disabled) {
-  border-color: var(--k5);
+  border-color: var(--k3);
   background: var(--k9);
 }
 

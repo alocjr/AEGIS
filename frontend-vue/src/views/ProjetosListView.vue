@@ -621,7 +621,7 @@ onMounted(async () => {
 }
 .page-desc {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.55;
   max-width: 52ch;
 }
@@ -649,7 +649,7 @@ onMounted(async () => {
 }
 .chart-sub {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0;
   line-height: 1.45;
 }
@@ -830,7 +830,7 @@ onMounted(async () => {
 }
 .chart-empty {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   text-align: center;
   margin: 8px 0 12px;
   max-width: 42ch;
@@ -897,7 +897,7 @@ onMounted(async () => {
 }
 .card-empty {
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
   padding: 36px 20px;
 }
 .link-new {
@@ -970,7 +970,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .list-field dd {
   margin: 3px 0 0;
@@ -988,7 +988,7 @@ onMounted(async () => {
 }
 .list-meta {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .list-quad {
   display: inline-flex;
@@ -1024,7 +1024,7 @@ onMounted(async () => {
 }
 .list-arrow {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   white-space: nowrap;
   margin-top: 2px;
 }

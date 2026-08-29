@@ -222,7 +222,7 @@ onMounted(async () => {
 }
 .page-desc {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0;
 }
 .card {
@@ -253,13 +253,13 @@ onMounted(async () => {
 }
 .card-empty {
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .card-empty p {
   margin: 0 0 12px 0;
 }
 .link-new {
-  color: var(--gold2);
+  color: var(--gold-text);
   font-weight: 500;
   text-decoration: none;
 }
@@ -338,7 +338,7 @@ onMounted(async () => {
 }
 .list-level {
   font-size: 12px;
-  color: var(--gold2);
+  color: var(--gold-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -394,7 +394,7 @@ onMounted(async () => {
 .mini-bar-label {
   flex: 0 0 auto;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -438,7 +438,7 @@ onMounted(async () => {
 }
 .list-pts-label {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   font-weight: 400;
 }
 </style>

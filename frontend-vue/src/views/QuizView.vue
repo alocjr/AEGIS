@@ -509,7 +509,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   border-radius: 10px;
   padding: 28px 20px;
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   padding: 20px;
@@ -548,7 +548,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .result-info {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 8px;
 }
 
@@ -583,7 +583,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   transition: background 0.15s, border-color 0.15s;
 }
 .opt:hover {
-  border-color: var(--k5);
+  border-color: var(--k3);
 }
 .opt.active {
   background: var(--k0);
@@ -591,7 +591,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   border-color: var(--k0);
 }
 .opt.correct {
-  border-color: var(--success);
+  border-color: var(--success-text);
   background: var(--successBg);
   color: var(--k0);
 }
@@ -613,7 +613,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   border-radius: var(--r-xs);
 }
 .fb.ok {
-  border-color: var(--success);
+  border-color: var(--success-text);
   background: var(--successBg);
 }
 .fb.bad {
@@ -635,7 +635,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   border-radius: var(--r-xs);
 }
 .opt-block.correct {
-  border-color: var(--success);
+  border-color: var(--success-text);
   background: var(--successBg);
 }
 .opt-block.wrong {
@@ -729,7 +729,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 .report-score-ring .value span:last-child {
   font-size: 12px;
   font-weight: 400;
-  color: var(--k5);
+  color: var(--k3);
 }
 .report-kpis {
   display: grid;
@@ -743,7 +743,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 4px;
 }
 .report-kpi .v {
@@ -753,7 +753,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   color: var(--k0);
 }
 .report-kpi .v.success {
-  color: var(--success);
+  color: var(--success-text);
 }
 .report-bar-wrap {
   margin-top: 12px;
@@ -763,7 +763,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
@@ -874,7 +874,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 12px;
 }
 .report-block-content {
@@ -901,10 +901,10 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   color: var(--k0);
 }
 .report-chart-pct.high {
-  color: var(--success);
+  color: var(--success-text);
 }
 .report-chart-pct.mid {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .report-chart-pct.low {
   color: var(--low);
@@ -914,7 +914,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .report-chart-desc {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .report-bar-row {
   margin-top: 4px;
@@ -927,7 +927,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 8px;
 }
 .bar-track {
@@ -968,7 +968,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .report-block-bar .bar-legend {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 6px;
   font-weight: 600;
 }
@@ -1037,7 +1037,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 .report-big-value .sublabel {
   font-size: 11px;
   font-weight: 500;
-  color: var(--k5);
+  color: var(--k3);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1058,14 +1058,14 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
   font-family: var(--serif);
   font-size: 32px;
   font-weight: 700;
-  color: var(--success);
+  color: var(--success-text);
   line-height: 1;
 }
 .report-big-num .sep {
   font-family: var(--serif);
   font-size: 28px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
 }
 .report-big-num .den {
   font-family: var(--serif);
@@ -1075,13 +1075,13 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .report-block-desc {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .report-block-bar {
   margin-top: 4px;
 }
 .report-big-num--acertos .num {
-  color: var(--success);
+  color: var(--success-text);
 }
 .report-big-num--conclusao .num {
   color: var(--k0);
@@ -1138,7 +1138,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .report-right--session .sec-desc {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 18px;
 }
 .report-actions {
@@ -1151,7 +1151,7 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 }
 .report-done-msg {
   font-weight: 600;
-  color: var(--success);
+  color: var(--success-text);
   margin: 0;
 }
 .sec-title {

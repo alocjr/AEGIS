@@ -1152,17 +1152,6 @@ onUnmounted(() => {
 
 <style scoped>
 .wrap {
-  /* DS-01: --gold e --serif removidos — herdam o token global único
-     (main.css), que agora tem exatamente estes valores. */
-  --navy: var(--k0);
-  --navy-2: #16243f;
-  --ink: #242a33;
-  --gold-2: #e3cb93;
-  --ivory: #f6f1e7;
-  --ivory-2: #fbf8f1;
-  --oxblood: #7c3a3a;
-  --muted: var(--k3);
-  --line: rgba(198, 161, 91, 0.32);
   max-width: 920px;
   margin: 0 auto;
   padding: 28px 20px 72px;
@@ -1228,7 +1217,7 @@ onUnmounted(() => {
   margin: 0 0 6px;
 }
 .eyebrow.gold {
-  color: var(--gold-2);
+  color: var(--gold-light);
 }
 .page-title {
   font-family: var(--serif);
@@ -1743,7 +1732,7 @@ onUnmounted(() => {
   height: 74px;
   border-radius: 50%;
   background: var(--navy);
-  color: var(--gold-2);
+  color: var(--gold-light);
   display: grid;
   place-content: center;
   text-align: center;
@@ -2178,7 +2167,7 @@ onUnmounted(() => {
 .vtype.active {
   background: rgba(198, 161, 91, 0.2);
   border-color: var(--gold);
-  color: var(--gold-2);
+  color: var(--gold-light);
 }
 .verdict-title,
 .verdict-text {

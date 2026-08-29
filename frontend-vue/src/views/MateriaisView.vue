@@ -165,7 +165,7 @@ onMounted(async () => {
   justify-content: center;
   min-height: 50vh;
   gap: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .spin {
   width: 28px;
@@ -203,7 +203,7 @@ onMounted(async () => {
 
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 
@@ -215,7 +215,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 10px;
 }
 .page-title {
@@ -281,7 +281,7 @@ onMounted(async () => {
 .mat-icon {
   font-size: 32px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mat-icon-wrap--video .mat-icon {
   color: var(--k2);
@@ -294,7 +294,7 @@ onMounted(async () => {
 }
 .mat-icon-wrap--link .mat-icon {
   font-size: 28px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .mat-icon-wrap--document .mat-icon {
   font-size: 28px;
@@ -310,7 +310,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mat-name {
   font-size: 13px;

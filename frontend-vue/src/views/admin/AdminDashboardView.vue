@@ -176,14 +176,14 @@ onMounted(async () => {
 }
 .dashboard-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 24px;
 }
 .loading,
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -285,7 +285,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
   opacity: 0.95;
 }
 
@@ -305,7 +305,7 @@ onMounted(async () => {
 }
 
 .card-email:hover {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 
 .card-phone:hover {
@@ -397,7 +397,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .extra-chip-value {
@@ -443,7 +443,7 @@ onMounted(async () => {
   padding: 12px 22px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--gold-text);
   border-top: 1px solid var(--bd2);
   transition: background 0.15s ease, color 0.15s ease;
 }

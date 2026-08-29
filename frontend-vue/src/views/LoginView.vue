@@ -101,7 +101,7 @@ function onClose() {
   transition: color 0.15s;
 }
 .login-brand__home:hover {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 
 .login-brand__hero {
@@ -123,7 +123,7 @@ function onClose() {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
   margin-bottom: 12px;
 }
 
@@ -185,7 +185,7 @@ function onClose() {
   bottom: 0;
   padding: 22px 10px 8px;
   background: linear-gradient(transparent, rgba(12, 24, 39, 0.88));
-  color: var(--gold2);
+  color: var(--gold-text);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.14em;

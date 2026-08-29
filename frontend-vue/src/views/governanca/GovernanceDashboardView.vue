@@ -254,7 +254,7 @@ onMounted(async () => {
 .subnav-link {
   font-size: 13px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
   text-decoration: none;
 }
 
@@ -272,13 +272,13 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .loading,
 .error-msg {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -367,7 +367,7 @@ onMounted(async () => {
 
 .metric-label {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .metrics-published-at {
@@ -376,7 +376,7 @@ onMounted(async () => {
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .snapshot-form {
@@ -412,7 +412,7 @@ onMounted(async () => {
 .link-btn {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--gold-text);
   cursor: pointer;
   font-size: 13px;
   padding: 0;

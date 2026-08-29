@@ -217,7 +217,7 @@ onMounted(async () => {
 }
 .page-desc {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.55;
   max-width: 62ch;
 }
@@ -248,7 +248,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .new-field select,
 .new-field input {
@@ -277,7 +277,7 @@ onMounted(async () => {
 }
 .card-empty {
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
   padding: 36px 20px;
 }
 .list {
@@ -345,17 +345,17 @@ onMounted(async () => {
 }
 .list-status[data-status='encerrado'] {
   background: var(--k9);
-  color: var(--k5);
+  color: var(--k3);
 }
 .list-meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .list-drafts {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .progress-bar {
   position: relative;
@@ -375,11 +375,11 @@ onMounted(async () => {
   right: 0;
   top: -18px;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .list-arrow {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   white-space: nowrap;
 }
 .list-actions {
