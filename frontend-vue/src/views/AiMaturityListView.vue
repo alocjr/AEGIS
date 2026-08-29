@@ -29,7 +29,7 @@ function formatDate(iso: string | null): string {
 function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
   if (!words.length) return '?'
-  const a = words[0][0] ?? ''
+  const a = words[0]?.[0] ?? ''
   const b = words[1]?.[0] ?? ''
   return (a + b).toUpperCase().slice(0, 2) || '?'
 }
@@ -48,7 +48,6 @@ function getDimensionPcts(
 }
 
 /** Gera pontos do polígono do radar (0-100% → raio) e posições das iniciais. SVG: size 72, center 36, rMax 26 */
-const RADAR_SIZE = 72
 const RADAR_CX = 36
 const RADAR_CY = 36
 const RADAR_R = 26
@@ -223,7 +222,7 @@ onMounted(async () => {
 }
 .page-desc {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0;
 }
 .card {
@@ -254,13 +253,13 @@ onMounted(async () => {
 }
 .card-empty {
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .card-empty p {
   margin: 0 0 12px 0;
 }
 .link-new {
-  color: var(--gold2);
+  color: var(--gold-text);
   font-weight: 500;
   text-decoration: none;
 }
@@ -339,7 +338,7 @@ onMounted(async () => {
 }
 .list-level {
   font-size: 12px;
-  color: var(--gold2);
+  color: var(--gold-text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -395,7 +394,7 @@ onMounted(async () => {
 .mini-bar-label {
   flex: 0 0 auto;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -439,7 +438,7 @@ onMounted(async () => {
 }
 .list-pts-label {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   font-weight: 400;
 }
 </style>

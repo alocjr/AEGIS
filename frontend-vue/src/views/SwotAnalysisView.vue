@@ -24,6 +24,7 @@ import {
   type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -445,7 +446,7 @@ const watchlistGroups = computed(() => {
       index.set(dim, i)
       groups.push({ dimensao: dim, items: [] })
     }
-    groups[i].items.push(item)
+    groups[i]!.items.push(item)
   }
   return groups
 })
@@ -468,7 +469,7 @@ async function loadSwot() {
   }
 }
 
-function persist(opts?: { rebuildTows?: boolean }) {
+function saveSwot(opts?: { rebuildTows?: boolean }) {
   if (opts?.rebuildTows) pendingRebuildTows = true
   void autosave.save()
 }
@@ -546,7 +547,7 @@ function addCanonicalPillar(field: SwotListField, pilarId: string) {
   form.value.pilares = { ...form.value.pilares, [field]: next }
   addingPillarFor.value = null
   customPillarDraft.value = ''
-  void persist()
+  void saveSwot()
 }
 
 function addCustomPillar(field: SwotListField) {
@@ -559,7 +560,7 @@ function addCustomPillar(field: SwotListField) {
   form.value.pilares = { ...form.value.pilares, [field]: next }
   addingPillarFor.value = null
   customPillarDraft.value = ''
-  void persist()
+  void saveSwot()
 }
 
 function addItem(field: SwotListField, pilar: string) {
@@ -569,12 +570,12 @@ function addItem(field: SwotListField, pilar: string) {
   if (form.value[field].length >= 40) return
   form.value[field] = [...form.value[field], { ...emptyItem(pilar), texto: text }]
   drafts[key] = ''
-  void persist({ rebuildTows: true })
+  void saveSwot({ rebuildTows: true })
 }
 
 function removeItem(field: SwotListField, index: number) {
   form.value[field] = form.value[field].filter((_, i) => i !== index)
-  void persist({ rebuildTows: true })
+  void saveSwot({ rebuildTows: true })
 }
 
 function toggleItemTows(field: SwotListField, index: number) {
@@ -583,7 +584,7 @@ function toggleItemTows(field: SwotListField, index: number) {
   if (!current) return
   list[index] = { ...current, tows: !current.tows }
   form.value[field] = list
-  void persist({ rebuildTows: true })
+  void saveSwot({ rebuildTows: true })
 }
 
 function onItemBlur(field: SwotListField, index: number, ev: Event) {
@@ -593,12 +594,14 @@ function onItemBlur(field: SwotListField, index: number, ev: Event) {
   if (!next) {
     list.splice(index, 1)
     form.value[field] = list
-    void persist({ rebuildTows: true })
+    void saveSwot({ rebuildTows: true })
     return
   }
-  list[index] = { ...list[index], texto: next }
+  const current = list[index]
+  if (!current) return
+  list[index] = { ...current, texto: next }
   form.value[field] = list
-  void persist()
+  void saveSwot()
 }
 
 function onDraftKeydown(field: SwotListField, pilar: string, ev: KeyboardEvent) {
@@ -615,25 +618,27 @@ function addInitiative(field: SwotTowsField) {
 
 function removeInitiative(field: SwotTowsField, index: number) {
   form.value[field] = form.value[field].filter((_, i) => i !== index)
-  void persist()
+  void saveSwot()
 }
 
 function onInitiativeBlur(field: SwotTowsField, index: number, key: keyof SwotInitiative, ev: Event) {
   const input = ev.target as HTMLInputElement
   const list = form.value[field].map((row) => ({ ...row }))
-  const row = { ...list[index], [key]: input.value }
+  const current = list[index]
+  if (!current) return
+  const row = { ...current, [key]: input.value }
   if (!(row.acao || '').trim() && !(row.dono || '').trim() && !(row.horizonte || '').trim()) {
     list.splice(index, 1)
   } else {
     list[index] = row
   }
   form.value[field] = list
-  void persist()
+  void saveSwot()
 }
 
 function setVereditoTipo(tipo: SwotVereditoTipo) {
   form.value.veredito_tipo = tipo
-  void persist()
+  void saveSwot()
 }
 
 function toggleHelp(field: SwotListField, ev?: Event) {
@@ -757,8 +762,8 @@ onUnmounted(() => {
     <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
     <div v-else-if="importState === 'ok'" class="card import-ok">JSON importado com sucesso.</div>
 
-    <div v-if="loading" class="card">Carregando…</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
       <section class="card method">
@@ -862,7 +867,7 @@ onUnmounted(() => {
           rows="3"
           maxlength="2000"
           placeholder="Em uma frase: a ambição declarada de para onde a organização quer ir com IA…"
-          @blur="persist"
+          @blur="saveSwot()"
         />
       </section>
 
@@ -1131,7 +1136,7 @@ onUnmounted(() => {
           class="verdict-title"
           maxlength="300"
           placeholder="Título do veredito (ex.: Ambição certa, organização ainda não pronta.)"
-          @blur="persist"
+          @blur="saveSwot()"
         />
         <textarea
           v-model="form.veredito_texto"
@@ -1139,7 +1144,7 @@ onUnmounted(() => {
           rows="5"
           maxlength="8000"
           placeholder="Conclusão e recomendação…"
-          @blur="persist"
+          @blur="saveSwot()"
         />
       </section>
     </template>
@@ -1148,17 +1153,6 @@ onUnmounted(() => {
 
 <style scoped>
 .wrap {
-  /* DS-01: --gold e --serif removidos — herdam o token global único
-     (main.css), que agora tem exatamente estes valores. */
-  --navy: var(--k0);
-  --navy-2: #16243f;
-  --ink: #242a33;
-  --gold-2: #e3cb93;
-  --ivory: #f6f1e7;
-  --ivory-2: #fbf8f1;
-  --oxblood: #7c3a3a;
-  --muted: var(--k3);
-  --line: rgba(198, 161, 91, 0.32);
   max-width: 920px;
   margin: 0 auto;
   padding: 28px 20px 72px;
@@ -1224,7 +1218,7 @@ onUnmounted(() => {
   margin: 0 0 6px;
 }
 .eyebrow.gold {
-  color: var(--gold-2);
+  color: var(--gold-light);
 }
 .page-title {
   font-family: var(--serif);
@@ -1739,7 +1733,7 @@ onUnmounted(() => {
   height: 74px;
   border-radius: 50%;
   background: var(--navy);
-  color: var(--gold-2);
+  color: var(--gold-light);
   display: grid;
   place-content: center;
   text-align: center;
@@ -2174,7 +2168,7 @@ onUnmounted(() => {
 .vtype.active {
   background: rgba(198, 161, 91, 0.2);
   border-color: var(--gold);
-  color: var(--gold-2);
+  color: var(--gold-light);
 }
 .verdict-title,
 .verdict-text {

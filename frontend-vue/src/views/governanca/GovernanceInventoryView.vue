@@ -177,7 +177,7 @@ onMounted(async () => {
 .subnav-link {
   font-size: 13px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
   text-decoration: none;
 }
 
@@ -196,7 +196,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
   max-width: 640px;
 }
@@ -223,7 +223,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -233,7 +233,7 @@ onMounted(async () => {
 .link-btn {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--gold-text);
   cursor: pointer;
   font: inherit;
   padding: 0;
@@ -280,7 +280,7 @@ onMounted(async () => {
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .badge-status {
@@ -342,7 +342,7 @@ onMounted(async () => {
 .filter-hint {
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   border-top: 1px solid var(--bd2);
 }
 

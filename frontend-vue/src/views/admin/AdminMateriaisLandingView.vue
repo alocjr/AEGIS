@@ -11,6 +11,8 @@ import type { LandingMaterial } from '@/api/admin'
 import { formatCount, formatLastAccess } from '@/lib/accessFormat'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 type UrlField = 'material_url' | 'summary_url' | 'audio_url'
 
@@ -187,22 +189,22 @@ onMounted(async () => {
 
 <template>
   <div class="materiais-landing-page">
-    <header class="page-header">
-      <h1 class="page-title">Materiais da Landing</h1>
-      <p class="page-sub">
-        Cards da vitrine no hero da landing: título, descrição, links e áudio narrado.
-        Você pode colar uma URL ou fazer upload (salva em <code>/material_gratuito</code>).
-      </p>
-      <div class="page-actions">
-        <button type="button" class="btn-primary" @click="openCreate">Novo material</button>
-      </div>
-    </header>
+    <PageHeader
+      title="Materiais da Landing"
+      subtitle="Cards da vitrine no hero da landing: título, descrição, links e áudio narrado. Você pode colar uma URL ou fazer upload (salva em /material_gratuito)."
+    >
+      <template #actions>
+        <AppButton variant="primary" @click="openCreate">Novo material</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="items.length === 0" class="empty">
-      Nenhum material cadastrado. Clique em <strong>Novo material</strong> para criar.
-    </div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock
+      v-else-if="items.length === 0"
+      state="empty"
+      message="Nenhum material cadastrado. Clique em Novo material para criar."
+    />
     <div v-else class="table-wrap">
       <table class="data-table">
         <thead>
@@ -371,7 +373,7 @@ onMounted(async () => {
 }
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .page-sub code {
@@ -388,7 +390,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -428,7 +430,7 @@ onMounted(async () => {
 .desc-preview {
   font-weight: 400;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -455,7 +457,7 @@ onMounted(async () => {
 .access-meta {
   display: block;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 2px;
 }
 .td-actions {

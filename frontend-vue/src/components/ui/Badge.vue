@@ -45,11 +45,11 @@ withDefaults(
 }
 .badge--success {
   background: var(--successBg);
-  color: var(--success);
+  color: var(--success-text);
 }
 .badge--warn {
   background: var(--warnBg);
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .badge--low {
   background: var(--lowBg);
@@ -57,6 +57,6 @@ withDefaults(
 }
 .badge--gold {
   background: rgba(155, 126, 70, 0.14);
-  color: var(--gold);
+  color: var(--gold-text);
 }
 </style>

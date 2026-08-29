@@ -507,7 +507,7 @@ onMounted(async () => {
   border-radius: var(--r-sm);
   padding: 28px 20px;
   text-align: center;
-  color: var(--k5);
+  color: var(--k3);
 }
 .state-card.error {
   color: var(--low);
@@ -522,7 +522,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin: 0 0 8px;
 }
 .page-title {
@@ -554,7 +554,7 @@ onMounted(async () => {
   text-transform: uppercase;
   background: var(--golddim);
   border: 1px solid var(--goldbd);
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .meta-pill.muted {
   background: var(--k8);
@@ -659,7 +659,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .level-desc {
   margin: 12px 0 0;
@@ -697,7 +697,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 6px;
 }
 .kpi-value {
@@ -708,11 +708,11 @@ onMounted(async () => {
   line-height: 1.1;
 }
 .kpi-value.gold {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .kpi-sub {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
   line-height: 1.35;
   overflow: hidden;
@@ -731,7 +731,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0 0 16px;
 }
 
@@ -855,7 +855,7 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .actions {

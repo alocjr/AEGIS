@@ -3,7 +3,8 @@ import { computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore } from '@/stores/auth'
-import type { CoursePublic, Encontro, JornadaSemana, MaterialSuporte, ProgramaFormacaoExecutiva } from '@/types'
+import type { Encontro, ProgramaFormacaoExecutiva } from '@/types'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
 
@@ -80,7 +81,7 @@ function isFirstEncontro(enc: Encontro): boolean {
 
 <template>
   <div class="wrap">
-    <div v-if="store.loading" class="loading">Carregando trilha...</div>
+    <StateBlock v-if="store.loading" state="loading" message="Carregando trilha…" />
 
     <template v-else-if="course">
       <nav class="breadcrumb">
@@ -336,9 +337,7 @@ function isFirstEncontro(enc: Encontro): boolean {
       </template>
     </template>
 
-    <div v-else class="empty">
-      {{ store.error || 'Trilha não encontrada.' }}
-    </div>
+    <StateBlock v-else state="error" :message="store.error || 'Trilha não encontrada.'" />
   </div>
 </template>
 
@@ -350,11 +349,11 @@ function isFirstEncontro(enc: Encontro): boolean {
 }
 .breadcrumb {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .breadcrumb a {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .breadcrumb a:hover {
   text-decoration: underline;
@@ -374,7 +373,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .intro-h1 {
@@ -393,7 +392,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-family: var(--serif);
   font-style: italic;
   font-size: 16px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .intro-desc {
@@ -424,14 +423,14 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-size: 22px;
 }
 .kpi-v.g {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .kpi-k {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .inst-row {
   margin-top: 24px;
@@ -443,7 +442,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .inst-name {
   font-size: 14px;
@@ -468,7 +467,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   gap: 10px;
   white-space: nowrap;
@@ -477,7 +476,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-family: var(--serif);
   font-style: italic;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mpad {
   padding-bottom: 8px;
@@ -537,7 +536,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-family: var(--serif);
   font-style: italic;
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mod-tag {
   font-size: 11px;
@@ -552,12 +551,12 @@ function isFirstEncontro(enc: Encontro): boolean {
   border-color: var(--k0);
 }
 .tg-lock {
-  color: var(--k5);
+  color: var(--k3);
   border-color: var(--k7);
 }
 .mod-meta {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -565,7 +564,7 @@ function isFirstEncontro(enc: Encontro): boolean {
 .mod-right {
   padding: 0 16px;
   flex-shrink: 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mod-body {
   border-top: 1px solid var(--bd2);
@@ -578,7 +577,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 10px;
   display: flex;
   align-items: center;
@@ -614,7 +613,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-bottom: 10px;
   border-bottom: 1px solid var(--bd2);
   margin-bottom: 12px;
@@ -665,7 +664,7 @@ function isFirstEncontro(enc: Encontro): boolean {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .metod-desc {
   font-size: 12px;
@@ -702,7 +701,7 @@ a.mat-row:hover {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-right: 12px;
   flex-shrink: 0;
 }
@@ -723,7 +722,7 @@ a.mat-row:hover {
 }
 .mat-sub {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mat-badge {
   font-size: 10px;
@@ -733,11 +732,11 @@ a.mat-row:hover {
   border: 1px solid;
 }
 .mb-ext {
-  color: var(--gold);
+  color: var(--gold-text);
   border-color: var(--goldbd);
 }
 .mb-int {
-  color: var(--k5);
+  color: var(--k3);
   border-color: var(--k7);
 }
 .entregavel {
@@ -750,11 +749,11 @@ a.mat-row:hover {
   margin-bottom: 20px;
 }
 .entregavel-star {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .entregavel-orig {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-left: auto;
 }
 .mod-foot {
@@ -767,7 +766,7 @@ a.mat-row:hover {
 }
 .foot-note {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 /* Fallback sem programa */
@@ -783,12 +782,12 @@ h1 {
 }
 .meta {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 24px;
 }
 .note {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   padding: 16px;
   background: var(--k8);
   border-radius: var(--r-xs);
@@ -798,7 +797,7 @@ h1 {
 .empty {
   text-align: center;
   padding: 48px 20px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 @media (max-width: 640px) {

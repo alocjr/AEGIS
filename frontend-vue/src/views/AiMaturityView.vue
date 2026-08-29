@@ -15,6 +15,7 @@ import {
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -293,8 +294,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 
 <template>
   <div class="wrap">
-    <div v-if="loading" class="state-card">Carregando diagnóstico…</div>
-    <div v-else-if="error" class="state-card error">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando diagnóstico…" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="model">
       <nav v-if="isEditingExisting && responseId" class="edit-nav">
@@ -547,26 +548,13 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   text-decoration: none;
 }
 .edit-back:hover {
-  color: var(--gold, #c6a15b);
+  color: var(--gold-text);
 }
 .edit-back.muted {
   color: var(--muted, #6e6a60);
   font-weight: 500;
 }
 .wrap {
-  /* DS-01: --gold e --serif removidos daqui — herdam o token global único
-     (main.css), que agora tem exatamente estes valores. --lvl1-5, --dim-* e
-     --tier-* também removidos: promovidos a main.css (eram idênticos aqui). */
-  --navy: var(--k0);
-  --navy-2: #16243f;
-  --ink: #242a33;
-  --gold-2: #e3cb93;
-  --ivory: #f6f1e7;
-  --ivory-2: #fbf8f1;
-  --oxblood: #7c3a3a;
-  --muted: var(--k3);
-  --line: rgba(198, 161, 91, 0.32);
-
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px 16px 64px;
@@ -599,7 +587,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 600;
   margin: 0 0 6px;
 }
@@ -613,7 +601,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 }
 .page-title em {
   font-style: italic;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .page-desc {
   margin: 0;
@@ -852,7 +840,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   transition: 0.15s;
 }
 .pillar-chip:hover {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   color: var(--navy);
 }
 .pillar-chip .dot {
@@ -887,8 +875,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   color: var(--navy);
 }
 .btn-swot:hover:not(:disabled) {
-  background: var(--gold-2);
-  border-color: var(--gold-2);
+  background: var(--gold-light);
+  border-color: var(--gold-light);
 }
 .btn-swot:disabled {
   opacity: 0.65;
@@ -1108,7 +1096,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 .cell[data-l='4']::before { background: var(--lvl4); }
 .cell[data-l='5']::before { background: var(--lvl5); }
 .cell:hover {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   box-shadow: 0 2px 10px rgba(14, 27, 51, 0.06);
 }
 .cell:focus-visible {
@@ -1162,7 +1150,7 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 700;
 }
 .overlap-notes ul {

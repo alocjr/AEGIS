@@ -8,12 +8,11 @@ import { ApiError } from '@/api/client'
 import type { CurrentCourseResponse } from '@/api/course'
 import type {
   Encontro,
-  JornadaSemana,
   MaterialSuporte,
   ProgramaFormacaoExecutiva,
   EstruturaEncontro,
-  EntregavelResumo,
 } from '@/types'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
 
@@ -56,8 +55,9 @@ const concluidosEfetivos = computed(() => progress.value?.concluidos_efetivos ??
 
 const ativoEfetivo = computed(() => progress.value?.ativo_efetivo ?? 1)
 
-const materialChecks = computed(() => progress.value?.material_checks ?? {})
-const quizPorEncontro = computed(() => progress.value?.quiz_por_encontro ?? {})
+const materialChecks = computed(
+  () => (progress.value?.material_checks ?? {}) as Record<string, Record<string, boolean>>
+)
 
 const jornada = computed(() => programa.value?.jornada_aprendizagem ?? [])
 
@@ -84,14 +84,6 @@ function statusEnc(enc: Encontro): EncStatus {
   if (concluidosEfetivos.value.includes(enc.id)) return 'done'
   if (liberados.value.includes(enc.id)) return 'active'
   return 'locked'
-}
-
-function isLiberado(enc: Encontro): boolean {
-  return liberados.value.includes(enc.id)
-}
-
-function isConcluido(enc: Encontro): boolean {
-  return concluidosEfetivos.value.includes(enc.id)
 }
 
 function podeClicarConcluir(enc: Encontro): boolean {
@@ -271,15 +263,13 @@ onMounted(() => loadProgram())
 
 <template>
   <div class="wrap">
-    <div v-if="loading" class="loading"><div class="spin"></div><div>Carregando programa...</div></div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>
-        Sua conta participa da organização e já pode usar as ferramentas do AI Hub (Modelo de
-        Maturidade, SWOT, Canvas, Governança). O acesso à mentoria é atribuído pela equipe Valorian.
-      </p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando programa…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. Sua conta participa da organização e já pode usar as ferramentas do AI Hub. O acesso à mentoria é atribuído pela equipe Valorian."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="data && programa">
       <div class="shell">
@@ -803,7 +793,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 11px;
   display: flex;
   align-items: center;
@@ -836,7 +826,7 @@ onMounted(() => loadProgram())
 }
 .sb-prog-den {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .sb-prog-track {
   height: 1.5px;
@@ -853,7 +843,7 @@ onMounted(() => loadProgram())
 }
 .sb-prog-note {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .sb-facts {
   display: grid;
@@ -872,13 +862,13 @@ onMounted(() => loadProgram())
   color: var(--k0);
 }
 .sb-fact-v.g {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .sb-fact-k {
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .sb-nav {
   flex: 1;
@@ -983,7 +973,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 4px;
 }
 .sb-next-title {
@@ -1036,7 +1026,7 @@ onMounted(() => loadProgram())
   justify-content: center;
   min-height: 60vh;
   gap: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .spin {
   width: 28px;
@@ -1076,7 +1066,7 @@ onMounted(() => loadProgram())
 
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 
@@ -1090,7 +1080,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 22px;
   display: flex;
   align-items: center;
@@ -1119,7 +1109,7 @@ onMounted(() => loadProgram())
   font-family: var(--serif);
   font-style: italic;
   font-size: 18px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 20px;
 }
 .intro-desc {
@@ -1149,14 +1139,14 @@ onMounted(() => loadProgram())
   font-size: 27px;
 }
 .kpi-v.g {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .kpi-k {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .inst-row {
   display: flex;
@@ -1171,7 +1161,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .inst-name {
   font-size: 14px;
@@ -1193,7 +1183,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 4px;
 }
 .inst-progress-track {
@@ -1228,7 +1218,7 @@ onMounted(() => loadProgram())
 }
 .inst-hover-meta {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 2px;
 }
 .inst-hover-desc {
@@ -1260,7 +1250,7 @@ onMounted(() => loadProgram())
   border-color: var(--green-done-bd);
 }
 .inst-step--done .inst-step-num {
-  color: var(--success);
+  color: var(--success-text);
 }
 .inst-step--active {
   background: var(--wh);
@@ -1284,7 +1274,7 @@ onMounted(() => loadProgram())
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .inst-progress-legend .leg::before {
   content: '';
@@ -1347,7 +1337,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   gap: 11px;
   white-space: nowrap;
@@ -1466,7 +1456,7 @@ onMounted(() => loadProgram())
   font-family: var(--serif);
   font-style: italic;
   font-size: 15px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mod-tag {
   font-size: 12px;
@@ -1486,12 +1476,12 @@ onMounted(() => loadProgram())
 }
 .tg-todo,
 .tg-lock {
-  color: var(--k5);
+  color: var(--k3);
   border-color: var(--k7);
 }
 .mod-meta {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -1500,12 +1490,12 @@ onMounted(() => loadProgram())
   color: inherit;
 }
 .mm-hi {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .mod-right {
   padding: 0 18px;
   flex-shrink: 0;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1594,7 +1584,7 @@ onMounted(() => loadProgram())
 }
 .btn-prime.btn--done {
   background: var(--success);
-  border-color: var(--success);
+  border-color: var(--success-text);
   color: #fff;
 }
 .btn-prime.btn--done:disabled {
@@ -1605,7 +1595,7 @@ onMounted(() => loadProgram())
   padding: 0 20px;
   background: var(--golddim);
   border: 1px solid var(--goldbd);
-  color: var(--gold);
+  color: var(--gold-text);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1620,7 +1610,7 @@ onMounted(() => loadProgram())
 }
 .btn-quiz:hover {
   background: var(--gold);
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   color: #fff;
 }
 .foot-note {
@@ -1629,7 +1619,7 @@ onMounted(() => loadProgram())
   color: var(--k6);
 }
 .foot-note--muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .metrics {
@@ -1686,7 +1676,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -1722,7 +1712,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-bottom: 12px;
   border-bottom: 1px solid var(--bd2);
   margin-bottom: 14px;
@@ -1773,7 +1763,7 @@ onMounted(() => loadProgram())
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .metod-desc {
   font-size: 12px;
@@ -1838,7 +1828,7 @@ a.mat-row:hover {
   height: 18px;
   margin-right: 12px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   cursor: default;
 }
 .mat-row--readonly {
@@ -1858,7 +1848,7 @@ a.mat-row--readonly {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-right: 14px;
   flex-shrink: 0;
 }
@@ -1883,7 +1873,7 @@ a.mat-row--readonly {
 }
 .mat-sub {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   display: flex;
   gap: 8px;
 }
@@ -1895,16 +1885,16 @@ a.mat-row--readonly {
   border: 1px solid;
 }
 .mb-ext {
-  color: var(--gold);
+  color: var(--gold-text);
   border-color: var(--goldbd);
 }
 .mb-int {
-  color: var(--k5);
+  color: var(--k3);
   border-color: var(--k7);
 }
 .mat-icon {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .entregavel {
   display: flex;
@@ -1916,11 +1906,11 @@ a.mat-row--readonly {
   margin-bottom: 24px;
 }
 .entregavel-star {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .entregavel-orig {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-left: auto;
 }
 

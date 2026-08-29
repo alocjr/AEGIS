@@ -33,6 +33,22 @@ NO_CACHE_HEADERS = {
     "Expires": "0",
 }
 
+IMMUTABLE_ASSET_HEADERS = {
+    "Cache-Control": "public, max-age=31536000, immutable",
+}
+
+
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    """CD-03: hashed bundles em /assets/* podem ser cacheados; shell SPA continua no-store."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/assets/"):
+            for key, value in IMMUTABLE_ASSET_HEADERS.items():
+                response.headers[key] = value
+        return response
+
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; "
@@ -148,6 +164,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CacheControlMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 
 
