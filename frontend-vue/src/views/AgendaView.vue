@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
 import { ApiError } from '@/api/client'
-import type { JornadaSemana, Encontro } from '@/types'
+import type { JornadaSemana, Encontro } from '@/api/courses'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppButton from '@/components/ui/AppButton.vue'

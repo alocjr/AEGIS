@@ -13,6 +13,7 @@ import {
   createSwotFromMaturity,
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
+import { maturityDimensionAccent } from '@/lib/domain/maturity'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,13 +35,6 @@ const TIER_LABELS: Record<string, string> = {
   basico: 'Básico',
   completo: 'Completo',
   complementar: 'Complementar',
-}
-
-const DIMENSION_ACCENT: Record<string, string> = {
-  strategy: '#7a5aa3',
-  data_infra: '#3d6fa8',
-  people_culture: '#b9822f',
-  gov_risk: '#a3453f',
 }
 
 type DimRow = {
@@ -131,7 +125,7 @@ const dimRows = computed<DimRow[]>(() => {
       max,
       avg: ds.avg ?? 0,
       pct,
-      accent: DIMENSION_ACCENT[dim.id] || 'var(--gold)',
+      accent: maturityDimensionAccent(dim.id),
       initials: getInitials(ds.name || dim.name),
     }
   })

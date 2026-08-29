@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import type { CoursePublic } from '@/types'
+import type { CoursePublic } from '@/api/courses'
 
 const props = withDefaults(
   defineProps<{

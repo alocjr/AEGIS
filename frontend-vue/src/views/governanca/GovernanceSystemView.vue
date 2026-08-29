@@ -12,6 +12,7 @@ import {
   createGate,
   getTraceability,
 } from '@/api/governance'
+import { SWOT_QUADRANT_LABEL } from '@/lib/domain/swot'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import type {
@@ -36,13 +37,6 @@ const gates = ref<Gate[]>([])
 
 const activeTab = ref<'geral' | 'avaliacao' | 'gate' | 'rastreabilidade'>('geral')
 const traceability = ref<Traceability | null>(null)
-
-const QUADRANTE_LABEL: Record<string, string> = {
-  forcas: 'Força',
-  fraquezas: 'Fraqueza',
-  oportunidades: 'Oportunidade',
-  ameacas: 'Ameaça',
-}
 
 const NIVEL_OPTIONS: RiscoNivel[] = ['baixo', 'medio', 'alto', 'critico']
 const NIVEL_LABEL: Record<RiscoNivel, string> = { baixo: 'Baixo', medio: 'Médio', alto: 'Alto', critico: 'Crítico' }
@@ -492,9 +486,9 @@ onMounted(async () => {
               <ul class="timeline-list">
                 <li v-for="item in traceability.swot_items" :key="item.id">
                   <RouterLink v-if="traceability.canvas?.swot_id" :to="`/swot/${traceability.canvas.swot_id}`">
-                    [{{ QUADRANTE_LABEL[item.quadrante] || item.quadrante }}] {{ item.texto }}
+                    [{{ SWOT_QUADRANT_LABEL[item.quadrante as keyof typeof SWOT_QUADRANT_LABEL] || item.quadrante }}] {{ item.texto }}
                   </RouterLink>
-                  <span v-else>[{{ QUADRANTE_LABEL[item.quadrante] || item.quadrante }}] {{ item.texto }}</span>
+                  <span v-else>[{{ SWOT_QUADRANT_LABEL[item.quadrante as keyof typeof SWOT_QUADRANT_LABEL] || item.quadrante }}] {{ item.texto }}</span>
                 </li>
               </ul>
             </div>

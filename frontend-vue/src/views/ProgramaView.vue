@@ -11,7 +11,7 @@ import type {
   MaterialSuporte,
   ProgramaFormacaoExecutiva,
   EstruturaEncontro,
-} from '@/types'
+} from '@/api/courses'
 import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']

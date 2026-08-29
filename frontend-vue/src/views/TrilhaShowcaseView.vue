@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore } from '@/stores/auth'
-import type { Encontro, ProgramaFormacaoExecutiva } from '@/types'
+import type { Encontro, ProgramaFormacaoExecutiva } from '@/api/courses'
 import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']

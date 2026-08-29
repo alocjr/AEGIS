@@ -11,6 +11,7 @@ import {
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
+import { CANVAS_QUADRANT_LABEL } from '@/lib/domain/canvas'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppModal from '@/components/ui/AppModal.vue'
@@ -27,13 +28,6 @@ const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
 const importError = ref<string | null>(null)
 const importOkMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
-
-const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
-  ganho_rapido: 'Ganho rápido',
-  aposta_estrategica: 'Aposta estratégica',
-  incremental: 'Incremental',
-  evitar: 'Evitar · vaidade',
-}
 
 /** Área do plot SVG (eixo valor × viabilidade, scores 1–5) */
 const PLOT = { x: 64, y: 40, w: 520, h: 440 }
@@ -417,7 +411,7 @@ onMounted(async () => {
               class="dot-group"
               role="link"
               tabindex="0"
-              :aria-label="`${p.title}. ${QUADRANT_LABEL[p.quadrant]}. Valor ${p.score_valor}, Viabilidade ${p.score_viabilidade}. Abrir canvas.`"
+              :aria-label="`${p.title}. ${CANVAS_QUADRANT_LABEL[p.quadrant]}. Valor ${p.score_valor}, Viabilidade ${p.score_viabilidade}. Abrir canvas.`"
               @click="openProject(p.id)"
               @keydown.enter.prevent="openProject(p.id)"
               @keydown.space.prevent="openProject(p.id)"
@@ -507,7 +501,7 @@ onMounted(async () => {
               </dl>
               <div class="list-foot">
                 <span v-if="item.quadrant" class="list-quad" :data-q="item.quadrant">
-                  {{ QUADRANT_LABEL[item.quadrant] }}
+                  {{ CANVAS_QUADRANT_LABEL[item.quadrant] }}
                 </span>
                 <span class="list-meta">Atualizado {{ formatDate(item.updated_at) }}</span>
               </div>
@@ -558,7 +552,7 @@ onMounted(async () => {
         <template v-if="hoverPoint">
           <div class="chart-tooltip-title">{{ hoverPoint.title }}</div>
           <div class="chart-tooltip-quad" :data-q="hoverPoint.quadrant">
-            {{ QUADRANT_LABEL[hoverPoint.quadrant] }}
+            {{ CANVAS_QUADRANT_LABEL[hoverPoint.quadrant] }}
           </div>
           <dl class="chart-tooltip-dl">
             <div>

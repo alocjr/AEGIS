@@ -18,8 +18,8 @@ import {
   type SwotAnalysisSummary,
   type SwotInitiative,
   type SwotListField,
-  type SwotTowsField,
 } from '@/api/swotAnalysis'
+import { SWOT_QUADRANT_LABEL, TOWS_GROUPS } from '@/lib/domain/swot'
 import { getActiveOkrCycle, type OkrCycle } from '@/api/okrs'
 import { useAutosave } from '@/composables/useAutosave'
 
@@ -209,21 +209,6 @@ const form = ref({
   tows_ids: [] as string[],
   kr_ids: [] as string[],
 })
-
-/** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
-const TOWS_GROUPS: { field: SwotTowsField; label: string; hint: string }[] = [
-  { field: 'tows_fo', label: 'F × O · Ofensiva', hint: 'Forças que capturam oportunidades' },
-  { field: 'tows_fa', label: 'F × A · Defesa', hint: 'Forças que neutralizam ameaças' },
-  { field: 'tows_fxo', label: 'f × O · Reforço', hint: 'Fraquezas que travam oportunidades' },
-  { field: 'tows_fxa', label: 'f × A · Sobrevivência', hint: 'Vulnerabilidade encontra risco' },
-]
-
-const SWOT_QUADRANT_LABEL: Record<SwotListField, string> = {
-  forcas: 'Força',
-  fraquezas: 'Fraqueza',
-  oportunidades: 'Oportunidade',
-  ameacas: 'Ameaça',
-}
 
 const MAX_TOWS_LINKS = 20
 

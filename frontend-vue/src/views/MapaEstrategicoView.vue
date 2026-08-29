@@ -16,7 +16,8 @@ import {
   type CanvasProjectPayload,
   type CanvasProjectSummary,
 } from '@/api/canvasProjects'
-import { createSwotFromMaturity, type SwotListField, type SwotTowsField } from '@/api/swotAnalysis'
+import { createSwotFromMaturity } from '@/api/swotAnalysis'
+import { SWOT_QUADRANT_LABEL, TOWS_LABEL } from '@/lib/domain/swot'
 import {
   buildStrategicMapGraph,
   lineageOf,
@@ -54,20 +55,6 @@ type DrawnPath = {
   width: number
   opacity: number
   dash: string
-}
-
-const QUADRANT_LABEL: Record<SwotListField, string> = {
-  forcas: 'Força',
-  oportunidades: 'Oportunidade',
-  fraquezas: 'Fraqueza',
-  ameacas: 'Ameaça',
-}
-
-const TOWS_LABEL: Record<SwotTowsField, string> = {
-  tows_fo: 'F × O · Ofensiva',
-  tows_fa: 'F × A · Defesa',
-  tows_fxo: 'f × O · Reforço',
-  tows_fxa: 'f × A · Sobrevivência',
 }
 
 function clip(text: string, max: number): string {
@@ -329,7 +316,7 @@ function findInitiative(id: string): { initiative: StrategicMapInitiative; item:
 function itemPrefill(item: StrategicMapItem, dim?: StrategicMapDimension, question?: StrategicMapQuestion): CanvasProjectPayload {
   const negative = item.quadrant === 'fraquezas' || item.quadrant === 'ameacas'
   return {
-    title: clip(item.texto || `${QUADRANT_LABEL[item.quadrant]}`, 200),
+    title: clip(item.texto || `${SWOT_QUADRANT_LABEL[item.quadrant]}`, 200),
     objetivo_estrategico: clip(head.value?.optica || '', 2000),
     contexto: dim && question ? originContext(dim, question) : [],
     dores: negative ? [clip(item.texto, 400)] : [],
@@ -763,7 +750,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
           </p>
           <ul class="plain-list">
             <li v-for="item in map?.unlinked.swot_items ?? []" :key="item.id">
-              <span class="tag muted">{{ QUADRANT_LABEL[item.quadrant] }}</span>
+              <span class="tag muted">{{ SWOT_QUADRANT_LABEL[item.quadrant] }}</span>
               {{ item.texto }}
             </li>
             <li v-for="objective in map?.unlinked.objectives ?? []" :key="objective.id">
