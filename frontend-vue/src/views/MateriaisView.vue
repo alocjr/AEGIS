@@ -2,7 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
 import { ApiError } from '@/api/client'
-import type { JornadaSemana, Encontro, MaterialSuporte } from '@/types'
+import type { JornadaSemana, Encontro, MaterialSuporte } from '@/api/courses'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 function parseMatItem(item: string): { tipo: string; nome: string } {
   const i = item.indexOf(':')
@@ -83,24 +85,19 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <div v-if="loading" class="loading">
-      <div class="spin"></div>
-      <span>Carregando materiais…</span>
-    </div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>Materiais de apoio ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta.</p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando materiais…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. Materiais de apoio ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
-      <div class="page-head">
-        <div class="page-kicker">Sua trilha</div>
-        <h1 class="page-title">Materiais · {{ courseTitle }}</h1>
-        <p class="page-desc">
-          {{ encontroIds.length }} encontros · {{ totalMateriais }} materiais de apoio.
-        </p>
-      </div>
+      <PageHeader
+        :title="`Materiais · ${courseTitle}`"
+        :subtitle="`${encontroIds.length} encontros · ${totalMateriais} materiais de apoio.`"
+      />
 
       <div class="enc-sections">
         <section
@@ -165,7 +162,7 @@ onMounted(async () => {
   justify-content: center;
   min-height: 50vh;
   gap: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .spin {
   width: 28px;
@@ -203,7 +200,7 @@ onMounted(async () => {
 
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 
@@ -215,7 +212,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 10px;
 }
 .page-title {
@@ -281,7 +278,7 @@ onMounted(async () => {
 .mat-icon {
   font-size: 32px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mat-icon-wrap--video .mat-icon {
   color: var(--k2);
@@ -294,7 +291,7 @@ onMounted(async () => {
 }
 .mat-icon-wrap--link .mat-icon {
   font-size: 28px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .mat-icon-wrap--document .mat-icon {
   font-size: 28px;
@@ -310,7 +307,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 .mat-name {
   font-size: 13px;

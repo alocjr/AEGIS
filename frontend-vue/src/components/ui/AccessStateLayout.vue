@@ -70,7 +70,7 @@ const BADGE_LABEL: Record<'401' | 'tool-disabled' | '404', string> = {
   border-radius: var(--r-pill);
   border: 1px solid var(--goldbd);
   background: var(--golddim);
-  color: var(--gold);
+  color: var(--gold-text);
   font-family: var(--serif);
   font-size: var(--fs-lg);
   font-weight: 600;

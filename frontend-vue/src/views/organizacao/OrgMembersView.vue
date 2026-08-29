@@ -7,7 +7,7 @@ import {
   updateOrgMember,
   deleteOrgMember,
 } from '@/api/orgAdmin'
-import type { OrgMember } from '@/api/orgAdmin'
+import type { OrganizationMember } from '@/api/organizationMembers'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -18,7 +18,7 @@ const currentUserId = computed(() => auth.user?.id ?? '')
 
 const loading = ref(true)
 const error = ref<string | null>(null)
-const members = ref<OrgMember[]>([])
+const members = ref<OrganizationMember[]>([])
 const searchQuery = ref('')
 
 const filteredMembers = computed(() => {
@@ -44,7 +44,7 @@ const form = ref<{ name: string; email: string; password: string; phone: string 
   phone: '',
 })
 
-const deleteTarget = ref<OrgMember | null>(null)
+const deleteTarget = ref<OrganizationMember | null>(null)
 const deleteConfirming = ref(false)
 const deleteError = ref<string | null>(null)
 
@@ -60,11 +60,11 @@ function openCreate() {
   modalOpen.value = true
 }
 
-function openEdit(member: OrgMember) {
+function openEdit(member: OrganizationMember) {
   modalMode.value = 'edit'
   editingId.value = member.id
   modalError.value = null
-  form.value = { name: member.name, email: member.email, password: '', phone: member.phone || '' }
+  form.value = { name: member.name, email: member.email ?? '', password: '', phone: member.phone || '' }
   modalOpen.value = true
 }
 
@@ -136,7 +136,7 @@ async function saveModal() {
   }
 }
 
-function askDelete(member: OrgMember) {
+function askDelete(member: OrganizationMember) {
   deleteTarget.value = member
   deleteError.value = null
   deleteConfirming.value = true
@@ -306,7 +306,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
   max-width: 640px;
 }
@@ -328,7 +328,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -375,7 +375,7 @@ onMounted(async () => {
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .badge {
@@ -406,14 +406,14 @@ onMounted(async () => {
 }
 
 .self-hint {
-  color: var(--k5);
+  color: var(--k3);
   font-size: 13px;
 }
 
 .filter-hint {
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   border-top: 1px solid var(--bd2);
 }
 
@@ -526,7 +526,7 @@ onMounted(async () => {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;

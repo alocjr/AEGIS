@@ -244,7 +244,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 
@@ -257,7 +257,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -307,7 +307,7 @@ onMounted(async () => {
 
 .trilha-tema {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -427,7 +427,7 @@ onMounted(async () => {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;
@@ -474,7 +474,7 @@ onMounted(async () => {
 .form-hint {
   display: block;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
 }
 

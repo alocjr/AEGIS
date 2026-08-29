@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { ApiError } from '@/api/client'
 import { getGate, updateGateItem, decideGate, listOrganizationMembers } from '@/api/governance'
 import type { Gate, ChecklistItem, ChecklistBloco, ChecklistItemStatus, GateResultado, OrganizationMember } from '@/api/governance'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const gateId = String(route.params.id)
@@ -42,7 +44,7 @@ const openCriticalItems = computed(() =>
   )
 )
 
-const admins = computed(() => members.value.filter((m) => m.is_admin))
+const admins = computed(() => members.value.filter((m) => m.is_org_admin))
 
 // ——— edição de item ———
 
@@ -143,17 +145,18 @@ onMounted(async () => {
 
 <template>
   <div class="gate-page">
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="loadError" class="error-msg">{{ loadError }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="loadError" state="error" :message="loadError" />
     <template v-else-if="gate">
-      <header class="page-header">
-        <RouterLink :to="`/governanca/sistemas/${gate.system_id}`" class="back-link">← Sistema</RouterLink>
-        <h1 class="page-title">Gate — ciclo {{ gate.revision }}</h1>
-        <p v-if="isDecided" class="page-sub decided">
-          Decidido: <strong>{{ gate.decisao?.resultado }}</strong>
-        </p>
-        <p v-else class="page-sub">Em andamento — preencha o checklist e registre a decisão.</p>
-      </header>
+      <RouterLink :to="`/governanca/sistemas/${gate.system_id}`" class="back-link">← Sistema</RouterLink>
+      <PageHeader
+        :title="`Gate — ciclo ${gate.revision}`"
+        :subtitle="
+          isDecided
+            ? `Decidido: ${gate.decisao?.resultado ?? ''}`
+            : 'Em andamento — preencha o checklist e registre a decisão.'
+        "
+      />
 
       <div class="gate-layout">
         <div class="checklist-col">
@@ -270,7 +273,7 @@ onMounted(async () => {
 .loading,
 .error-msg {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -280,7 +283,7 @@ onMounted(async () => {
 .back-link {
   display: inline-block;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   text-decoration: none;
   margin-bottom: 8px;
 }
@@ -294,7 +297,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 20px;
 }
 
@@ -350,7 +353,7 @@ onMounted(async () => {
 .item-id {
   font-size: 12px;
   font-weight: 700;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .item-texto {
@@ -376,7 +379,7 @@ onMounted(async () => {
   font-weight: 600;
   border-radius: var(--r-sm);
   border: 1px solid var(--bd2);
-  color: var(--k5);
+  color: var(--k3);
   background: var(--k9);
 }
 
@@ -473,7 +476,7 @@ select.input {
 .link-btn {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--gold-text);
   cursor: pointer;
   font-size: 13px;
   padding: 0;

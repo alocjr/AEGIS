@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { fetchDashboard } from '@/api/admin'
 import type { DashboardOrganization } from '@/api/admin'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -66,12 +68,11 @@ onMounted(async () => {
 
 <template>
   <div class="dashboard">
-    <h1 class="dashboard-title">Dashboard</h1>
-    <p class="dashboard-sub">Organizações, jornada de estratégia e progresso por trilha</p>
+    <PageHeader title="Dashboard" subtitle="Organizações, jornada de estratégia e progresso por trilha" />
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="organizations.length === 0" class="empty">Nenhum aluno cadastrado.</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock v-else-if="organizations.length === 0" state="empty" message="Nenhum aluno cadastrado." />
 
     <div v-else class="org-list">
       <section v-for="org in organizations" :key="org.id ?? '—'" class="org-group">
@@ -176,14 +177,14 @@ onMounted(async () => {
 }
 .dashboard-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 24px;
 }
 .loading,
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -285,7 +286,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
   opacity: 0.95;
 }
 
@@ -305,7 +306,7 @@ onMounted(async () => {
 }
 
 .card-email:hover {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 
 .card-phone:hover {
@@ -397,7 +398,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .extra-chip-value {
@@ -443,7 +444,7 @@ onMounted(async () => {
   padding: 12px 22px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--gold-text);
   border-top: 1px solid var(--bd2);
   transition: background 0.15s ease, color 0.15s ease;
 }

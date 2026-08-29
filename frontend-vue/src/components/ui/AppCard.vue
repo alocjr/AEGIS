@@ -37,7 +37,7 @@ withDefaults(
   box-shadow: var(--shadow-1);
 }
 .app-card--highlighted {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
 }
 .app-card__header {
   padding: 18px 22px;

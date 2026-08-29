@@ -10,10 +10,11 @@ import {
 } from '@/api/admin'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 import type {
   AdminQuizListItem,
   AdminQuizGroup,
-  AdminQuizDetail,
   AdminQuizQuestao,
   AdminQuizOpcao,
   CourseListItem,
@@ -84,6 +85,7 @@ function nextQuestaoId(): number {
 
 function setCorrectOption(questaoIndex: number, opcaoIndex: number) {
   const q = modalQuestoes.value[questaoIndex]
+  if (!q) return
   q.opcoes.forEach((op, i) => {
     op.isCorrect = i === opcaoIndex
   })
@@ -99,15 +101,16 @@ function removeQuestao(index: number) {
 
 function addOpcao(questaoIndex: number) {
   const q = modalQuestoes.value[questaoIndex]
+  if (!q) return
   q.opcoes = [...q.opcoes, emptyOpcao()]
 }
 
 function removeOpcao(questaoIndex: number, opcaoIndex: number) {
   const q = modalQuestoes.value[questaoIndex]
-  if (q.opcoes.length <= 2) return
+  if (!q || q.opcoes.length <= 2) return
   q.opcoes = q.opcoes.filter((_, i) => i !== opcaoIndex)
   if (q.opcoes.every((o) => !o.isCorrect) && q.opcoes.length > 0) {
-    q.opcoes[0].isCorrect = true
+    q.opcoes[0]!.isCorrect = true
   }
 }
 
@@ -131,13 +134,14 @@ function openCreate() {
   modalError.value = null
   modalOpen.value = true
   if (trilhas.value.length > 0) {
-    modalTrilhaSlug.value = trilhas.value[0].slug
-    loadEncontrosForTrilha(trilhas.value[0].slug!).then(() => {
+    const first = trilhas.value[0]!
+    modalTrilhaSlug.value = first.slug
+    loadEncontrosForTrilha(first.slug!).then(() => {
       const opts = modalEncontroOptions.value
       if (opts.length > 0) {
         const maxExisting = Math.max(0, ...allQuizzes.value.map((q) => q.encontro))
         const next = opts.find((e) => e.id > maxExisting) ?? opts[opts.length - 1]
-        modalEncontro.value = next.id
+        if (next) modalEncontro.value = next.id
       } else {
         modalEncontro.value = Math.max(1, ...allQuizzes.value.map((q) => q.encontro), 0) + 1
       }
@@ -177,7 +181,7 @@ async function openEdit(item: AdminQuizListItem) {
         : [emptyQuestao(1)]
     modalQuestoes.value.forEach((q) => {
       if (q.opcoes.length > 0 && q.opcoes.every((o) => !o.isCorrect)) {
-        q.opcoes[0].isCorrect = true
+        q.opcoes[0]!.isCorrect = true
       }
     })
     const groupContaining = groupedByTrilha.value.find((g) =>
@@ -186,7 +190,7 @@ async function openEdit(item: AdminQuizListItem) {
     modalTrilhaSlug.value = groupContaining?.course_slug ?? ''
     await loadEncontrosForTrilha(modalTrilhaSlug.value || undefined)
     if (modalEncontroOptions.value.length > 0 && !modalEncontroOptions.value.some((e) => e.id === modalEncontro.value)) {
-      modalEncontro.value = modalEncontroOptions.value[0].id
+      modalEncontro.value = modalEncontroOptions.value[0]!.id
     }
   } catch (e) {
     modalError.value = e instanceof Error ? e.message : 'Erro ao carregar quiz.'
@@ -206,7 +210,7 @@ async function onTrilhaChange() {
   const opts = modalEncontroOptions.value
   if (opts.length > 0) {
     if (!opts.some((e) => e.id === modalEncontro.value)) {
-      modalEncontro.value = opts[0].id
+      modalEncontro.value = opts[0]!.id
     }
   } else {
     modalEncontro.value = Math.max(1, ...allQuizzes.value.map((q) => q.encontro), 0) + 1
@@ -219,6 +223,7 @@ function validate(): string | null {
   }
   for (let i = 0; i < modalQuestoes.value.length; i++) {
     const q = modalQuestoes.value[i]
+    if (!q) continue
     if (!q.pergunta.trim()) return `Questão ${i + 1}: preencha o enunciado.`
     if (q.opcoes.length < 2) return `Questão ${i + 1}: adicione pelo menos 2 opções.`
     const withText = q.opcoes.filter((o) => o.text.trim())
@@ -284,19 +289,19 @@ onMounted(async () => {
 
 <template>
   <div class="quiz-page">
-    <header class="page-header">
-      <h1 class="page-title">Quiz</h1>
-      <p class="page-sub">Criar e editar quizzes por encontro.</p>
-      <div class="page-actions">
-        <button type="button" class="btn-primary" @click="openCreate">Novo quiz</button>
-      </div>
-    </header>
+    <PageHeader title="Quiz" subtitle="Criar e editar quizzes por encontro.">
+      <template #actions>
+        <AppButton variant="primary" @click="openCreate">Novo quiz</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="allQuizzes.length === 0" class="empty">
-      Nenhum quiz cadastrado. Clique em <strong>Novo quiz</strong> para criar.
-    </div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock
+      v-else-if="allQuizzes.length === 0"
+      state="empty"
+      message="Nenhum quiz cadastrado. Clique em Novo quiz para criar."
+    />
     <div v-else class="grouped-quizzes">
       <section v-for="group in groupedByTrilha" :key="group.course_slug ?? 'orphan'" class="trilha-section">
         <h2 class="trilha-section-title">{{ group.titulo }}</h2>
@@ -484,7 +489,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 
@@ -497,7 +502,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -567,7 +572,7 @@ onMounted(async () => {
 
 .quiz-meta {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .quiz-card-actions {
@@ -612,7 +617,7 @@ onMounted(async () => {
 
 .btn-ghost {
   background: transparent;
-  color: var(--k5);
+  color: var(--k3);
   border: none;
 }
 
@@ -681,7 +686,7 @@ onMounted(async () => {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;
@@ -735,7 +740,7 @@ onMounted(async () => {
 .form-hint {
   display: block;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
 }
 

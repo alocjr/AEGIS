@@ -1,21 +1,25 @@
 # Valorian 4 Future · Frontend Vue (TypeScript)
 
-Interface modular em **Vue 3**, **TypeScript** e **Vite**, seguindo boas práticas de mercado.
-
-## Assets
-
-O logo fica em `public/assets/logo.png`. Substitua o placeholder pelo arquivo real da marca; ele é copiado para `dist/assets/` no build e servido em `/assets/logo.png`.
+Interface em **Vue 3**, **TypeScript** e **Vite** para a plataforma AEGIS (mentoria executiva em IA).
 
 ## Estrutura
 
-- `src/api` – Cliente HTTP e endpoints (ex.: `courses.ts`)
-- `src/components` – Componentes reutilizáveis (`layout/`, `course/`)
-- `src/composables` – Lógica reutilizável (ex.: `useCourses`)
-- `src/layouts` – Layouts (DefaultLayout, AdminLayout)
-- `src/router` – Rotas e meta (títulos)
-- `src/stores` – Pinia (ex.: `courses`)
-- `src/types` – Tipos TypeScript globais
-- `src/views` – Páginas (uma por rota)
+| Pasta | Conteúdo |
+|---|---|
+| `src/api/` | Cliente HTTP, tipos de API e endpoints |
+| `src/assets/` | CSS global (`main.css` — tokens do design system) |
+| `src/components/` | Componentes reutilizáveis (`ui/`, `layout/`, `course/`) |
+| `src/composables/` | Lógica reutilizável (ex.: `useAutosave`, `useCourses`) |
+| `src/layouts/` | Shells (`DefaultLayout`, `AdminLayout`) |
+| `src/lib/` | Utilitários, domínio (`lib/domain/`), navegação admin |
+| `src/router/` | Rotas, guards e meta de título |
+| `src/stores/` | Pinia (auth, courses) |
+| `src/views/` | Páginas (uma por rota) |
+| `public/` | Assets estáticos, incluindo `lp.html` (landing) |
+
+Tipos de curso/trilha ficam em `src/api/courses.ts`. O diretório `src/types/` mantém apenas reexports de compatibilidade.
+
+Componentes UI compartilhados: `AppButton`, `AppModal`, `AppCard`, `PageHeader`, `StateBlock`, `AccessStateLayout`, etc. — ver `src/components/ui/`.
 
 ## Desenvolvimento
 
@@ -27,17 +31,23 @@ npm run dev
 
 Acesse `http://localhost:5173`. O Vite faz proxy de `/api` e `/static` para o backend em `http://127.0.0.1:8000`. Deixe o backend rodando em outro terminal.
 
+A rota `/` no app Vue redireciona para `public/lp.html` (landing estática). Em produção, o backend serve `lp.html` diretamente em `GET /`.
+
 ## Build e integração com o backend
 
 ```bash
 npm run build
 ```
 
-O build gera a pasta `dist/`. O FastAPI detecta `frontend-vue/dist/index.html` e passa a servir a SPA nas rotas atuais (/, /programa, /trilhas, /admin, etc.). Se `dist/` não existir, o backend continua servindo o frontend estático em `frontend/`.
+O build gera `dist/` (inclui `lp.html` copiado de `public/`). O FastAPI detecta `frontend-vue/dist/index.html` e passa a servir a SPA nas rotas do app (`/programa`, `/admin`, etc.), mantendo `lp.html` em `/`.
 
 ## Scripts
 
-- `npm run dev` – Servidor de desenvolvimento
-- `npm run build` – Build de produção (`vue-tsc` + `vite build`)
-- `npm run preview` – Preview do build
-- `npm run type-check` – Verificação de tipos
+- `npm run dev` — servidor de desenvolvimento
+- `npm run build` — build de produção (`vue-tsc` + `vite build`)
+- `npm run preview` — preview do build
+- `npm run type-check` — verificação de tipos
+
+## Documentação de design
+
+Auditoria e roadmap de UI: `docs/SYSTEM_DESIGN.md`.

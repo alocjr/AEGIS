@@ -22,6 +22,8 @@ import type {
 import { useAuthStore } from '@/stores/auth'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.id ?? '')
@@ -303,10 +305,8 @@ onMounted(async () => {
 
 <template>
   <div class="usuarios-page">
-    <header class="page-header">
-      <h1 class="page-title">Usuários</h1>
-      <p class="page-sub">Gerir usuários da plataforma: criar, editar e excluir.</p>
-      <div class="page-actions">
+    <PageHeader title="Usuários" subtitle="Gerir usuários da plataforma: criar, editar e excluir.">
+      <template #actions>
         <input
           v-model="searchQuery"
           type="search"
@@ -314,15 +314,17 @@ onMounted(async () => {
           placeholder="Buscar por nome, e-mail, telefone ou trilha..."
           aria-label="Buscar usuários"
         />
-        <button type="button" class="btn-primary" @click="openCreate">Novo usuário</button>
-      </div>
-    </header>
+        <AppButton variant="primary" @click="openCreate">Novo usuário</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="users.length === 0" class="empty">
-      Nenhum usuário cadastrado. Clique em <strong>Novo usuário</strong> para criar.
-    </div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock
+      v-else-if="users.length === 0"
+      state="empty"
+      message="Nenhum usuário cadastrado. Clique em Novo usuário para criar."
+    />
     <div v-else class="table-wrap">
       <table class="data-table">
         <thead>
@@ -548,7 +550,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 
@@ -568,7 +570,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -660,7 +662,7 @@ onMounted(async () => {
   padding: 2px 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
   background: transparent;
   border: 1px dashed var(--bd);
   border-radius: var(--r-sm);
@@ -696,19 +698,19 @@ onMounted(async () => {
 }
 
 .self-hint {
-  color: var(--k5);
+  color: var(--k3);
   font-size: 13px;
 }
 
 .filter-hint {
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   border-top: 1px solid var(--bd2);
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 /* Reuso dos estilos de modal/forms do AdminTrilhasView (globais ou iguais) */
@@ -885,7 +887,7 @@ select.input {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;
@@ -940,7 +942,7 @@ select.input {
 .form-hint {
   display: block;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
 }
 </style>
