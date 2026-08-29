@@ -778,7 +778,7 @@ onBeforeUnmount(() => {
 }
 .back {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   text-decoration: none;
 }
 .back:hover {
@@ -789,7 +789,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .save-status .ok {
   color: #2f6e4a;
@@ -798,7 +798,7 @@ onBeforeUnmount(() => {
   color: #8f2b2b;
 }
 .save-status .pending {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .btn-save {
   font-size: 12px;
@@ -860,14 +860,14 @@ onBeforeUnmount(() => {
 }
 .status-badge[data-status='encerrado'] {
   background: var(--k9);
-  color: var(--k5);
+  color: var(--k3);
 }
 .head-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .head-field select,
 .head-field input {
@@ -929,7 +929,7 @@ onBeforeUnmount(() => {
   padding: 3px 8px;
   border-radius: var(--r-pill);
   background: var(--warnBg);
-  color: var(--warn);
+  color: var(--warn-text);
   white-space: nowrap;
 }
 .objective-titulo {
@@ -948,7 +948,7 @@ onBeforeUnmount(() => {
 .btn-remove {
   border: none;
   background: transparent;
-  color: var(--k5);
+  color: var(--k3);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -985,7 +985,7 @@ onBeforeUnmount(() => {
 }
 .obj-hint {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   font-style: italic;
 }
 .origin {
@@ -1012,15 +1012,15 @@ onBeforeUnmount(() => {
 }
 .origin-count {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-count.muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-caret {
   margin-left: auto;
   font-size: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-chips {
   display: flex;
@@ -1039,7 +1039,7 @@ onBeforeUnmount(() => {
   color: var(--k3);
 }
 .origin-chip b {
-  color: var(--k5);
+  color: var(--k3);
   font-weight: 600;
 }
 .origin-body {
@@ -1055,7 +1055,7 @@ onBeforeUnmount(() => {
 }
 .origin-none {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-link {
   color: var(--k0);
@@ -1065,7 +1065,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-select select {
   padding: 6px 8px;
@@ -1089,7 +1089,7 @@ onBeforeUnmount(() => {
 }
 .origin-group-head span {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .origin-list {
   list-style: none;
@@ -1121,7 +1121,7 @@ onBeforeUnmount(() => {
 }
 .origin-cross {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .kr-list {
   display: flex;
@@ -1171,7 +1171,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .kr-num input {
   width: 80px;
@@ -1208,7 +1208,7 @@ onBeforeUnmount(() => {
   right: 0;
   top: -16px;
   font-size: 10px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .btn-add-kr {
   align-self: flex-start;
@@ -1217,7 +1217,7 @@ onBeforeUnmount(() => {
   border-radius: var(--r-sm);
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
 }
 .btn-add-kr:hover:not(:disabled) {
@@ -1236,7 +1236,7 @@ onBeforeUnmount(() => {
   border-radius: var(--r-md);
   padding: 12px;
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
 }
 .btn-add-objective:hover:not(:disabled) {

@@ -232,7 +232,9 @@ function onAgendaInput(encId: number, datetimeLocal: string) {
     const startIdx = ordered.findIndex((enc) => enc.id === encId)
     if (startIdx >= 0) {
       for (let i = 1; startIdx + i < ordered.length; i++) {
-        next[String(ordered[startIdx + i].id)] = addWeeksIso(iso, i)
+        const enc = ordered[startIdx + i]
+        if (!enc) continue
+        next[String(enc.id)] = addWeeksIso(iso, i)
       }
     }
   }
@@ -476,11 +478,11 @@ onMounted(() => loadData())
 }
 .breadcrumb {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 20px;
 }
 .breadcrumb a {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .breadcrumb a:hover {
   text-decoration: underline;
@@ -488,7 +490,7 @@ onMounted(() => loadData())
 .loading,
 .error-msg {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -514,14 +516,14 @@ onMounted(() => loadData())
   margin-bottom: 8px;
 }
 .card-email:hover {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .card-trilha {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 .card-progress {
   background: var(--wh);
@@ -549,7 +551,7 @@ onMounted(() => loadData())
 }
 .progress-label {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .progress-bar-wrap {
   height: 8px;
@@ -565,7 +567,7 @@ onMounted(() => loadData())
 }
 .progress-pct {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   text-align: right;
 }
 
@@ -603,7 +605,7 @@ onMounted(() => loadData())
 .resumo-card-pct--muted {
   font-size: 14px;
   font-weight: 500;
-  color: var(--k5);
+  color: var(--k3);
 }
 .resumo-bar-wrap {
   height: 10px;
@@ -634,7 +636,7 @@ onMounted(() => loadData())
 }
 .resumo-card-desc {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .resumo-card--swot-ok,
 .resumo-card--canvas-ok {
@@ -710,18 +712,18 @@ onMounted(() => loadData())
 }
 .enc-status-badge--done {
   background: var(--green-done-row);
-  color: var(--success);
+  color: var(--success-text);
   border: 1px solid var(--green-done-bd);
 }
 .enc-status-badge--pending {
   background: var(--warnBg);
-  color: var(--warn);
+  color: var(--warn-text);
   border: 1px solid rgba(193, 122, 44, 0.3);
 }
 .enc-status-date {
   font-size: 11px;
   font-weight: 400;
-  color: var(--k5);
+  color: var(--k3);
 }
 .enc-detalhes {
   display: grid;
@@ -752,7 +754,7 @@ onMounted(() => loadData())
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--k5);
+  color: var(--k3);
 }
 .enc-bloco-val {
   font-size: 13px;
@@ -760,11 +762,11 @@ onMounted(() => loadData())
   color: var(--k0);
 }
 .enc-bloco-val--muted {
-  color: var(--k5);
+  color: var(--k3);
   font-weight: 500;
 }
 .enc-bloco-val--pending {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 .enc-bar-wrap {
   height: 8px;
@@ -799,7 +801,7 @@ onMounted(() => loadData())
 }
 .sec-desc {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 14px;
 }
 .enc-list {
@@ -824,7 +826,7 @@ onMounted(() => loadData())
 .enc-num {
   font-size: 12px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
 }
 .enc-titulo {
   font-size: 14px;
@@ -832,7 +834,7 @@ onMounted(() => loadData())
 }
 .enc-semana {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .btn-liberar {
   flex-shrink: 0;
@@ -866,7 +868,7 @@ onMounted(() => loadData())
 }
 .agenda-section .sec-desc {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin: 0 0 16px 0;
 }
 .agenda-list {
@@ -903,7 +905,7 @@ onMounted(() => loadData())
 }
 .agenda-titulo {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .agenda-item-field {
   flex-shrink: 0;
@@ -919,7 +921,7 @@ onMounted(() => loadData())
 }
 .agenda-input:focus {
   outline: none;
-  border-color: var(--gold);
+  border-color: var(--gold-text);
 }
 .agenda-save-error {
   font-size: 13px;
@@ -945,7 +947,7 @@ onMounted(() => loadData())
 }
 .agenda-date {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .actions {
   padding-top: 8px;

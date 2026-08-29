@@ -548,7 +548,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 
@@ -568,7 +568,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -660,7 +660,7 @@ onMounted(async () => {
   padding: 2px 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--k5);
+  color: var(--k3);
   background: transparent;
   border: 1px dashed var(--bd);
   border-radius: var(--r-sm);
@@ -696,19 +696,19 @@ onMounted(async () => {
 }
 
 .self-hint {
-  color: var(--k5);
+  color: var(--k3);
   font-size: 13px;
 }
 
 .filter-hint {
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   border-top: 1px solid var(--bd2);
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 /* Reuso dos estilos de modal/forms do AdminTrilhasView (globais ou iguais) */
@@ -885,7 +885,7 @@ select.input {
   background: none;
   font-size: 24px;
   line-height: 1;
-  color: var(--k5);
+  color: var(--k3);
   cursor: pointer;
   border-radius: var(--r-md);
   display: flex;
@@ -940,7 +940,7 @@ select.input {
 .form-hint {
   display: block;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
 }
 </style>

@@ -371,7 +371,7 @@ onMounted(async () => {
 }
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .page-sub code {
@@ -388,7 +388,7 @@ onMounted(async () => {
 .error-msg,
 .empty {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 .error-msg {
   color: #8f2b2b;
@@ -428,7 +428,7 @@ onMounted(async () => {
 .desc-preview {
   font-weight: 400;
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -455,7 +455,7 @@ onMounted(async () => {
 .access-meta {
   display: block;
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   margin-top: 2px;
 }
 .td-actions {

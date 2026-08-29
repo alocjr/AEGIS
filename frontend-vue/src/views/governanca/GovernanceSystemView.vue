@@ -558,7 +558,7 @@ onMounted(async () => {
 .loading,
 .error-msg {
   padding: 40px 0;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .error-msg {
@@ -568,7 +568,7 @@ onMounted(async () => {
 .back-link {
   display: inline-block;
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   text-decoration: none;
   margin-bottom: 8px;
 }
@@ -582,7 +582,7 @@ onMounted(async () => {
 
 .page-sub {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 20px;
 }
 
@@ -597,7 +597,7 @@ onMounted(async () => {
   padding: 10px 18px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--k5);
+  color: var(--k3);
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -606,7 +606,7 @@ onMounted(async () => {
 
 .tab.active {
   color: var(--k0);
-  border-bottom-color: var(--gold);
+  border-bottom-color: var(--gold-text);
 }
 
 .tab-panel {
@@ -660,7 +660,7 @@ select.input {
   height: 18px;
   font-size: 12px;
   margin-bottom: 8px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .save-indicator.error {
@@ -716,7 +716,7 @@ select.input {
 }
 
 .muted {
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .badge-risco {

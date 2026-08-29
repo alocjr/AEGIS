@@ -66,7 +66,7 @@ const publicoLabel = computed(() => {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 10px;
 }
 .trilha-card h3 {
@@ -77,7 +77,7 @@ const publicoLabel = computed(() => {
 }
 .publico {
   font-size: 13px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 12px;
   font-style: italic;
 }
@@ -94,7 +94,7 @@ const publicoLabel = computed(() => {
 }
 .meta {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 16px;
 }
 .btn-card {

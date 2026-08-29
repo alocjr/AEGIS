@@ -53,7 +53,7 @@ const nextEncontroId = computed<number | null>(() => {
   const future = arr.filter((x) => x.ts >= now).sort((a, b) => a.ts - b.ts)
   if (future[0]) return future[0].it.encontro.id
   arr.sort((a, b) => a.ts - b.ts)
-  return arr[0].it.encontro.id
+  return arr[0]?.it.encontro.id ?? null
 })
 
 function isNext(item: AgendaItem): boolean {
@@ -338,7 +338,7 @@ onMounted(async () => {
   justify-content: center;
   min-height: 50vh;
   gap: 16px;
-  color: var(--k5);
+  color: var(--k3);
 }
 .spin {
   width: 28px;
@@ -378,7 +378,7 @@ onMounted(async () => {
 
 .empty-trilha p {
   font-size: 14px;
-  color: var(--k5);
+  color: var(--k3);
   line-height: 1.6;
 }
 
@@ -390,7 +390,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 10px;
 }
 .agenda-title {
@@ -416,7 +416,7 @@ onMounted(async () => {
   padding: 10px 18px;
   border: 1px solid var(--gold);
   background: transparent;
-  color: var(--gold);
+  color: var(--gold-text);
   border-radius: var(--r-xs);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
@@ -427,7 +427,7 @@ onMounted(async () => {
 }
 .export-hint {
   font-size: 12px;
-  color: var(--k5);
+  color: var(--k3);
 }
 
 .calendar {
@@ -449,7 +449,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--k5);
+  color: var(--k3);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--bd);
 }
@@ -473,7 +473,7 @@ onMounted(async () => {
   border-left: 3px solid var(--gold);
 }
 .day-card.is-next {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   box-shadow: 0 8px 28px rgba(180, 140, 60, 0.4);
   transform: translateY(-1px);
   padding-top: 28px;
@@ -502,11 +502,11 @@ onMounted(async () => {
 }
 .day-date.undefined {
   font-style: italic;
-  color: var(--k5);
+  color: var(--k3);
 }
 .day-time {
   font-size: 11px;
-  color: var(--k5);
+  color: var(--k3);
   margin-bottom: 8px;
 }
 .day-enc-num {
@@ -514,7 +514,7 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-top: 6px;
 }
 .day-title {

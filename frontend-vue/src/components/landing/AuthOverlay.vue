@@ -399,7 +399,7 @@ function onClose() {
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 10px;
 }
 
@@ -450,7 +450,7 @@ function onClose() {
 }
 .auth-success {
   font-size: var(--fs-sm);
-  color: var(--success);
+  color: var(--success-text);
   margin: 0;
   line-height: 1.45;
 }
@@ -462,13 +462,13 @@ function onClose() {
   padding: 0;
   border: none;
   background: none;
-  color: var(--gold);
+  color: var(--gold-text);
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
 .auth-link:hover {
-  color: var(--gold2);
+  color: var(--gold-text);
 }
 
 .auth-actions {
