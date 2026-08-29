@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { fetchQuiz, fetchQuizById, fetchMyQuizResponse, submitQuiz } from '@/api/quiz'
 import type { QuizDoc, QuizSubmitResponse } from '@/api/quiz'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const quizIdParam = computed(() => route.params.quizId as string | undefined)
@@ -178,21 +180,19 @@ watch([encontroIdParam, quizIdParam, isReviewQuery], load)
 
 <template>
   <div class="wrap">
-    <header class="page-header">
-      <h1>Quiz — Encontro {{ encontroId }}</h1>
-      <p v-if="quiz && !reviewMode" class="muted">
-        {{ quiz.titulo }}
-      </p>
-      <p v-else-if="quiz && reviewMode" class="muted">
-        Você respondeu todas as questões. Racional de cada alternativa abaixo.
-      </p>
-    </header>
+    <PageHeader
+      :title="`Quiz — Encontro ${encontroId}`"
+      :subtitle="
+        quiz && reviewMode
+          ? 'Você respondeu todas as questões. Racional de cada alternativa abaixo.'
+          : quiz
+            ? quiz.titulo
+            : null
+      "
+    />
 
-    <div v-if="loading" class="loading">Carregando quiz...</div>
-
-    <template v-else-if="error">
-      <div class="error-msg">{{ error }}</div>
-    </template>
+    <StateBlock v-if="loading" state="loading" message="Carregando quiz…" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <!-- Sem perguntas disponíveis -->
     <div v-else-if="quiz && questoes.length === 0 && !allAnswered" class="card">

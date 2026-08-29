@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
 import { ApiError } from '@/api/client'
 import type { JornadaSemana, Encontro, MaterialSuporte } from '@/types'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 function parseMatItem(item: string): { tipo: string; nome: string } {
   const i = item.indexOf(':')
@@ -83,24 +85,19 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <div v-if="loading" class="loading">
-      <div class="spin"></div>
-      <span>Carregando materiais…</span>
-    </div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>Materiais de apoio ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta.</p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando materiais…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. Materiais de apoio ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
-      <div class="page-head">
-        <div class="page-kicker">Sua trilha</div>
-        <h1 class="page-title">Materiais · {{ courseTitle }}</h1>
-        <p class="page-desc">
-          {{ encontroIds.length }} encontros · {{ totalMateriais }} materiais de apoio.
-        </p>
-      </div>
+      <PageHeader
+        :title="`Materiais · ${courseTitle}`"
+        :subtitle="`${encontroIds.length} encontros · ${totalMateriais} materiais de apoio.`"
+      />
 
       <div class="enc-sections">
         <section

@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { ANALYTICS_RANGES, fetchResourceAccessReport } from '@/api/admin'
 import type { ResourceAccessCategory, ResourceAccessItem, ResourceAccessReport } from '@/api/admin'
 import { formatCount, formatLastAccess } from '@/lib/accessFormat'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const RANGE_LABELS: Record<number, string> = {
   7: '7 dias',
@@ -108,27 +110,25 @@ watch(days, load, { immediate: true })
 
 <template>
   <div class="analytics">
-    <header class="analytics-head">
-      <div>
-        <h1 class="analytics-title">Acessos</h1>
-        <p class="analytics-sub">Quantas vezes cada recurso da plataforma foi aberto</p>
-      </div>
-      <div class="range-picker" role="group" aria-label="Período">
-        <button
-          v-for="range in ANALYTICS_RANGES"
-          :key="range"
-          type="button"
-          class="range-btn"
-          :class="{ active: days === range }"
-          @click="days = range"
-        >
-          {{ RANGE_LABELS[range] }}
-        </button>
-      </div>
-    </header>
+    <PageHeader title="Acessos" subtitle="Quantas vezes cada recurso da plataforma foi aberto">
+      <template #actions>
+        <div class="range-picker" role="group" aria-label="Período">
+          <button
+            v-for="range in ANALYTICS_RANGES"
+            :key="range"
+            type="button"
+            class="range-btn"
+            :class="{ active: days === range }"
+            @click="days = range"
+          >
+            {{ RANGE_LABELS[range] }}
+          </button>
+        </div>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="report">
       <div class="kpi-grid">

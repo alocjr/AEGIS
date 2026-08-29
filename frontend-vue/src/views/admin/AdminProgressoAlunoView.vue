@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { fetchUserCourseAndProgress, liberarEncontro, updateUserProgress } from '@/api/admin'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const userId = computed(() => route.params.userId as string)
@@ -252,8 +253,8 @@ onMounted(() => loadData())
       <span>Progresso · {{ data?.user?.name ?? 'Aluno' }}</span>
     </nav>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="data">
       <div class="card-header">

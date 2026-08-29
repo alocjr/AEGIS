@@ -24,6 +24,7 @@ import {
   type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -761,8 +762,8 @@ onUnmounted(() => {
     <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
     <div v-else-if="importState === 'ok'" class="card import-ok">JSON importado com sucesso.</div>
 
-    <div v-if="loading" class="card">Carregando…</div>
-    <div v-else-if="error" class="card error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
       <section class="card method">

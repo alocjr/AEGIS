@@ -12,6 +12,8 @@ import {
   createGate,
   getTraceability,
 } from '@/api/governance'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 import type {
   AiSystem,
   RiskAssessment,
@@ -228,14 +230,14 @@ onMounted(async () => {
 
 <template>
   <div class="system-page">
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="loadError" class="error-msg">{{ loadError }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="loadError" state="error" :message="loadError" />
     <template v-else-if="system">
-      <header class="page-header">
-        <RouterLink to="/governanca/inventario" class="back-link">← Inventário</RouterLink>
-        <h1 class="page-title">{{ system.nome || 'Sistema sem nome' }}</h1>
-        <p class="page-sub">{{ system.area_negocio || 'Área não definida' }} · Status: {{ system.status }}</p>
-      </header>
+      <RouterLink to="/governanca/inventario" class="back-link">← Inventário</RouterLink>
+      <PageHeader
+        :title="system.nome || 'Sistema sem nome'"
+        :subtitle="`${system.area_negocio || 'Área não definida'} · Status: ${system.status}`"
+      />
 
       <nav class="tabs">
         <button type="button" class="tab" :class="{ active: activeTab === 'geral' }" @click="activeTab = 'geral'">

@@ -22,6 +22,8 @@ import type {
 import { useAuthStore } from '@/stores/auth'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const auth = useAuthStore()
 const currentUserId = computed(() => auth.user?.id ?? '')
@@ -303,10 +305,8 @@ onMounted(async () => {
 
 <template>
   <div class="usuarios-page">
-    <header class="page-header">
-      <h1 class="page-title">Usuários</h1>
-      <p class="page-sub">Gerir usuários da plataforma: criar, editar e excluir.</p>
-      <div class="page-actions">
+    <PageHeader title="Usuários" subtitle="Gerir usuários da plataforma: criar, editar e excluir.">
+      <template #actions>
         <input
           v-model="searchQuery"
           type="search"
@@ -314,15 +314,17 @@ onMounted(async () => {
           placeholder="Buscar por nome, e-mail, telefone ou trilha..."
           aria-label="Buscar usuários"
         />
-        <button type="button" class="btn-primary" @click="openCreate">Novo usuário</button>
-      </div>
-    </header>
+        <AppButton variant="primary" @click="openCreate">Novo usuário</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="users.length === 0" class="empty">
-      Nenhum usuário cadastrado. Clique em <strong>Novo usuário</strong> para criar.
-    </div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock
+      v-else-if="users.length === 0"
+      state="empty"
+      message="Nenhum usuário cadastrado. Clique em Novo usuário para criar."
+    />
     <div v-else class="table-wrap">
       <table class="data-table">
         <thead>

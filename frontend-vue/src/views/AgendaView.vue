@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { fetchCurrentCourse } from '@/api/course'
 import { ApiError } from '@/api/client'
 import type { JornadaSemana, Encontro } from '@/types'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 interface AgendaItem {
   semana: number
@@ -262,29 +265,27 @@ onMounted(async () => {
 
 <template>
   <div class="shell">
-    <div v-if="loading" class="loading">
-      <div class="spin"></div>
-      <span>Carregando agenda…</span>
-    </div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>A agenda de encontros fica disponível quando a equipe Valorian atribuir uma trilha à sua conta.</p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando agenda…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. A agenda de encontros fica disponível quando a equipe Valorian atribuir uma trilha à sua conta."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
     <template v-else>
-      <div class="agenda-head">
-        <div class="agenda-kicker">Sua trilha</div>
-        <h1 class="agenda-title">Agenda · {{ courseTitle }}</h1>
-        <p class="agenda-desc">
-          {{ numSemanas }} semanas · {{ numEncontros }} encontros. Passe o mouse sobre um dia para ver os detalhes.
-        </p>
-        <div v-if="exportableItems.length > 0" class="agenda-export">
-          <button type="button" class="btn-export" @click="exportToGoogleCalendar">
+      <PageHeader
+        :title="`Agenda · ${courseTitle}`"
+        :subtitle="`${numSemanas} semanas · ${numEncontros} encontros. Passe o mouse sobre um dia para ver os detalhes.`"
+      >
+        <template v-if="exportableItems.length > 0" #actions>
+          <AppButton variant="secondary" size="sm" @click="exportToGoogleCalendar">
             Exportar para Google Calendar
-          </button>
-          <span class="export-hint">Baixe o arquivo .ics e importe em calendar.google.com (Configurações → Importar)</span>
-        </div>
-      </div>
+          </AppButton>
+        </template>
+      </PageHeader>
+      <p v-if="exportableItems.length > 0" class="export-hint">
+        Baixe o arquivo .ics e importe em calendar.google.com (Configurações → Importar)
+      </p>
       <div class="calendar">
         <div v-for="w in weekNums" :key="w" class="week-col">
           <div class="week-label">Semana {{ w }}</div>

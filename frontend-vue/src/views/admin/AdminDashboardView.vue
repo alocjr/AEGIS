@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { fetchDashboard } from '@/api/admin'
 import type { DashboardOrganization } from '@/api/admin'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -66,12 +68,11 @@ onMounted(async () => {
 
 <template>
   <div class="dashboard">
-    <h1 class="dashboard-title">Dashboard</h1>
-    <p class="dashboard-sub">Organizações, jornada de estratégia e progresso por trilha</p>
+    <PageHeader title="Dashboard" subtitle="Organizações, jornada de estratégia e progresso por trilha" />
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="organizations.length === 0" class="empty">Nenhum aluno cadastrado.</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock v-else-if="organizations.length === 0" state="empty" message="Nenhum aluno cadastrado." />
 
     <div v-else class="org-list">
       <section v-for="org in organizations" :key="org.id ?? '—'" class="org-group">

@@ -15,6 +15,7 @@ import {
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -293,8 +294,8 @@ function onCellKeydown(e: KeyboardEvent, qid: string, lvl: number) {
 
 <template>
   <div class="wrap">
-    <div v-if="loading" class="state-card">Carregando diagnóstico…</div>
-    <div v-else-if="error" class="state-card error">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando diagnóstico…" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="model">
       <nav v-if="isEditingExisting && responseId" class="edit-nav">

@@ -103,18 +103,19 @@ function ringStrokeOffset(pct: number | null): number {
 
     <StateBlock v-if="loading" state="loading" />
 
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>Os quizzes ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta.</p>
-    </div>
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. Os quizzes ficam disponíveis quando a equipe Valorian atribuir uma trilha à sua conta."
+    />
 
-    <template v-else-if="error">
-      <div class="error-msg">{{ error }}</div>
-    </template>
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
-    <div v-else-if="list.length === 0" class="empty-wrap">
-      <div class="empty">Nenhum quiz disponível para este programa.</div>
-    </div>
+    <StateBlock
+      v-else-if="list.length === 0"
+      state="empty"
+      message="Nenhum quiz disponível para este programa."
+    />
 
     <div v-else class="dashboard-wrap">
       <div class="dashboard">

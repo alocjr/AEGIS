@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { ApiError } from '@/api/client'
 import { getGate, updateGateItem, decideGate, listOrganizationMembers } from '@/api/governance'
 import type { Gate, ChecklistItem, ChecklistBloco, ChecklistItemStatus, GateResultado, OrganizationMember } from '@/api/governance'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const route = useRoute()
 const gateId = String(route.params.id)
@@ -143,17 +145,18 @@ onMounted(async () => {
 
 <template>
   <div class="gate-page">
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="loadError" class="error-msg">{{ loadError }}</div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="loadError" state="error" :message="loadError" />
     <template v-else-if="gate">
-      <header class="page-header">
-        <RouterLink :to="`/governanca/sistemas/${gate.system_id}`" class="back-link">← Sistema</RouterLink>
-        <h1 class="page-title">Gate — ciclo {{ gate.revision }}</h1>
-        <p v-if="isDecided" class="page-sub decided">
-          Decidido: <strong>{{ gate.decisao?.resultado }}</strong>
-        </p>
-        <p v-else class="page-sub">Em andamento — preencha o checklist e registre a decisão.</p>
-      </header>
+      <RouterLink :to="`/governanca/sistemas/${gate.system_id}`" class="back-link">← Sistema</RouterLink>
+      <PageHeader
+        :title="`Gate — ciclo ${gate.revision}`"
+        :subtitle="
+          isDecided
+            ? `Decidido: ${gate.decisao?.resultado ?? ''}`
+            : 'Em andamento — preencha o checklist e registre a decisão.'
+        "
+      />
 
       <div class="gate-layout">
         <div class="checklist-col">

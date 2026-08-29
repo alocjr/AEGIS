@@ -12,6 +12,7 @@ import type {
   ProgramaFormacaoExecutiva,
   EstruturaEncontro,
 } from '@/types'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
 
@@ -262,15 +263,13 @@ onMounted(() => loadProgram())
 
 <template>
   <div class="wrap">
-    <div v-if="loading" class="loading"><div class="spin"></div><div>Carregando programa...</div></div>
-    <div v-else-if="noTrilha" class="empty-trilha">
-      <h2>Você ainda não tem uma trilha de mentoria</h2>
-      <p>
-        Sua conta participa da organização e já pode usar as ferramentas do AI Hub (Modelo de
-        Maturidade, SWOT, Canvas, Governança). O acesso à mentoria é atribuído pela equipe Valorian.
-      </p>
-    </div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
+    <StateBlock v-if="loading" state="loading" message="Carregando programa…" />
+    <StateBlock
+      v-else-if="noTrilha"
+      state="empty"
+      message="Você ainda não tem uma trilha de mentoria. Sua conta participa da organização e já pode usar as ferramentas do AI Hub. O acesso à mentoria é atribuído pela equipe Valorian."
+    />
+    <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else-if="data && programa">
       <div class="shell">

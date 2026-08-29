@@ -10,6 +10,8 @@ import {
 } from '@/api/admin'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import StateBlock from '@/components/ui/StateBlock.vue'
 import type {
   AdminQuizListItem,
   AdminQuizGroup,
@@ -287,19 +289,19 @@ onMounted(async () => {
 
 <template>
   <div class="quiz-page">
-    <header class="page-header">
-      <h1 class="page-title">Quiz</h1>
-      <p class="page-sub">Criar e editar quizzes por encontro.</p>
-      <div class="page-actions">
-        <button type="button" class="btn-primary" @click="openCreate">Novo quiz</button>
-      </div>
-    </header>
+    <PageHeader title="Quiz" subtitle="Criar e editar quizzes por encontro.">
+      <template #actions>
+        <AppButton variant="primary" @click="openCreate">Novo quiz</AppButton>
+      </template>
+    </PageHeader>
 
-    <div v-if="loading" class="loading">Carregando...</div>
-    <div v-else-if="error" class="error-msg">{{ error }}</div>
-    <div v-else-if="allQuizzes.length === 0" class="empty">
-      Nenhum quiz cadastrado. Clique em <strong>Novo quiz</strong> para criar.
-    </div>
+    <StateBlock v-if="loading" state="loading" />
+    <StateBlock v-else-if="error" state="error" :message="error" />
+    <StateBlock
+      v-else-if="allQuizzes.length === 0"
+      state="empty"
+      message="Nenhum quiz cadastrado. Clique em Novo quiz para criar."
+    />
     <div v-else class="grouped-quizzes">
       <section v-for="group in groupedByTrilha" :key="group.course_slug ?? 'orphan'" class="trilha-section">
         <h2 class="trilha-section-title">{{ group.titulo }}</h2>

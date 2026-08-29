@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useCoursesStore } from '@/stores/courses'
 import { useAuthStore } from '@/stores/auth'
 import type { Encontro, ProgramaFormacaoExecutiva } from '@/types'
+import StateBlock from '@/components/ui/StateBlock.vue'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
 
@@ -80,7 +81,7 @@ function isFirstEncontro(enc: Encontro): boolean {
 
 <template>
   <div class="wrap">
-    <div v-if="store.loading" class="loading">Carregando trilha...</div>
+    <StateBlock v-if="store.loading" state="loading" message="Carregando trilha…" />
 
     <template v-else-if="course">
       <nav class="breadcrumb">
@@ -336,9 +337,7 @@ function isFirstEncontro(enc: Encontro): boolean {
       </template>
     </template>
 
-    <div v-else class="empty">
-      {{ store.error || 'Trilha não encontrada.' }}
-    </div>
+    <StateBlock v-else state="error" :message="store.error || 'Trilha não encontrada.'" />
   </div>
 </template>
 
