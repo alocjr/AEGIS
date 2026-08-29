@@ -14,6 +14,7 @@ import {
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
 import { maturityDimensionAccent } from '@/lib/domain/maturity'
+import { MATURITY_TIER_LABEL_SHORT } from '@/lib/maturityModel'
 
 const route = useRoute()
 const router = useRouter()
@@ -30,12 +31,6 @@ const swotError = ref<string | null>(null)
 const isComplete = ref(false)
 const exportBusy = ref(false)
 const exportError = ref<string | null>(null)
-
-const TIER_LABELS: Record<string, string> = {
-  basico: 'Básico',
-  completo: 'Completo',
-  complementar: 'Complementar',
-}
 
 type DimRow = {
   id: string
@@ -101,7 +96,7 @@ const levelInfo = computed(() => {
 const tierLabel = computed(() => {
   const tier = displayedResult.value?.tier
   if (!tier) return null
-  return TIER_LABELS[tier] || tier
+  return MATURITY_TIER_LABEL_SHORT[tier as MaturityTier] || tier
 })
 
 const dimRows = computed<DimRow[]>(() => {
