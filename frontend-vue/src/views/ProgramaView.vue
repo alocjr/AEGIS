@@ -8,11 +8,9 @@ import { ApiError } from '@/api/client'
 import type { CurrentCourseResponse } from '@/api/course'
 import type {
   Encontro,
-  JornadaSemana,
   MaterialSuporte,
   ProgramaFormacaoExecutiva,
   EstruturaEncontro,
-  EntregavelResumo,
 } from '@/types'
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV']
@@ -56,8 +54,9 @@ const concluidosEfetivos = computed(() => progress.value?.concluidos_efetivos ??
 
 const ativoEfetivo = computed(() => progress.value?.ativo_efetivo ?? 1)
 
-const materialChecks = computed(() => progress.value?.material_checks ?? {})
-const quizPorEncontro = computed(() => progress.value?.quiz_por_encontro ?? {})
+const materialChecks = computed(
+  () => (progress.value?.material_checks ?? {}) as Record<string, Record<string, boolean>>
+)
 
 const jornada = computed(() => programa.value?.jornada_aprendizagem ?? [])
 
@@ -84,14 +83,6 @@ function statusEnc(enc: Encontro): EncStatus {
   if (concluidosEfetivos.value.includes(enc.id)) return 'done'
   if (liberados.value.includes(enc.id)) return 'active'
   return 'locked'
-}
-
-function isLiberado(enc: Encontro): boolean {
-  return liberados.value.includes(enc.id)
-}
-
-function isConcluido(enc: Encontro): boolean {
-  return concluidosEfetivos.value.includes(enc.id)
 }
 
 function podeClicarConcluir(enc: Encontro): boolean {

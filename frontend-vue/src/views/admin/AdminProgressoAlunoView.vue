@@ -232,7 +232,9 @@ function onAgendaInput(encId: number, datetimeLocal: string) {
     const startIdx = ordered.findIndex((enc) => enc.id === encId)
     if (startIdx >= 0) {
       for (let i = 1; startIdx + i < ordered.length; i++) {
-        next[String(ordered[startIdx + i].id)] = addWeeksIso(iso, i)
+        const enc = ordered[startIdx + i]
+        if (!enc) continue
+        next[String(enc.id)] = addWeeksIso(iso, i)
       }
     }
   }

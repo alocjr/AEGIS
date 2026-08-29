@@ -29,7 +29,7 @@ function formatDate(iso: string | null): string {
 function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
   if (!words.length) return '?'
-  const a = words[0][0] ?? ''
+  const a = words[0]?.[0] ?? ''
   const b = words[1]?.[0] ?? ''
   return (a + b).toUpperCase().slice(0, 2) || '?'
 }
@@ -48,7 +48,6 @@ function getDimensionPcts(
 }
 
 /** Gera pontos do polígono do radar (0-100% → raio) e posições das iniciais. SVG: size 72, center 36, rMax 26 */
-const RADAR_SIZE = 72
 const RADAR_CX = 36
 const RADAR_CY = 36
 const RADAR_R = 26
