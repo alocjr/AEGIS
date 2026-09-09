@@ -99,16 +99,6 @@ export type SwotAnalysisPayload = Partial<{
   veredito_texto: string
 }>
 
-/** Envelope aegis.swot-ia ou payload direto. */
-export type SwotImportDocument = {
-  format?: string
-  version?: number
-  exported_at?: string
-  locale?: string
-  meta?: Record<string, unknown>
-  payload?: SwotAnalysisPayload
-} & SwotAnalysisPayload
-
 export type SwotPillar = {
   id: Exclude<SwotPilarId, ''>
   name: string
@@ -279,8 +269,4 @@ export function updateSwotAnalysis(
     return put<SwotAnalysis>(`/api/swot-analysis/${encodeURIComponent(swotId)}${q}`, body)
   }
   return put<SwotAnalysis>(`/api/swot-analysis${q}`, body)
-}
-
-export function importSwotAnalysis(body: SwotImportDocument): Promise<SwotAnalysis> {
-  return post<SwotAnalysis>('/api/swot-analysis/import', body)
 }

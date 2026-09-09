@@ -667,14 +667,13 @@ def create_project(
     return _to_item(doc)
 
 
-@router.post("/import")
 def import_projects(
     body: CanvasImportRequest,
     user=Depends(get_verified_user),
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Importa aegis.canvas-oportunidades e cria um projeto por oportunidade."""
+    """Importa aegis.canvas-oportunidades e cria um projeto por oportunidade (MCP)."""
     mapped = _projects_from_import(body)
     now = datetime.now(timezone.utc)
     docs = []
@@ -697,7 +696,6 @@ def import_projects(
     }
 
 
-@router.post("/{project_id}/import")
 def import_into_project(
     project_id: str,
     body: CanvasImportRequest,
@@ -705,7 +703,7 @@ def import_into_project(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Importa o JSON e substitui o conteúdo do projeto aberto (1ª oportunidade)."""
+    """Importa o JSON e substitui o conteúdo do projeto aberto (1ª oportunidade, MCP)."""
     _get_owned(db, org_id, project_id)
     mapped = _projects_from_import(body)
     fields = mapped[0]

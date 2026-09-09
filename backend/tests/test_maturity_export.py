@@ -1,4 +1,4 @@
-"""GET /api/maturity/my-responses/{id}/export: envelope aegis.maturidade-ia."""
+"""MCP maturity_export (export_my_response): envelope aegis.maturidade-ia."""
 
 from __future__ import annotations
 

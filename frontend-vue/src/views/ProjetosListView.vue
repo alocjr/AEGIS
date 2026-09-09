@@ -5,7 +5,6 @@ import {
   listCanvasProjects,
   createCanvasProject,
   deleteCanvasProject,
-  importCanvasProjects,
   updateCanvasProject,
   aprovarPortfolio,
   aprovarProjeto,
@@ -14,7 +13,6 @@ import {
   type CanvasPrioridade,
   type CanvasMesInicio,
   type CanvasQuadrant,
-  type CanvasImportDocument,
   type CanvasAprovarProjetoPayload,
 } from '@/api/canvasProjects'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -35,10 +33,6 @@ const searchError = ref<string | null>(null)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 const deleteTarget = ref<CanvasProjectSummary | null>(null)
 const deleteError = ref<string | null>(null)
-const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
-const importError = ref<string | null>(null)
-const importOkMsg = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
 const priorityFilter = ref<CanvasPrioridade[]>([])
 const execError = ref<string | null>(null)
 
@@ -267,53 +261,6 @@ async function onCreate() {
   }
 }
 
-function openImportPicker() {
-  importError.value = null
-  importState.value = 'idle'
-  importOkMsg.value = ''
-  fileInput.value?.click()
-}
-
-async function onImportFile(ev: Event) {
-  const input = ev.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-
-  importState.value = 'importing'
-  importError.value = null
-  importOkMsg.value = ''
-  try {
-    const text = await file.text()
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      throw new Error('Arquivo inválido. Envie um JSON válido.')
-    }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('JSON inválido. Esperado um objeto aegis.canvas-oportunidades.')
-    }
-    const doc = parsed as CanvasImportDocument
-    if (doc.schema != null && doc.schema !== 'aegis.canvas-oportunidades') {
-      throw new Error('Formato inválido. Esperado schema=aegis.canvas-oportunidades.')
-    }
-    if (doc.versao != null && String(doc.versao) !== '1') {
-      throw new Error('Versão não suportada. Use versao "1".')
-    }
-    const result = await importCanvasProjects(doc)
-    await refresh()
-    importState.value = 'ok'
-    importOkMsg.value = `${result.created} projeto${result.created === 1 ? '' : 's'} importado${result.created === 1 ? '' : 's'}.`
-    window.setTimeout(() => {
-      if (importState.value === 'ok') importState.value = 'idle'
-    }, 3500)
-  } catch (e) {
-    importState.value = 'error'
-    importError.value = e instanceof Error ? e.message : 'Falha na importação.'
-  }
-}
-
 function askDelete(item: CanvasProjectSummary, ev: Event) {
   ev.preventDefault()
   ev.stopPropagation()
@@ -414,7 +361,7 @@ onUnmounted(() => {
   <div class="wrap">
     <PageHeader
       title="Projetos · Canvas de Oportunidades"
-      subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08), ou importe o JSON gerado pelo prompt do Canvas de Oportunidades."
+      subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08)."
     />
 
     <StateBlock v-if="loading" state="loading" />
@@ -429,23 +376,8 @@ onUnmounted(() => {
           placeholder="Buscar por palavras no canvas"
           aria-label="Buscar projetos por palavras em qualquer texto do canvas"
         />
-        <input
-          ref="fileInput"
-          type="file"
-          accept="application/json,.json"
-          class="sr-only"
-          @change="onImportFile"
-        />
         <button type="button" class="btn-new" :disabled="creating" @click="onCreate">
           {{ creating ? 'Criando…' : '+ Novo projeto' }}
-        </button>
-        <button
-          type="button"
-          class="btn-import"
-          :disabled="importState === 'importing'"
-          @click="openImportPicker"
-        >
-          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
         </button>
         <div class="prio-filter" role="group" aria-label="Filtrar por prioridade">
           <span class="prio-filter-label">Prioridade</span>
@@ -634,8 +566,6 @@ onUnmounted(() => {
 
       <div v-if="searchError" class="card error-msg">{{ searchError }}</div>
       <div v-if="execError" class="card error-msg">{{ execError }}</div>
-      <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
-      <div v-else-if="importState === 'ok'" class="card import-ok">{{ importOkMsg }}</div>
 
       <div v-if="items.length === 0" class="card card-empty">
         <template v-if="searchQuery.trim()">
@@ -1089,41 +1019,6 @@ onUnmounted(() => {
   background: var(--k0);
   border-color: var(--k0);
   color: var(--wh);
-}
-.btn-import {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 18px;
-  background: #fff;
-  color: var(--k0);
-  border: 1px solid var(--bd);
-  border-radius: var(--r-md);
-  font-size: 14px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn-import:hover:not(:disabled) {
-  border-color: var(--k0);
-}
-.btn-import:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.import-ok {
-  color: #2f6e4a;
-  border-color: #bbd3b7;
-  background: #e8f0e7;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 .card-empty {
   text-align: center;

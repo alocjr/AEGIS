@@ -247,7 +247,6 @@ def get_my_response_by_id(
     }
 
 
-@router.get("/my-responses/{response_id}/export")
 def export_my_response(
     response_id: str,
     user=Depends(get_verified_user),

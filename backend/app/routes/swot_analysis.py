@@ -714,14 +714,13 @@ def update_swot_by_id(
     return _to_item(refreshed)
 
 
-@router.post("/import")
 def import_swot(
     body: SwotImportRequest,
     user=Depends(get_verified_user),
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Importa um documento aegis.swot-ia (v1–v3) e substitui o conteúdo da SWOT mais recente."""
+    """Importa um documento aegis.swot-ia (v1–v3) e substitui a SWOT mais recente (MCP)."""
     payload = _payload_from_import(body)
     # Importação é substituição completa dos campos do payload presentes
     full = SwotAnalysisUpdateRequest(

@@ -5,7 +5,6 @@ import {
   getSwotAnalysis,
   getSwotAnalysisById,
   updateSwotAnalysis,
-  importSwotAnalysis,
   SWOT_PILLARS,
   SWOT_QUADRANT_DEFAULT_PILLARS,
   MATURITY_DIMENSIONS,
@@ -20,7 +19,6 @@ import {
   type SwotPilarId,
   type SwotPilarSlot,
   type SwotPilaresPorQuadrante,
-  type SwotImportDocument,
   type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
@@ -43,14 +41,11 @@ const autosave = useAutosave(async () => {
 })
 const saveState = autosave.saveState
 const saveError = autosave.error
-const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
-const importError = ref<string | null>(null)
 const showMethod = ref(true)
 const showCatalog = ref(false)
 const openHelp = ref<SwotListField | null>(null)
 const addingPillarFor = ref<SwotListField | null>(null)
 const customPillarDraft = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
 const currentSwotId = ref<string | null>(null)
 const maturityResponseId = ref<string | null>(null)
 /** Pontos de Atenção (nota 3) — só leitura; fora do form de autosave. */
@@ -648,52 +643,6 @@ function onDocPointerDown(ev: PointerEvent) {
   openHelp.value = null
 }
 
-function openImportPicker() {
-  importError.value = null
-  importState.value = 'idle'
-  fileInput.value?.click()
-}
-
-async function onImportFile(ev: Event) {
-  const input = ev.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-
-  importState.value = 'importing'
-  importError.value = null
-  try {
-    const text = await file.text()
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      throw new Error('Arquivo JSON inválido.')
-    }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('O JSON deve ser um objeto aegis.swot-ia.')
-    }
-    const doc = parsed as SwotImportDocument
-    if (doc.format && doc.format !== 'aegis.swot-ia') {
-      throw new Error('Formato inválido. Esperado format=aegis.swot-ia.')
-    }
-    if (doc.version != null && doc.version !== 1 && doc.version !== 2 && doc.version !== 3) {
-      throw new Error('Versão não suportada. Use version 1, 2 ou 3.')
-    }
-    const updated = await importSwotAnalysis(doc)
-    applyDoc(updated)
-    importState.value = 'ok'
-    saveState.value = 'saved'
-    window.setTimeout(() => {
-      if (importState.value === 'ok') importState.value = 'idle'
-      if (saveState.value === 'saved') saveState.value = 'idle'
-    }, 2000)
-  } catch (e) {
-    importState.value = 'error'
-    importError.value = e instanceof Error ? e.message : 'Falha na importação.'
-  }
-}
-
 onMounted(() => {
   document.addEventListener('pointerdown', onDocPointerDown)
   void loadSwot()
@@ -734,17 +683,7 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="header-actions">
-        <input
-          ref="fileInput"
-          type="file"
-          accept="application/json,.json"
-          class="sr-only"
-          @change="onImportFile"
-        />
         <RouterLink class="maturity-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
-        <button type="button" class="import-btn" :disabled="importState === 'importing'" @click="openImportPicker">
-          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
-        </button>
         <div class="save-pill" :data-state="saveState">
           <span v-if="saveState === 'saving'">Salvando…</span>
           <span v-else-if="saveState === 'saved'">Salvo</span>
@@ -753,9 +692,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
-    <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
-    <div v-else-if="importState === 'ok'" class="card import-ok">JSON importado com sucesso.</div>
 
     <div v-if="loading" class="card">Carregando…</div>
     <div v-else-if="error" class="card error-msg">{{ error }}</div>
@@ -1188,32 +1124,6 @@ onUnmounted(() => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-.import-btn {
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--navy);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  font-family: inherit;
-}
-.import-btn:hover:not(:disabled) {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-.import-btn:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.import-ok {
-  color: #2f6e4a;
-  border-color: #bbd3b7;
-  background: #e8f0e7;
 }
 .eyebrow {
   font-size: 0.7rem;

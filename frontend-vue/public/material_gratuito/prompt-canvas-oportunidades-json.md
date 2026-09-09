@@ -1,6 +1,6 @@
 # Prompt · Preenchimento inicial do Canvas de Oportunidades de IA → JSON
 
-Cole o bloco abaixo no Claude e substitua o conteúdo de **DESCRIÇÃO DO PROJETO** ao final. O Claude infere as áreas de negócio, propõe um rascunho de oportunidades para cada uma preenchendo os oito blocos, pontua Valor × Viabilidade e devolve **apenas um JSON** no schema `aegis.canvas-oportunidades` — pronto para importar na plataforma.
+Cole o bloco abaixo no Claude e substitua o conteúdo de **DESCRIÇÃO DO PROJETO** ao final. O Claude infere as áreas de negócio, propõe um rascunho de oportunidades para cada uma preenchendo os oito blocos, pontua Valor × Viabilidade e devolve **apenas um JSON** no schema `aegis.canvas-oportunidades` — importe com a tool MCP `canvas_import` (ou `canvas_import_into` no projeto aberto).
 
 > É um **rascunho inicial para ajuste**, não a versão final: as notas servem para posicionar na matriz e provocar a discussão da equipe.
 
