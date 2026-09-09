@@ -405,10 +405,20 @@ def register_learner_tools(mcp) -> None:
     # ── Canvas ───────────────────────────────────────────────────────────────
 
     @mcp.tool
-    def canvas_list() -> dict:
-        """Lista os projetos (canvas) da organização."""
+    def canvas_list(q: str = "") -> dict:
+        """Lista os projetos (canvas) da organização.
+
+        `q` (opcional): busca por palavras em qualquer texto do canvas
+        (título, área, dores, cronograma, etc.). Todas as palavras precisam aparecer.
+        """
         user = _canvas_user()
-        return call_route(canvas_routes.list_projects, user=user, org_id=_org_id(user), db=get_db())
+        return call_route(
+            canvas_routes.list_projects,
+            q=q or "",
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
 
     @mcp.tool
     def canvas_get(project_id: str) -> dict:

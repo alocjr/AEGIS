@@ -1,5 +1,6 @@
 """Canvas de Oportunidades de IA por área — projetos do mentorado."""
 
+import unicodedata
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -269,6 +270,67 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
     }
 
 
+_SEARCH_SKIP_KEYS = frozenset(
+    {
+        "_id",
+        "organization_id",
+        "created_by_user_id",
+        "swot_id",
+        "ai_system_id",
+        "swot_item_ids",
+        "tows_ids",
+        "kr_ids",
+    }
+)
+_SEARCH_MAX_CHARS = 200
+_SEARCH_MAX_WORDS = 12
+
+
+def _fold_text(value: str) -> str:
+    """Minúsculas sem acento — 'gestao' encontra 'gestão'."""
+    stripped = unicodedata.normalize("NFKD", value)
+    return "".join(ch for ch in stripped if not unicodedata.combining(ch)).casefold()
+
+
+def _query_words(q: str) -> list[str]:
+    raw = (q or "").strip()[:_SEARCH_MAX_CHARS]
+    words = [w for w in _fold_text(raw).split() if w]
+    return words[:_SEARCH_MAX_WORDS]
+
+
+def _walk_text(value) -> list[str]:
+    """Recolhe strings do documento do canvas (listas, cronograma, campos livres)."""
+    out: list[str] = []
+
+    def walk(node) -> None:
+        if isinstance(node, str):
+            text = node.strip()
+            if text:
+                out.append(text)
+            return
+        if isinstance(node, dict):
+            for key, child in node.items():
+                if key in _SEARCH_SKIP_KEYS:
+                    continue
+                walk(child)
+            return
+        if isinstance(node, (list, tuple)):
+            for child in node:
+                walk(child)
+
+    walk(value)
+    return out
+
+
+def _matches_canvas_query(doc: dict, q: str) -> bool:
+    """True se todas as palavras de `q` aparecem em algum texto do canvas."""
+    words = _query_words(q)
+    if not words:
+        return True
+    blob = _fold_text(" ".join(_walk_text(doc)))
+    return all(word in blob for word in words)
+
+
 def _owned_swot_id(db: Database, org_id, raw) -> str | None:
     """Valida que a SWOT de origem existe e pertence a organizacao."""
     swot_id = str(raw or "").strip()
@@ -495,13 +557,17 @@ def _projects_from_import(body: CanvasImportRequest) -> list[dict]:
 
 @router.get("")
 def list_projects(
+    q: str = "",
     user=Depends(get_verified_user),
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Lista projetos (canvas) da organização — mais recentes primeiro."""
+    """Lista projetos (canvas) da organização — mais recentes primeiro.
+
+    `q` filtra por palavras em qualquer texto do canvas (AND, sem acento).
+    """
     cursor = db.canvas_projects.find({"organization_id": org_id}).sort("updated_at", -1)
-    return {"items": [_to_item(d, summary=True) for d in cursor]}
+    return {"items": [_to_item(doc, summary=True) for doc in cursor if _matches_canvas_query(doc, q)]}
 
 
 @router.post("")

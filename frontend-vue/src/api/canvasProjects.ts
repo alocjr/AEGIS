@@ -118,8 +118,10 @@ export type CanvasProjectPayload = Partial<{
   cronograma: CanvasCronograma
 }>
 
-export function listCanvasProjects(): Promise<{ items: CanvasProjectSummary[] }> {
-  return get<{ items: CanvasProjectSummary[] }>('/api/canvas-projects')
+export function listCanvasProjects(q?: string): Promise<{ items: CanvasProjectSummary[] }> {
+  const query = (q || '').trim()
+  const suffix = query ? `?q=${encodeURIComponent(query)}` : ''
+  return get<{ items: CanvasProjectSummary[] }>(`/api/canvas-projects${suffix}`)
 }
 
 export function createCanvasProject(title = 'Novo projeto'): Promise<CanvasProject> {

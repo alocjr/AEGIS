@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import {
   listCanvasProjects,
@@ -21,6 +21,10 @@ const loading = ref(true)
 const creating = ref(false)
 const error = ref<string | null>(null)
 const items = ref<CanvasProjectSummary[]>([])
+const searchQuery = ref('')
+const searching = ref(false)
+const searchError = ref<string | null>(null)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 const deleteTarget = ref<CanvasProjectSummary | null>(null)
 const deleteError = ref<string | null>(null)
 const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
@@ -157,8 +161,27 @@ function hideChartTooltip() {
 }
 
 async function refresh() {
-  const res = await listCanvasProjects()
+  const res = await listCanvasProjects(searchQuery.value)
   items.value = res.items ?? []
+}
+
+watch(searchQuery, () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    void applySearch()
+  }, 280)
+})
+
+async function applySearch() {
+  searching.value = true
+  searchError.value = null
+  try {
+    await refresh()
+  } catch (e) {
+    searchError.value = e instanceof Error ? e.message : 'Erro ao buscar projetos.'
+  } finally {
+    searching.value = false
+  }
 }
 
 async function onCreate() {
@@ -271,6 +294,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
+})
 </script>
 
 <template>
@@ -284,6 +311,34 @@ onMounted(async () => {
     <StateBlock v-else-if="error" state="error" :message="error" />
 
     <template v-else>
+      <div class="card card-cta">
+        <input
+          v-model="searchQuery"
+          type="search"
+          class="search-input"
+          placeholder="Buscar por palavras no canvas"
+          aria-label="Buscar projetos por palavras em qualquer texto do canvas"
+        />
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="sr-only"
+          @change="onImportFile"
+        />
+        <button type="button" class="btn-new" :disabled="creating" @click="onCreate">
+          {{ creating ? 'Criando…' : '+ Novo projeto' }}
+        </button>
+        <button
+          type="button"
+          class="btn-import"
+          :disabled="importState === 'importing'"
+          @click="openImportPicker"
+        >
+          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
+        </button>
+      </div>
+
       <div class="card card-chart">
         <div class="chart-head">
           <h2 class="chart-title">Gráfico dos Quadrantes</h2>
@@ -442,43 +497,34 @@ onMounted(async () => {
           </svg>
 
           <p v-if="plotPoints.length === 0" class="chart-empty">
-            Nenhum projeto pontuado ainda. Abra um canvas e preencha Valor e Viabilidade no bloco 08.
+            <template v-if="searchQuery.trim()">
+              Nenhum projeto pontuado corresponde à busca.
+            </template>
+            <template v-else>
+              Nenhum projeto pontuado ainda. Abra um canvas e preencha Valor e Viabilidade no bloco 08.
+            </template>
           </p>
         </div>
       </div>
 
-      <div class="card card-cta">
-        <input
-          ref="fileInput"
-          type="file"
-          accept="application/json,.json"
-          class="sr-only"
-          @change="onImportFile"
-        />
-        <button type="button" class="btn-new" :disabled="creating" @click="onCreate">
-          {{ creating ? 'Criando…' : '+ Novo projeto' }}
-        </button>
-        <button
-          type="button"
-          class="btn-import"
-          :disabled="importState === 'importing'"
-          @click="openImportPicker"
-        >
-          {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
-        </button>
-      </div>
-
+      <div v-if="searchError" class="card error-msg">{{ searchError }}</div>
       <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
       <div v-else-if="importState === 'ok'" class="card import-ok">{{ importOkMsg }}</div>
 
       <div v-if="items.length === 0" class="card card-empty">
-        <p>Você ainda não tem projetos.</p>
-        <button type="button" class="link-new" :disabled="creating" @click="onCreate">
-          Criar primeiro projeto →
-        </button>
+        <template v-if="searchQuery.trim()">
+          <p>Nenhum projeto com essas palavras.</p>
+          <p class="empty-hint">A busca olha título, área, dores, cronograma e o restante do canvas.</p>
+        </template>
+        <template v-else>
+          <p>Você ainda não tem projetos.</p>
+          <button type="button" class="link-new" :disabled="creating" @click="onCreate">
+            Criar primeiro projeto →
+          </button>
+        </template>
       </div>
 
-      <ul v-else class="list">
+      <ul v-else class="list" :class="{ dimmed: searching }">
         <li v-for="item in items" :key="item.id" class="list-item">
           <RouterLink :to="`/projetos/${item.id}`" class="list-link">
             <div class="list-main">
@@ -544,6 +590,9 @@ onMounted(async () => {
           </div>
         </li>
       </ul>
+      <p v-if="searchQuery.trim() && items.length > 0" class="filter-hint">
+        {{ items.length }} {{ items.length === 1 ? 'projeto encontrado' : 'projetos encontrados' }}.
+      </p>
       <p v-if="approveError" class="error-msg">{{ approveError }}</p>
     </template>
 
@@ -835,10 +884,6 @@ onMounted(async () => {
   margin: 8px 0 12px;
   max-width: 42ch;
 }
-.card-cta {
-  display: flex;
-  justify-content: flex-start;
-}
 .btn-new {
   display: inline-flex;
   align-items: center;
@@ -859,6 +904,24 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+.search-input {
+  flex: 1 1 240px;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--k0);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--k0);
+}
+.search-input::-webkit-search-cancel-button {
+  cursor: pointer;
 }
 .btn-import {
   display: inline-flex;
@@ -899,6 +962,19 @@ onMounted(async () => {
   text-align: center;
   color: var(--k5);
   padding: 36px 20px;
+}
+.empty-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--k5);
+}
+.filter-hint {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--k5);
+}
+.list.dimmed {
+  opacity: 0.65;
 }
 .link-new {
   margin-top: 12px;
