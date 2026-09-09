@@ -119,7 +119,13 @@ esse valor sempre que adicionar ou mudar tools — o Claude cacheia `tools/list`
 | `canvas_list` / `canvas_get` | Leitura |
 | `canvas_create` | **Escrita** — projeto vazio |
 | `canvas_import` / `canvas_import_into` | **Escrita** — import `aegis.canvas-oportunidades` |
-| `canvas_update` | **Escrita** — campos do canvas |
+| `canvas_update` | **Escrita** — campos do canvas (`cronograma` substitui o Gantt inteiro) |
+| `canvas_cronograma_get` | Leitura do Gantt do projeto |
+| `canvas_cronograma_create` | **Escrita** — cria ou substitui o cronograma |
+| `canvas_cronograma_update` | **Escrita** — merge do Gantt (atividades/marcos substituem a lista se enviados) |
+| `canvas_cronograma_delete` | **Escrita** — zera o cronograma |
+| `canvas_cronograma_add_atividade` / `canvas_cronograma_update_atividade` / `canvas_cronograma_delete_atividade` | **Escrita** — atividade do Gantt sem apagar as outras |
+| `canvas_cronograma_add_marco` / `canvas_cronograma_update_marco` / `canvas_cronograma_delete_marco` | **Escrita** — marco de decisão sem apagar os outros |
 | `canvas_approve_portfolio` | **Escrita** — aprova e cria sistema no inventário |
 
 ### OKR

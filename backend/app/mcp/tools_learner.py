@@ -113,6 +113,106 @@ def _find_kr(key_results: list[dict], kr_id: str) -> tuple[int, dict]:
     raise ToolError(f"Key Result '{kid}' nao encontrado neste objective.")
 
 
+_CRONO_META_KEYS = ("subtitulo", "pre_requisito", "criterio_aceite", "semanas")
+_ATIVIDADE_KEYS = ("id", "titulo", "lideranca", "semana_inicio", "semana_fim", "predecessor")
+_MARCO_KEYS = ("id", "semana", "titulo")
+_MAX_ATIVIDADES = 30
+_MAX_MARCOS = 12
+
+
+def _empty_cronograma() -> dict:
+    return canvas_routes._clean_cronograma({})
+
+
+def _cronograma_of(project: dict) -> dict:
+    return canvas_routes._clean_cronograma(project.get("cronograma"))
+
+
+def _cronograma_pack(item: dict) -> dict:
+    return {
+        "id": item.get("id"),
+        "title": item.get("title"),
+        "cronograma": item.get("cronograma") or _empty_cronograma(),
+    }
+
+
+def _find_crono_item(items: list[dict], item_id: str, label: str) -> tuple[int, dict]:
+    iid = (item_id or "").strip()
+    for i, item in enumerate(items):
+        if str(item.get("id") or "") == iid:
+            return i, dict(item)
+    raise ToolError(f"{label} '{iid}' nao encontrado neste cronograma.")
+
+
+def _merge_cronograma(current: dict, patch: dict) -> dict:
+    """Mescla metadados; `atividades`/`marcos` substituem a lista se enviados."""
+    out = canvas_routes._clean_cronograma(current)
+    for key in _CRONO_META_KEYS:
+        if key in patch:
+            out[key] = patch[key]
+    if "atividades" in patch:
+        atividades = patch["atividades"]
+        if not isinstance(atividades, list):
+            raise ToolError("atividades deve ser um array.")
+        out["atividades"] = [a for a in atividades if isinstance(a, dict)]
+    if "marcos" in patch:
+        marcos = patch["marcos"]
+        if not isinstance(marcos, list):
+            raise ToolError("marcos deve ser um array.")
+        out["marcos"] = [m for m in marcos if isinstance(m, dict)]
+    return canvas_routes._clean_cronograma(out)
+
+
+def _add_cronograma_atividade(current: dict, atividade: dict) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    if len(out["atividades"]) >= _MAX_ATIVIDADES:
+        raise ToolError(f"Limite de {_MAX_ATIVIDADES} atividades por cronograma.")
+    if not str(atividade.get("titulo") or "").strip():
+        raise ToolError("Informe titulo da atividade.")
+    out["atividades"].append({k: atividade[k] for k in _ATIVIDADE_KEYS if k in atividade})
+    return canvas_routes._clean_cronograma(out)
+
+
+def _update_cronograma_atividade(current: dict, atividade_id: str, fields: dict) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    idx, item = _find_crono_item(out["atividades"], atividade_id, "Atividade")
+    patch = {k: v for k, v in fields.items() if k in _ATIVIDADE_KEYS and k != "id"}
+    item.update(patch)
+    out["atividades"][idx] = item
+    return canvas_routes._clean_cronograma(out)
+
+
+def _delete_cronograma_atividade(current: dict, atividade_id: str) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    _find_crono_item(out["atividades"], atividade_id, "Atividade")
+    out["atividades"] = [a for a in out["atividades"] if str(a.get("id") or "") != atividade_id.strip()]
+    return canvas_routes._clean_cronograma(out)
+
+
+def _add_cronograma_marco(current: dict, marco: dict) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    if len(out["marcos"]) >= _MAX_MARCOS:
+        raise ToolError(f"Limite de {_MAX_MARCOS} marcos por cronograma.")
+    out["marcos"].append({k: marco[k] for k in _MARCO_KEYS if k in marco})
+    return canvas_routes._clean_cronograma(out)
+
+
+def _update_cronograma_marco(current: dict, marco_id: str, fields: dict) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    idx, item = _find_crono_item(out["marcos"], marco_id, "Marco")
+    patch = {k: v for k, v in fields.items() if k in _MARCO_KEYS and k != "id"}
+    item.update(patch)
+    out["marcos"][idx] = item
+    return canvas_routes._clean_cronograma(out)
+
+
+def _delete_cronograma_marco(current: dict, marco_id: str) -> dict:
+    out = canvas_routes._clean_cronograma(current)
+    _find_crono_item(out["marcos"], marco_id, "Marco")
+    out["marcos"] = [m for m in out["marcos"] if str(m.get("id") or "") != marco_id.strip()]
+    return canvas_routes._clean_cronograma(out)
+
+
 def _maturity_levels(question: dict) -> dict[str, str]:
     raw = question.get("levels") or {}
     out: dict[str, str] = {}
@@ -358,7 +458,12 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def canvas_update(project_id: str, fields: dict[str, Any] | str) -> dict:
-        """Atualiza campos de um projeto/canvas existente."""
+        """Atualiza campos de um projeto/canvas existente.
+
+        `fields.cronograma` substitui o Gantt inteiro. Para criar/editar/excluir o
+        cronograma sem apagar atividades, use canvas_cronograma_create,
+        canvas_cronograma_update, canvas_cronograma_delete e as tools de atividade/marco.
+        """
         user = _canvas_user()
         raw = parse_json_object(fields, label="fields")
         body = validate_model(CanvasProjectUpdateRequest, raw)
@@ -370,6 +475,125 @@ def register_learner_tools(mcp) -> None:
             org_id=_org_id(user),
             db=get_db(),
         )
+
+    def _canvas_load(user: dict, project_id: str) -> dict:
+        return call_route(
+            canvas_routes.get_project,
+            project_id=project_id,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+
+    def _canvas_save_cronograma(user: dict, project_id: str, cronograma: dict) -> dict:
+        body = validate_model(CanvasProjectUpdateRequest, {"cronograma": cronograma})
+        item = call_route(
+            canvas_routes.update_project,
+            project_id=project_id,
+            body=body,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+        return _cronograma_pack(item)
+
+    @mcp.tool
+    def canvas_cronograma_get(project_id: str) -> dict:
+        """Retorna o cronograma (Gantt de semanas + marcos) do projeto."""
+        user = _canvas_user()
+        return _cronograma_pack(_canvas_load(user, project_id))
+
+    @mcp.tool
+    def canvas_cronograma_create(project_id: str, cronograma: dict[str, Any] | str) -> dict:
+        """Cria ou substitui o cronograma (Gantt) do projeto.
+
+        Campos: subtitulo?, pre_requisito?, criterio_aceite?, semanas (4–16, padrão 8),
+        atividades[] (id?, titulo, lideranca?, semana_inicio, semana_fim, predecessor?),
+        marcos[] (id?, semana, titulo). Para acrescentar um item sem apagar os outros,
+        use canvas_cronograma_add_atividade ou canvas_cronograma_add_marco.
+        """
+        user = _canvas_user()
+        _canvas_load(user, project_id)
+        raw = parse_json_object(cronograma, label="cronograma")
+        return _canvas_save_cronograma(user, project_id, canvas_routes._clean_cronograma(raw))
+
+    @mcp.tool
+    def canvas_cronograma_update(project_id: str, fields: dict[str, Any] | str) -> dict:
+        """Atualiza o cronograma (merge). Metadados mesclam; atividades/marcos, se enviados, substituem a lista.
+
+        Campos: subtitulo, pre_requisito, criterio_aceite, semanas, atividades, marcos.
+        """
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        patch = parse_json_object(fields, label="fields")
+        return _canvas_save_cronograma(user, project_id, _merge_cronograma(current, patch))
+
+    @mcp.tool
+    def canvas_cronograma_delete(project_id: str) -> dict:
+        """Exclui o cronograma do projeto (zera atividades, marcos e textos; horizonte volta a 8 semanas)."""
+        user = _canvas_user()
+        _canvas_load(user, project_id)
+        return _canvas_save_cronograma(user, project_id, _empty_cronograma())
+
+    @mcp.tool
+    def canvas_cronograma_add_atividade(project_id: str, atividade: dict[str, Any] | str) -> dict:
+        """Adiciona uma atividade ao Gantt sem apagar as outras. Obrigatório: titulo."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        raw = parse_json_object(atividade, label="atividade")
+        return _canvas_save_cronograma(user, project_id, _add_cronograma_atividade(current, raw))
+
+    @mcp.tool
+    def canvas_cronograma_update_atividade(
+        project_id: str,
+        atividade_id: str,
+        fields: dict[str, Any] | str,
+    ) -> dict:
+        """Atualiza uma atividade do Gantt (merge: titulo, lideranca, semana_inicio, semana_fim, predecessor)."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        patch = parse_json_object(fields, label="fields")
+        return _canvas_save_cronograma(
+            user, project_id, _update_cronograma_atividade(current, atividade_id, patch)
+        )
+
+    @mcp.tool
+    def canvas_cronograma_delete_atividade(project_id: str, atividade_id: str) -> dict:
+        """Remove uma atividade do Gantt pelo id."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        return _canvas_save_cronograma(
+            user, project_id, _delete_cronograma_atividade(current, atividade_id)
+        )
+
+    @mcp.tool
+    def canvas_cronograma_add_marco(project_id: str, marco: dict[str, Any] | str) -> dict:
+        """Adiciona um marco de decisão ao Gantt sem apagar os outros. Campos: semana, titulo."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        raw = parse_json_object(marco, label="marco")
+        return _canvas_save_cronograma(user, project_id, _add_cronograma_marco(current, raw))
+
+    @mcp.tool
+    def canvas_cronograma_update_marco(
+        project_id: str,
+        marco_id: str,
+        fields: dict[str, Any] | str,
+    ) -> dict:
+        """Atualiza um marco do Gantt (merge: semana, titulo)."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        patch = parse_json_object(fields, label="fields")
+        return _canvas_save_cronograma(
+            user, project_id, _update_cronograma_marco(current, marco_id, patch)
+        )
+
+    @mcp.tool
+    def canvas_cronograma_delete_marco(project_id: str, marco_id: str) -> dict:
+        """Remove um marco do Gantt pelo id."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        return _canvas_save_cronograma(user, project_id, _delete_cronograma_marco(current, marco_id))
 
     @mcp.tool
     def canvas_approve_portfolio(project_id: str) -> dict:

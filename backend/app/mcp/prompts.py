@@ -43,8 +43,10 @@ def register_prompts(mcp) -> None:
             "oportunidade). Se o usuário já tiver um projeto aberto, use "
             "`canvas_import_into` com `project_id` e o mesmo documento "
             "(aplica a 1ª oportunidade). Para um canvas vazio use `canvas_create`; "
-            "para editar campos, `canvas_update`. `canvas_approve_portfolio` envia "
-            "o projeto ao inventário de Governança.\n"
+            "para editar campos, `canvas_update`. Cronograma (Gantt): "
+            "`canvas_cronograma_create` / `canvas_cronograma_update` / "
+            "`canvas_cronograma_delete`, ou as tools de atividade/marco. "
+            "`canvas_approve_portfolio` envia o projeto ao inventário de Governança.\n"
         )
 
     @mcp.prompt
