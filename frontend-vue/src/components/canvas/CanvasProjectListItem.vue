@@ -53,9 +53,75 @@ function formatInicioReal(iso: string): string {
 
 <template>
   <li class="list-item">
-    <RouterLink :to="`/projetos/${item.id}`" class="list-link">
-      <div class="list-main">
-        <span class="list-title">{{ item.title || 'Novo projeto' }}</span>
+    <div class="list-main">
+      <div class="list-head">
+        <RouterLink :to="`/projetos/${item.id}`" class="list-title">
+          {{ item.title || 'Novo projeto' }}
+        </RouterLink>
+        <RouterLink :to="`/projetos/${item.id}`" class="list-arrow">Abrir canvas →</RouterLink>
+      </div>
+
+      <div class="list-toolbar" @click.stop>
+        <label class="toolbar-field">
+          <span>Prioridade</span>
+          <select
+            :value="item.prioridade || 'P4'"
+            :aria-label="'Prioridade de ' + (item.title || 'projeto')"
+            @change="$emit('prioridade', $event)"
+          >
+            <option v-for="p in CANVAS_PRIORIDADES" :key="p.id" :value="p.id">{{ p.label }}</option>
+          </select>
+        </label>
+        <label class="toolbar-field">
+          <span>Início</span>
+          <select
+            :value="item.mes_inicio || ''"
+            :aria-label="'Mês de início de ' + (item.title || 'projeto')"
+            @change="$emit('mes', $event)"
+          >
+            <option value="">Mês</option>
+            <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
+          </select>
+        </label>
+        <button
+          v-if="!item.projeto_aprovado"
+          type="button"
+          class="btn-approve-proj"
+          @click="$emit('approve', $event)"
+        >
+          Aprovar projeto
+        </button>
+        <div v-else class="approved-meta">
+          <span class="approved-flag">Aprovado</span>
+          <span class="approved-detail">
+            {{ periodicidadeLabel(item.periodicidade) }}
+            <template v-if="item.data_inicio_real"> · {{ formatInicioReal(item.data_inicio_real) }}</template>
+          </span>
+          <span v-if="item.aprovacao_comentario" class="approved-who" :title="item.aprovacao_comentario">
+            {{ item.aprovacao_comentario }}
+          </span>
+          <button type="button" class="link-edit" @click="$emit('approve', $event)">Editar</button>
+        </div>
+        <RouterLink
+          v-if="item.status === 'aprovado_portfolio' && item.ai_system_id"
+          :to="`/governanca/sistemas/${item.ai_system_id}`"
+          class="badge-portfolio"
+          title="Ver na Governança de IA"
+        >
+          No portfólio ✓
+        </RouterLink>
+        <button
+          v-else
+          type="button"
+          class="btn-approve"
+          :disabled="approvingPortfolio"
+          @click="$emit('approvePortfolio', $event)"
+        >
+          {{ approvingPortfolio ? 'Aprovando…' : 'Aprovar para portfólio' }}
+        </button>
+      </div>
+
+      <RouterLink :to="`/projetos/${item.id}`" class="list-link">
         <dl class="list-fields">
           <div class="list-field">
             <dt>Área de negócio</dt>
@@ -84,74 +150,11 @@ function formatInicioReal(iso: string): string {
           </span>
           <span class="list-meta">Atualizado {{ formatDate(item.updated_at) }}</span>
         </div>
-      </div>
-      <span class="list-arrow">Abrir canvas →</span>
-    </RouterLink>
-    <div class="list-exec" @click.stop>
-      <label>
-        <span>Prioridade</span>
-        <select
-          :value="item.prioridade || 'P4'"
-          :aria-label="'Prioridade de ' + (item.title || 'projeto')"
-          @change="$emit('prioridade', $event)"
-        >
-          <option v-for="p in CANVAS_PRIORIDADES" :key="p.id" :value="p.id">{{ p.label }}</option>
-        </select>
-      </label>
-      <label>
-        <span>Início</span>
-        <select
-          :value="item.mes_inicio || ''"
-          :aria-label="'Mês de início de ' + (item.title || 'projeto')"
-          @change="$emit('mes', $event)"
-        >
-          <option value="">Mês</option>
-          <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
-        </select>
-      </label>
-      <button
-        v-if="!item.projeto_aprovado"
-        type="button"
-        class="btn-approve-proj"
-        @click="$emit('approve', $event)"
-      >
-        Aprovar projeto
-      </button>
-      <div v-else class="approved-meta">
-        <span class="approved-flag">Aprovado</span>
-        <span>
-          {{ periodicidadeLabel(item.periodicidade) }}
-          <template v-if="item.data_inicio_real"> · {{ formatInicioReal(item.data_inicio_real) }}</template>
-        </span>
-        <span v-if="item.aprovacao_comentario" class="approved-who" :title="item.aprovacao_comentario">
-          {{ item.aprovacao_comentario }}
-        </span>
-        <button type="button" class="link-edit" @click="$emit('approve', $event)">Editar</button>
-      </div>
-    </div>
-    <div class="list-actions">
-      <RouterLink
-        v-if="item.status === 'aprovado_portfolio' && item.ai_system_id"
-        :to="`/governanca/sistemas/${item.ai_system_id}`"
-        class="badge-portfolio"
-        title="Ver na Governança de IA"
-        @click.stop
-      >
-        No portfólio ✓
       </RouterLink>
-      <button
-        v-else
-        type="button"
-        class="btn-approve"
-        :disabled="approvingPortfolio"
-        @click="$emit('approvePortfolio', $event)"
-      >
-        {{ approvingPortfolio ? 'Aprovando…' : 'Aprovar para portfólio' }}
-      </button>
-      <button type="button" class="btn-del" title="Excluir projeto" @click="$emit('delete', $event)">
-        Excluir
-      </button>
     </div>
+    <button type="button" class="btn-del" title="Excluir projeto" @click="$emit('delete', $event)">
+      Excluir
+    </button>
   </li>
 </template>
 
@@ -163,29 +166,59 @@ function formatInicioReal(iso: string): string {
   background: var(--wh);
   border: 1px solid var(--bd);
   border-radius: var(--r-lg);
-  overflow: visible;
+  overflow: hidden;
 }
-.list-exec {
+.list-main {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 14px;
-  border-left: 1px solid var(--bd);
-  background: #faf9f6;
-  min-width: 196px;
+  min-width: 0;
+  flex: 1;
 }
-.list-exec label {
+.list-head {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 0;
+}
+.list-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--k0);
+  text-decoration: none;
+  min-width: 0;
+}
+.list-title:hover {
+  text-decoration: underline;
+}
+.list-arrow {
+  font-size: 13px;
+  color: var(--k5);
+  white-space: nowrap;
+  text-decoration: none;
+  margin-top: 2px;
+}
+.list-arrow:hover {
+  color: var(--k0);
+}
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 18px 4px;
+}
+.toolbar-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--k5);
 }
-.list-exec select {
+.toolbar-field select {
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -194,9 +227,9 @@ function formatInicioReal(iso: string): string {
   color: var(--k0);
   border: 1px solid var(--bd);
   border-radius: var(--r-md);
-  padding: 5px 6px;
+  padding: 5px 8px;
   background: #fff;
-  max-width: 200px;
+  max-width: 220px;
 }
 .btn-approve-proj {
   border: 1px solid var(--k0);
@@ -207,7 +240,7 @@ function formatInicioReal(iso: string): string {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 7px 8px;
+  padding: 6px 10px;
   border-radius: var(--r-md);
   cursor: pointer;
 }
@@ -216,12 +249,13 @@ function formatInicioReal(iso: string): string {
 }
 .approved-meta {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   font-size: 11px;
   color: var(--k4);
   line-height: 1.35;
-  max-width: 200px;
+  max-width: 100%;
 }
 .approved-flag {
   font-size: 10px;
@@ -230,15 +264,18 @@ function formatInicioReal(iso: string): string {
   text-transform: uppercase;
   color: #2f6e4a;
 }
+.approved-detail {
+  white-space: nowrap;
+}
 .approved-who {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   color: var(--k5);
+  max-width: 180px;
 }
 .link-edit {
-  align-self: flex-start;
   border: none;
   background: none;
   padding: 0;
@@ -248,31 +285,55 @@ function formatInicioReal(iso: string): string {
   text-decoration: underline;
   cursor: pointer;
 }
+.btn-approve {
+  border: 1px solid var(--bd);
+  background: #fff;
+  color: var(--k4);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-approve:hover:not(:disabled) {
+  border-color: var(--k0);
+  color: var(--k0);
+}
+.btn-approve:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.badge-portfolio {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--k0);
+  background: var(--golddim);
+  border: 1px solid var(--goldbd);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.badge-portfolio:hover {
+  background: var(--goldbd);
+}
 .list-link {
-  flex: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 18px 16px;
   text-decoration: none;
   color: inherit;
   min-width: 0;
 }
 .list-link:hover {
   background: rgba(0, 0, 0, 0.02);
-}
-.list-main {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
-}
-.list-title {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--k0);
 }
 .list-fields {
   margin: 0;
@@ -344,16 +405,6 @@ function formatInicioReal(iso: string): string {
   border-color: #ddbcb4;
   color: #9c3b2e;
 }
-.list-arrow {
-  font-size: 13px;
-  color: var(--k5);
-  white-space: nowrap;
-  margin-top: 2px;
-}
-.list-actions {
-  display: flex;
-  align-items: center;
-}
 .btn-del {
   border: none;
   background: transparent;
@@ -362,41 +413,10 @@ function formatInicioReal(iso: string): string {
   font-size: 12px;
   cursor: pointer;
   border-left: 1px solid var(--bd);
+  align-self: stretch;
 }
 .btn-del:hover {
   background: #faf2f1;
-}
-.btn-approve {
-  border: none;
-  background: transparent;
-  color: var(--k4);
-  padding: 0 14px;
-  font-size: 12px;
-  cursor: pointer;
-  border-left: 1px solid var(--bd);
-  white-space: nowrap;
-}
-.btn-approve:hover:not(:disabled) {
-  background: var(--k9);
-}
-.btn-approve:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-.badge-portfolio {
-  padding: 4px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--k0);
-  background: var(--golddim);
-  border-left: 1px solid var(--bd);
-  text-decoration: none;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-}
-.badge-portfolio:hover {
-  background: var(--goldbd);
 }
 @media (max-width: 640px) {
   .list-fields {
@@ -405,19 +425,21 @@ function formatInicioReal(iso: string): string {
   .list-arrow {
     display: none;
   }
-  .list-item {
-    flex-wrap: wrap;
+  .toolbar-field {
+    flex: 1 1 calc(50% - 5px);
   }
-  .list-exec {
-    flex-direction: row;
+  .toolbar-field select {
+    max-width: none;
+    width: 100%;
+  }
+  .btn-del {
     flex: 1 1 100%;
     border-left: none;
     border-top: 1px solid var(--bd);
-    min-width: 0;
+    padding: 10px 14px;
   }
-  .list-exec select {
-    max-width: none;
-    width: 100%;
+  .list-item {
+    flex-wrap: wrap;
   }
 }
 </style>
