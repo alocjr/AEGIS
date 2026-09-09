@@ -144,6 +144,44 @@ class CanvasCronogramaTests(unittest.TestCase):
         self.assertEqual(act["semana_fim"], 8)
         self.assertEqual(cleaned["marcos"][0]["semana"], 8)
 
+    def test_accepts_year_horizon(self) -> None:
+        cleaned = _clean_cronograma(
+            {
+                "semanas": 52,
+                "atividades": [
+                    {"id": "a01", "titulo": "Programa anual", "semana_inicio": 1, "semana_fim": 52},
+                ],
+                "marcos": [{"id": "m01", "semana": 52, "titulo": "Go / no-go"}],
+            }
+        )
+        self.assertEqual(cleaned["semanas"], 52)
+        self.assertEqual(cleaned["atividades"][0]["semana_fim"], 52)
+        self.assertEqual(cleaned["marcos"][0]["semana"], 52)
+
+    def test_clamps_horizon_above_52(self) -> None:
+        cleaned = _clean_cronograma({"semanas": 80})
+        self.assertEqual(cleaned["semanas"], 52)
+
+    def test_schema_accepts_52_weeks(self) -> None:
+        body = CanvasProjectUpdateRequest(
+            cronograma={
+                "semanas": 52,
+                "atividades": [
+                    {
+                        "id": "a01",
+                        "titulo": "Onda anual",
+                        "semana_inicio": 40,
+                        "semana_fim": 52,
+                    }
+                ],
+                "marcos": [{"id": "m01", "semana": 48, "titulo": "Revisão"}],
+            }
+        )
+        cleaned = _clean_cronograma(body.cronograma)
+        self.assertEqual(cleaned["semanas"], 52)
+        self.assertEqual(cleaned["atividades"][0]["semana_inicio"], 40)
+        self.assertEqual(cleaned["marcos"][0]["semana"], 48)
+
     def test_generates_ids_and_caps_lists(self) -> None:
         cleaned = _clean_cronograma(
             {

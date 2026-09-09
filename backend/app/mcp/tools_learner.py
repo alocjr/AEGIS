@@ -507,7 +507,7 @@ def register_learner_tools(mcp) -> None:
     def canvas_cronograma_create(project_id: str, cronograma: dict[str, Any] | str) -> dict:
         """Cria ou substitui o cronograma (Gantt) do projeto.
 
-        Campos: subtitulo?, pre_requisito?, criterio_aceite?, semanas (4–16, padrão 8),
+        Campos: subtitulo?, pre_requisito?, criterio_aceite?, semanas (4–52, padrão 8),
         atividades[] (id?, titulo, lideranca?, semana_inicio, semana_fim, predecessor?),
         marcos[] (id?, semana, titulo). Para acrescentar um item sem apagar os outros,
         use canvas_cronograma_add_atividade ou canvas_cronograma_add_marco.

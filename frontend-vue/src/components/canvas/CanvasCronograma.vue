@@ -9,13 +9,44 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ persist: [] }>()
 
-const HORIZONTES = [4, 6, 8, 10, 12, 16] as const
+const HORIZONTES = [4, 6, 8, 10, 12, 16, 20, 24, 26, 36, 40, 48, 52] as const
+const WEEKS_PER_MONTH = 4
+const MONTH_VIEW_AFTER = 12
 const MAX_ATIVIDADES = 30
 const MAX_MARCOS = 12
 const LIDER_OPTS = ['Gestor + Área', 'TI + Área', 'Consultoria', 'Comitê IA', 'Sponsor executivo']
 
 const weeks = computed(() => Array.from({ length: crono.value.semanas }, (_, i) => i + 1))
+const useMonths = computed(() => crono.value.semanas > MONTH_VIEW_AFTER)
+const months = computed(() => {
+  const total = crono.value.semanas
+  const cols: { index: number; start: number; end: number; label: string }[] = []
+  let start = 1
+  let index = 1
+  while (start <= total) {
+    const end = Math.min(start + WEEKS_PER_MONTH - 1, total)
+    cols.push({ index, start, end, label: `M${index}` })
+    start = end + 1
+    index += 1
+  }
+  return cols
+})
+const horizonteOptions = computed(() => {
+  const n = crono.value.semanas
+  if ((HORIZONTES as readonly number[]).includes(n)) return [...HORIZONTES]
+  return [...HORIZONTES, n].sort((a, b) => a - b)
+})
 const rangeEditing = ref<string | null>(null)
+
+function horizonteLabel(n: number): string {
+  if (n <= MONTH_VIEW_AFTER) return `${n} semanas`
+  const meses = Math.ceil(n / WEEKS_PER_MONTH)
+  return `${n} semanas · ${meses} ${meses === 1 ? 'mês' : 'meses'}`
+}
+
+function isMonthStart(week: number): boolean {
+  return useMonths.value && week > 1 && (week - 1) % WEEKS_PER_MONTH === 0
+}
 
 const draft = reactive({
   titulo: '',
@@ -197,7 +228,7 @@ const draftRange = computed(() => {
 </script>
 
 <template>
-  <div class="crono" :style="{ '--weeks': String(crono.semanas) }">
+  <div class="crono" :class="{ 'crono-months': useMonths }" :style="{ '--weeks': String(crono.semanas) }">
     <div class="topbar">
       <span>Valorian 4 Future</span>
       <span>{{ areaLabel }}</span>
@@ -209,7 +240,7 @@ const draftRange = computed(() => {
         <label class="horizonte">
           <span>Horizonte</span>
           <select :value="crono.semanas" @change="setSemanas(Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in HORIZONTES" :key="n" :value="n">{{ n }} semanas</option>
+            <option v-for="n in horizonteOptions" :key="n" :value="n">{{ horizonteLabel(n) }}</option>
           </select>
         </label>
       </div>
@@ -242,7 +273,18 @@ const draftRange = computed(() => {
           <div class="c-dur">Dur.</div>
           <div class="c-pred">Predec.</div>
           <div class="c-weeks">
-            <span v-for="w in weeks" :key="'h' + w">S{{ w }}</span>
+            <template v-if="useMonths">
+              <span
+                v-for="m in months"
+                :key="'h' + m.index"
+                class="month-h"
+                :style="{ gridColumn: m.start + ' / ' + (m.end + 1) }"
+                :title="'Semanas ' + m.start + '–' + m.end"
+              >{{ m.label }}</span>
+            </template>
+            <template v-else>
+              <span v-for="w in weeks" :key="'h' + w">S{{ w }}</span>
+            </template>
           </div>
         </div>
 
@@ -306,7 +348,13 @@ const draftRange = computed(() => {
             @blur="persist"
           />
           <div class="c-weeks" @click="rangeEditing = act.id">
-            <span v-for="w in weeks" :key="act.id + 'w' + w" class="week-cell" :style="{ gridColumn: String(w) }" />
+            <span
+              v-for="w in weeks"
+              :key="act.id + 'w' + w"
+              class="week-cell"
+              :class="{ 'month-start': isMonthStart(w) }"
+              :style="{ gridColumn: String(w) }"
+            />
             <div class="bar" :style="barStyle(act)">{{ barLabel(act) }}</div>
             <button
               type="button"
@@ -360,7 +408,13 @@ const draftRange = computed(() => {
             @keydown="onDraftKey"
           />
           <div class="c-weeks">
-            <span v-for="w in weeks" :key="'dw' + w" class="week-cell" :style="{ gridColumn: String(w) }" />
+            <span
+              v-for="w in weeks"
+              :key="'dw' + w"
+              class="week-cell"
+              :class="{ 'month-start': isMonthStart(w) }"
+              :style="{ gridColumn: String(w) }"
+            />
             <div class="bar bar-draft" :style="barStyle(draftRange)">{{ barLabel(draftRange) }}</div>
           </div>
           </div>
@@ -374,7 +428,12 @@ const draftRange = computed(() => {
         <div class="marco-row">
           <div class="marco-label">Marcos de decisão</div>
           <div class="c-weeks">
-            <div v-for="w in weeks" :key="'mw' + w" class="week-cell marco-cell">
+            <div
+              v-for="w in weeks"
+              :key="'mw' + w"
+              class="week-cell marco-cell"
+              :class="{ 'month-start': isMonthStart(w) }"
+            >
               <template v-if="marcosAt(w).length">
                 <button
                   v-for="marco in marcosAt(w)"
@@ -456,6 +515,7 @@ const draftRange = computed(() => {
 
     <footer class="legend">
       <span>S = semana a partir do início autorizado.</span>
+      <span v-if="useMonths">M = mês de 4 semanas (colunas agrupadas em planos com mais de 12 semanas).</span>
       <span>Duração = tempo decorrido, não esforço em pessoa-semana.</span>
       <span>FS = iniciar após a conclusão da predecessora.</span>
       <span>SS = iniciar em paralelo.</span>
@@ -522,6 +582,9 @@ h2 {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.horizonte select {
+  max-width: 220px;
 }
 .horizonte select,
 .marco-week select,
@@ -675,7 +738,7 @@ h2 {
 .range-picks select {
   padding: 1px 2px;
   font-size: 10px;
-  max-width: 48px;
+  max-width: 56px;
 }
 .gantt-row .c-weeks {
   cursor: pointer;
@@ -700,6 +763,12 @@ h2 {
     #e6e1d6 calc(100% / var(--weeks))
   );
 }
+.crono-months .c-weeks {
+  grid-template-columns: repeat(var(--weeks, 8), minmax(16px, 1fr));
+}
+.crono-months .gantt {
+  min-width: 980px;
+}
 .gantt-head .c-weeks {
   background: transparent;
   text-align: center;
@@ -711,10 +780,17 @@ h2 {
   padding: 8px 0;
   border-left: 1px solid rgba(255, 255, 255, 0.18);
 }
+.gantt-head .c-weeks .month-h {
+  letter-spacing: 0.1em;
+}
 .week-cell {
   grid-row: 1;
   border-left: 1px solid #ece8df;
   min-height: 34px;
+}
+.week-cell.month-start {
+  border-left-color: #c4beb2;
+  border-left-width: 2px;
 }
 .bar {
   grid-row: 1;

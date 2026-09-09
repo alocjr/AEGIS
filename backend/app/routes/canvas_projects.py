@@ -125,7 +125,7 @@ def _clean_ref_ids(value) -> list[str]:
     return out
 
 
-def _clip_week(value, *, lo: int = 1, hi: int = 16, default: int = 1) -> int:
+def _clip_week(value, *, lo: int = 1, hi: int = 52, default: int = 1) -> int:
     try:
         n = int(value)
     except (TypeError, ValueError):
@@ -134,11 +134,11 @@ def _clip_week(value, *, lo: int = 1, hi: int = 16, default: int = 1) -> int:
 
 
 def _clean_cronograma(value) -> dict:
-    """Normaliza o Gantt persistido no canvas (horizonte 4–16 semanas)."""
+    """Normaliza o Gantt persistido no canvas (horizonte 4–52 semanas)."""
     if hasattr(value, "model_dump"):
         value = value.model_dump()
     raw = value if isinstance(value, dict) else {}
-    semanas = _clip_week(raw.get("semanas"), lo=4, hi=16, default=8)
+    semanas = _clip_week(raw.get("semanas"), lo=4, hi=52, default=8)
 
     atividades: list[dict] = []
     seen_ids: set[str] = set()

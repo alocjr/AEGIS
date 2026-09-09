@@ -94,8 +94,8 @@ class CanvasCronogramaAtividade(BaseModel):
     id: str = Field(default="", max_length=64)
     titulo: str = Field(default="", max_length=400)
     lideranca: str = Field(default="", max_length=120)
-    semana_inicio: int = Field(default=1, ge=1, le=16)
-    semana_fim: int = Field(default=1, ge=1, le=16)
+    semana_inicio: int = Field(default=1, ge=1, le=52)
+    semana_fim: int = Field(default=1, ge=1, le=52)
     predecessor: str = Field(default="", max_length=40)
 
 
@@ -103,7 +103,7 @@ class CanvasCronogramaMarco(BaseModel):
     """Marco de decisão posicionado em uma semana do cronograma."""
 
     id: str = Field(default="", max_length=64)
-    semana: int = Field(default=1, ge=1, le=16)
+    semana: int = Field(default=1, ge=1, le=52)
     titulo: str = Field(default="", max_length=200)
 
 
@@ -113,7 +113,7 @@ class CanvasCronograma(BaseModel):
     subtitulo: str = Field(default="", max_length=400)
     pre_requisito: str = Field(default="", max_length=500)
     criterio_aceite: str = Field(default="", max_length=1000)
-    semanas: int = Field(default=8, ge=4, le=16)
+    semanas: int = Field(default=8, ge=4, le=52)
     atividades: list[CanvasCronogramaAtividade] = Field(default_factory=list, max_length=30)
     marcos: list[CanvasCronogramaMarco] = Field(default_factory=list, max_length=12)
 
