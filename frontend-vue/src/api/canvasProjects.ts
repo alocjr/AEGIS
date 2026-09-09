@@ -55,6 +55,42 @@ export interface CanvasProject extends CanvasProjectSummary {
   custo: string[]
   riscos: string[]
   opportunity_type_options: string[]
+  cronograma: CanvasCronograma
+}
+
+export interface CanvasCronogramaAtividade {
+  id: string
+  titulo: string
+  lideranca: string
+  semana_inicio: number
+  semana_fim: number
+  predecessor: string
+}
+
+export interface CanvasCronogramaMarco {
+  id: string
+  semana: number
+  titulo: string
+}
+
+export interface CanvasCronograma {
+  subtitulo: string
+  pre_requisito: string
+  criterio_aceite: string
+  semanas: number
+  atividades: CanvasCronogramaAtividade[]
+  marcos: CanvasCronogramaMarco[]
+}
+
+export function emptyCronograma(): CanvasCronograma {
+  return {
+    subtitulo: '',
+    pre_requisito: '',
+    criterio_aceite: '',
+    semanas: 8,
+    atividades: [],
+    marcos: [],
+  }
 }
 
 export type CanvasProjectPayload = Partial<{
@@ -79,6 +115,7 @@ export type CanvasProjectPayload = Partial<{
   tows_ids: string[]
   justificativa_tows: string
   kr_ids: string[]
+  cronograma: CanvasCronograma
 }>
 
 export function listCanvasProjects(): Promise<{ items: CanvasProjectSummary[] }> {

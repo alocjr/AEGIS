@@ -88,6 +88,36 @@ class CanvasRiscosEstruturado(BaseModel):
     human_in_the_loop: Literal["nenhum", "sugerir", "aprovar", "supervisionar"] | None = None
 
 
+class CanvasCronogramaAtividade(BaseModel):
+    """Atividade do Gantt: intervalo de semanas (início/fim) no horizonte do projeto."""
+
+    id: str = Field(default="", max_length=64)
+    titulo: str = Field(default="", max_length=400)
+    lideranca: str = Field(default="", max_length=120)
+    semana_inicio: int = Field(default=1, ge=1, le=16)
+    semana_fim: int = Field(default=1, ge=1, le=16)
+    predecessor: str = Field(default="", max_length=40)
+
+
+class CanvasCronogramaMarco(BaseModel):
+    """Marco de decisão posicionado em uma semana do cronograma."""
+
+    id: str = Field(default="", max_length=64)
+    semana: int = Field(default=1, ge=1, le=16)
+    titulo: str = Field(default="", max_length=200)
+
+
+class CanvasCronograma(BaseModel):
+    """Cronograma de execução do canvas (Gantt de semanas + marcos)."""
+
+    subtitulo: str = Field(default="", max_length=400)
+    pre_requisito: str = Field(default="", max_length=500)
+    criterio_aceite: str = Field(default="", max_length=1000)
+    semanas: int = Field(default=8, ge=4, le=16)
+    atividades: list[CanvasCronogramaAtividade] = Field(default_factory=list, max_length=30)
+    marcos: list[CanvasCronogramaMarco] = Field(default_factory=list, max_length=12)
+
+
 class CanvasProjectUpdateRequest(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=200)
     area_negocio: str | None = Field(None, max_length=200)
@@ -114,6 +144,7 @@ class CanvasProjectUpdateRequest(BaseModel):
     justificativa_tows: str | None = Field(None, max_length=4000)
     # Key Results (OKR) que este projeto endereça
     kr_ids: list[str] | None = Field(None, max_length=20)
+    cronograma: CanvasCronograma | None = None
 
 
 class CanvasImportRequest(BaseModel):

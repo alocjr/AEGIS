@@ -5,12 +5,14 @@ import {
   getCanvasProject,
   updateCanvasProject,
   importIntoCanvasProject,
+  emptyCronograma,
   type CanvasProject,
   type CanvasProjectPayload,
   type CanvasListField,
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
+import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
 import {
   getSwotAnalysisById,
   listSwotAnalyses,
@@ -208,6 +210,7 @@ const form = ref({
   swot_item_ids: [] as string[],
   tows_ids: [] as string[],
   kr_ids: [] as string[],
+  cronograma: emptyCronograma(),
 })
 
 /** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
@@ -470,6 +473,12 @@ function applyProject(p: CanvasProject) {
     swot_item_ids: [...(p.swot_item_ids || [])],
     tows_ids: [...(p.tows_ids || [])],
     kr_ids: [...(p.kr_ids || [])],
+    cronograma: {
+      ...emptyCronograma(),
+      ...(p.cronograma || {}),
+      atividades: (p.cronograma?.atividades || []).map((a) => ({ ...a })),
+      marcos: (p.cronograma?.marcos || []).map((m) => ({ ...m })),
+    },
   }
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
@@ -1124,6 +1133,19 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+
+      <section class="crono-section">
+        <div class="crono-kicker">
+          <span class="num num-amber">09</span>
+          <span class="cell-title">Cronograma</span>
+        </div>
+        <CanvasCronograma
+          v-model="form.cronograma"
+          :title="form.title"
+          :area="form.area_negocio"
+          @persist="persist"
+        />
+      </section>
 
       <footer class="sheet-footer">
         <span>Complementar à <b>SWOT de IA</b> — a SWOT olha a organização; este canvas desce à área.</span>
@@ -2049,6 +2071,19 @@ h1 span {
 }
 .q-avoid b {
   color: var(--danger);
+}
+.crono-section {
+  border-top: 1px solid var(--line);
+}
+.crono-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 18px 0;
+}
+.crono-kicker .cell-title {
+  padding-right: 0;
+  margin: 0;
 }
 .sheet-footer {
   padding: 12px 30px 18px;

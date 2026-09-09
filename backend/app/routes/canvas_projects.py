@@ -76,6 +76,14 @@ _EMPTY_FIELDS = {
     "tows_ids": [],
     "justificativa_tows": "",
     "kr_ids": [],
+    "cronograma": {
+        "subtitulo": "",
+        "pre_requisito": "",
+        "criterio_aceite": "",
+        "semanas": 8,
+        "atividades": [],
+        "marcos": [],
+    },
     "dados_estruturado": {"descricao": "", "sensibilidade": None},
     "riscos_estruturado": {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
     "status": "rascunho",
@@ -115,6 +123,81 @@ def _clean_ref_ids(value) -> list[str]:
         if len(out) >= 20:
             break
     return out
+
+
+def _clip_week(value, *, lo: int = 1, hi: int = 16, default: int = 1) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, n))
+
+
+def _clean_cronograma(value) -> dict:
+    """Normaliza o Gantt persistido no canvas (horizonte 4–16 semanas)."""
+    if hasattr(value, "model_dump"):
+        value = value.model_dump()
+    raw = value if isinstance(value, dict) else {}
+    semanas = _clip_week(raw.get("semanas"), lo=4, hi=16, default=8)
+
+    atividades: list[dict] = []
+    seen_ids: set[str] = set()
+    for i, item in enumerate((raw.get("atividades") or [])[:30]):
+        if not isinstance(item, dict):
+            continue
+        start = _clip_week(item.get("semana_inicio"), hi=semanas)
+        end = _clip_week(item.get("semana_fim"), hi=semanas)
+        if end < start:
+            start, end = end, start
+        aid = str(item.get("id") or "").strip()[:64]
+        if not aid or aid in seen_ids:
+            aid = f"a{i + 1:02d}"
+            suffix = 2
+            while aid in seen_ids:
+                aid = f"a{i + 1:02d}_{suffix}"
+                suffix += 1
+        seen_ids.add(aid)
+        atividades.append(
+            {
+                "id": aid,
+                "titulo": str(item.get("titulo") or "").strip()[:400],
+                "lideranca": str(item.get("lideranca") or "").strip()[:120],
+                "semana_inicio": start,
+                "semana_fim": end,
+                "predecessor": str(item.get("predecessor") or "").strip()[:40],
+            }
+        )
+
+    marcos: list[dict] = []
+    seen_marco: set[str] = set()
+    for i, item in enumerate((raw.get("marcos") or [])[:12]):
+        if not isinstance(item, dict):
+            continue
+        mid = str(item.get("id") or "").strip()[:64]
+        if not mid or mid in seen_marco:
+            mid = f"m{i + 1:02d}"
+            suffix = 2
+            while mid in seen_marco:
+                mid = f"m{i + 1:02d}_{suffix}"
+                suffix += 1
+        seen_marco.add(mid)
+        marcos.append(
+            {
+                "id": mid,
+                "semana": _clip_week(item.get("semana"), hi=semanas),
+                "titulo": str(item.get("titulo") or "").strip()[:200],
+            }
+        )
+    marcos.sort(key=lambda m: (m["semana"], m["id"]))
+
+    return {
+        "subtitulo": str(raw.get("subtitulo") or "").strip()[:400],
+        "pre_requisito": str(raw.get("pre_requisito") or "").strip()[:500],
+        "criterio_aceite": str(raw.get("criterio_aceite") or "").strip()[:1000],
+        "semanas": semanas,
+        "atividades": atividades,
+        "marcos": marcos,
+    }
 
 
 def _quadrant(score_valor: int | None, score_viabilidade: int | None) -> str | None:
@@ -177,6 +260,7 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "riscos": _as_item_list(doc.get("riscos")),
         "proximo_passo": doc.get("proximo_passo") or "",
         "justificativa_tows": doc.get("justificativa_tows") or "",
+        "cronograma": _clean_cronograma(doc.get("cronograma")),
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
         "dados_estruturado": doc.get("dados_estruturado")
         or {"descricao": "", "sensibilidade": None},
@@ -631,9 +715,11 @@ def update_project(
     for key in ("swot_item_ids", "tows_ids", "kr_ids"):
         if key in data:
             updates[key] = _clean_ref_ids(data[key])
+    if "cronograma" in data and data["cronograma"] is not None:
+        updates["cronograma"] = _clean_cronograma(data["cronograma"])
 
     for key, value in data.items():
-        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids", "kr_ids"):
+        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids", "kr_ids", "cronograma"):
             continue
         if key in _LIST_FIELDS:
             updates[key] = _clean_item_list(value)
