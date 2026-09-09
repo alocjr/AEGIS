@@ -56,6 +56,19 @@ export const CANVAS_MESES: { id: Exclude<CanvasMesInicio, ''>; label: string }[]
   { id: 'dez', label: 'Dez' },
 ]
 
+export type CanvasPeriodicidade = 'quinzenal' | 'mensal' | 'bimestral' | 'trimestral'
+
+export const CANVAS_PERIODICIDADES: { id: CanvasPeriodicidade; label: string }[] = [
+  { id: 'quinzenal', label: 'Quinzenal' },
+  { id: 'mensal', label: 'Mensal' },
+  { id: 'bimestral', label: 'Bimestral' },
+  { id: 'trimestral', label: 'Trimestral' },
+]
+
+export function periodicidadeLabel(id: string): string {
+  return CANVAS_PERIODICIDADES.find((p) => p.id === id)?.label || id
+}
+
 export interface CanvasProjectSummary {
   id: string
   title: string
@@ -85,6 +98,12 @@ export interface CanvasProjectSummary {
   prioridade: CanvasPrioridade
   /** Mês em que o projeto deve iniciar. */
   mes_inicio: CanvasMesInicio
+  /** Aprovação executiva (C-level). Só projetos aprovados entram no Mapa Estratégico. */
+  projeto_aprovado: boolean
+  aprovacao_comentario: string
+  data_inicio_real: string
+  periodicidade: CanvasPeriodicidade | ''
+  aprovado_em: string | null
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
@@ -250,4 +269,17 @@ export interface AprovarPortfolioResult {
  * no módulo de Governança (idempotente — reexecutar não duplica). */
 export function aprovarPortfolio(id: string): Promise<AprovarPortfolioResult> {
   return post<AprovarPortfolioResult>(`/api/canvas-projects/${encodeURIComponent(id)}/aprovar-portfolio`)
+}
+
+export type CanvasAprovarProjetoPayload = {
+  comentario: string
+  data_inicio_real: string
+  periodicidade: CanvasPeriodicidade
+}
+
+export function aprovarProjeto(
+  id: string,
+  body: CanvasAprovarProjetoPayload
+): Promise<CanvasProject> {
+  return post<CanvasProject>(`/api/canvas-projects/${encodeURIComponent(id)}/aprovar`, body)
 }

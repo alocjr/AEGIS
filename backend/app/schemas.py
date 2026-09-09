@@ -155,6 +155,17 @@ class CanvasProjectUpdateRequest(BaseModel):
     mes_inicio: CanvasMesInicio | Literal[""] | None = None
 
 
+CanvasPeriodicidade = Literal["quinzenal", "mensal", "bimestral", "trimestral"]
+
+
+class CanvasAprovarProjetoRequest(BaseModel):
+    """Aprovação executiva do projeto (C-level) — quem aprovou, início real e ritmo de follow-up."""
+
+    comentario: str = Field(..., min_length=1, max_length=1000)
+    data_inicio_real: str = Field(..., min_length=10, max_length=10)
+    periodicidade: CanvasPeriodicidade
+
+
 class CanvasImportRequest(BaseModel):
     """Envelope aegis.canvas-oportunidades (prompt → JSON importável)."""
 

@@ -8,6 +8,8 @@ import {
   emptyCronograma,
   CANVAS_PRIORIDADES,
   CANVAS_MESES,
+  aprovarProjeto,
+  periodicidadeLabel,
   type CanvasProject,
   type CanvasProjectPayload,
   type CanvasListField,
@@ -15,8 +17,10 @@ import {
   type CanvasMesInicio,
   type CanvasQuadrant,
   type CanvasImportDocument,
+  type CanvasAprovarProjetoPayload,
 } from '@/api/canvasProjects'
 import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
+import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 import {
   getSwotAnalysisById,
   listSwotAnalyses,
@@ -639,6 +643,36 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('pointerdown', onDocPointerDown)
 })
+
+const approveOpen = ref(false)
+const approvingExec = ref(false)
+const approveExecError = ref<string | null>(null)
+
+function formatInicioReal(iso: string): string {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
+}
+
+function openApprove() {
+  approveExecError.value = null
+  approveOpen.value = true
+}
+
+async function submitApprove(payload: CanvasAprovarProjetoPayload) {
+  approvingExec.value = true
+  approveExecError.value = null
+  try {
+    const updated = await aprovarProjeto(projectId.value, payload)
+    applyProject(updated)
+    approveOpen.value = false
+  } catch (e) {
+    approveExecError.value = e instanceof Error ? e.message : 'Erro ao aprovar o projeto.'
+  } finally {
+    approvingExec.value = false
+  }
+}
 </script>
 
 <template>
@@ -735,6 +769,19 @@ onUnmounted(() => {
               <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
             </select>
           </label>
+        </div>
+        <div class="exec-approve">
+          <template v-if="project?.projeto_aprovado">
+            <div class="approved-flag">Projeto aprovado</div>
+            <p v-if="project.aprovacao_comentario">{{ project.aprovacao_comentario }}</p>
+            <p class="approved-meta">
+              Início real
+              {{ project.data_inicio_real ? formatInicioReal(project.data_inicio_real) : '—' }}
+              · acompanhamento {{ periodicidadeLabel(project.periodicidade || '') || '—' }}
+            </p>
+            <button type="button" class="approve-btn ghost" @click="openApprove">Atualizar aprovação</button>
+          </template>
+          <button v-else type="button" class="approve-btn" @click="openApprove">Aprovar projeto</button>
         </div>
         <label class="head-justify">
           <span>Como este projeto trata as estratégias TOWS</span>
@@ -1173,6 +1220,18 @@ onUnmounted(() => {
         <span>Consolide um canvas por área numa <b>matriz de portfólio</b> para priorizar o roadmap.</span>
       </footer>
     </div>
+
+    <CanvasAprovarModal
+      :open="approveOpen"
+      :saving="approvingExec"
+      :error="approveExecError"
+      :already-approved="!!project?.projeto_aprovado"
+      :initial-comentario="project?.aprovacao_comentario"
+      :initial-data-inicio-real="project?.data_inicio_real"
+      :initial-periodicidade="project?.periodicidade || ''"
+      @close="approveOpen = false"
+      @submit="submitApprove"
+    />
   </div>
 </template>
 
@@ -1372,6 +1431,49 @@ h1 span {
   grid-template-columns: repeat(2, minmax(150px, 1fr));
   gap: 10px 20px;
   min-width: min(320px, 100%);
+}
+.exec-approve {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  padding-top: 12px;
+  border-top: 1px dotted var(--line);
+}
+.approved-flag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+.exec-approve p {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.approved-meta {
+  color: var(--ink-soft) !important;
+  font-size: 12px !important;
+}
+.approve-btn {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.approve-btn.ghost {
+  background: transparent;
+  color: var(--ink);
 }
 .head-justify {
   flex-basis: 100%;

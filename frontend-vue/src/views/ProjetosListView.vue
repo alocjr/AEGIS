@@ -8,18 +8,22 @@ import {
   importCanvasProjects,
   updateCanvasProject,
   aprovarPortfolio,
+  aprovarProjeto,
   CANVAS_PRIORIDADES,
   CANVAS_MESES,
+  periodicidadeLabel,
   type CanvasProjectSummary,
   type CanvasPrioridade,
   type CanvasMesInicio,
   type CanvasQuadrant,
   type CanvasImportDocument,
+  type CanvasAprovarProjetoPayload,
 } from '@/api/canvasProjects'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -322,6 +326,52 @@ function cancelDelete() {
 
 const approvingId = ref<string | null>(null)
 const approveError = ref<string | null>(null)
+const approveTarget = ref<CanvasProjectSummary | null>(null)
+const approvingExec = ref(false)
+const approveExecError = ref<string | null>(null)
+
+function formatInicioReal(iso: string): string {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}/${m}/${y}`
+}
+
+function applyApproval(item: CanvasProjectSummary, updated: CanvasProjectSummary) {
+  item.projeto_aprovado = updated.projeto_aprovado
+  item.aprovacao_comentario = updated.aprovacao_comentario
+  item.data_inicio_real = updated.data_inicio_real
+  item.periodicidade = updated.periodicidade
+  item.aprovado_em = updated.aprovado_em
+}
+
+function openApprove(item: CanvasProjectSummary, ev?: Event) {
+  ev?.preventDefault()
+  ev?.stopPropagation()
+  approveTarget.value = item
+  approveExecError.value = null
+}
+
+function cancelApprove() {
+  if (approvingExec.value) return
+  approveTarget.value = null
+  approveExecError.value = null
+}
+
+async function submitApprove(payload: CanvasAprovarProjetoPayload) {
+  if (!approveTarget.value) return
+  approvingExec.value = true
+  approveExecError.value = null
+  try {
+    const updated = await aprovarProjeto(approveTarget.value.id, payload)
+    applyApproval(approveTarget.value, updated)
+    approveTarget.value = null
+  } catch (e) {
+    approveExecError.value = e instanceof Error ? e.message : 'Erro ao aprovar o projeto.'
+  } finally {
+    approvingExec.value = false
+  }
+}
 
 async function onApprovePortfolio(item: CanvasProjectSummary, ev: Event) {
   ev.preventDefault()
@@ -668,6 +718,25 @@ onUnmounted(() => {
                 <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
               </select>
             </label>
+            <button
+              v-if="!item.projeto_aprovado"
+              type="button"
+              class="btn-approve-proj"
+              @click="openApprove(item, $event)"
+            >
+              Aprovar projeto
+            </button>
+            <div v-else class="approved-meta">
+              <span class="approved-flag">Aprovado</span>
+              <span>
+                {{ periodicidadeLabel(item.periodicidade) }}
+                <template v-if="item.data_inicio_real"> · {{ formatInicioReal(item.data_inicio_real) }}</template>
+              </span>
+              <span v-if="item.aprovacao_comentario" class="approved-who" :title="item.aprovacao_comentario">
+                {{ item.aprovacao_comentario }}
+              </span>
+              <button type="button" class="link-edit" @click="openApprove(item, $event)">Editar</button>
+            </div>
           </div>
           <div class="list-actions">
             <RouterLink
@@ -766,6 +835,17 @@ onUnmounted(() => {
         <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
       </template>
     </AppModal>
+    <CanvasAprovarModal
+      :open="!!approveTarget"
+      :saving="approvingExec"
+      :error="approveExecError"
+      :already-approved="!!approveTarget?.projeto_aprovado"
+      :initial-comentario="approveTarget?.aprovacao_comentario"
+      :initial-data-inicio-real="approveTarget?.data_inicio_real"
+      :initial-periodicidade="approveTarget?.periodicidade || ''"
+      @close="cancelApprove"
+      @submit="submitApprove"
+    />
   </div>
 </template>
 
@@ -1187,6 +1267,56 @@ onUnmounted(() => {
   padding: 5px 6px;
   background: #fff;
   max-width: 200px;
+}
+.btn-approve-proj {
+  border: 1px solid var(--k0);
+  background: var(--k0);
+  color: var(--wh);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 8px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.btn-approve-proj:hover {
+  opacity: 0.92;
+}
+.approved-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--k4);
+  line-height: 1.35;
+  max-width: 200px;
+}
+.approved-flag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2f6e4a;
+}
+.approved-who {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--k5);
+}
+.link-edit {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--k0);
+  text-decoration: underline;
+  cursor: pointer;
 }
 .list-link {
   flex: 1;

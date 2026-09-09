@@ -26,6 +26,7 @@ from app.routes import okrs as okr_routes
 from app.routes import strategic_map as strategic_map_routes
 from app.routes import swot_analysis as swot_routes
 from app.schemas import (
+    CanvasAprovarProjetoRequest,
     CanvasImportRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
@@ -613,6 +614,37 @@ def register_learner_tools(mcp) -> None:
         return call_route(
             canvas_routes.aprovar_portfolio,
             project_id=project_id,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+
+    @mcp.tool
+    def canvas_aprovar_projeto(
+        project_id: str,
+        comentario: str,
+        data_inicio_real: str,
+        periodicidade: str,
+    ) -> dict:
+        """Aprovação executiva do projeto (C-level). Só projetos aprovados entram no Mapa Estratégico.
+
+        comentario: pessoas que aprovaram (ex.: 'Ana CEO, Bruno CFO').
+        data_inicio_real: data real de início no formato AAAA-MM-DD.
+        periodicidade: quinzenal, mensal, bimestral ou trimestral.
+        """
+        user = _canvas_user()
+        body = validate_model(
+            CanvasAprovarProjetoRequest,
+            {
+                "comentario": comentario,
+                "data_inicio_real": data_inicio_real,
+                "periodicidade": periodicidade,
+            },
+        )
+        return call_route(
+            canvas_routes.aprovar_projeto,
+            project_id=project_id,
+            body=body,
             user=user,
             org_id=_org_id(user),
             db=get_db(),

@@ -254,6 +254,7 @@ def get_strategic_map(
     projects = [
         _project_to_item(doc, summary=True)
         for doc in db.canvas_projects.find({"organization_id": org_id}).sort([("updated_at", -1)])
+        if doc.get("projeto_aprovado")
     ]
     items_by_id: dict[str, dict] = {}
     items_by_question: dict[str, list[dict]] = {}

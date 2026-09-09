@@ -16,6 +16,7 @@ from app.governance.rules.r3_canvas import (
 )
 from app.schemas import (
     OPPORTUNITY_TYPE_OPTIONS,
+    CanvasAprovarProjetoRequest,
     CanvasImportRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
@@ -91,12 +92,18 @@ _EMPTY_FIELDS = {
     "ai_system_id": None,
     "prioridade": "P4",
     "mes_inicio": "",
+    "projeto_aprovado": False,
+    "aprovacao_comentario": "",
+    "data_inicio_real": "",
+    "periodicidade": "",
+    "aprovado_em": None,
 }
 
 _SENSIBILIDADE_OPTIONS = frozenset({"publico", "interno", "pessoal", "sensivel"})
 _PRIORIDADES = ("P0", "P1", "P2", "P3", "P4")
 _PRIORITY_RANK = {code: i for i, code in enumerate(_PRIORIDADES)}
 _MESES_INICIO = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+_PERIODICIDADES = ("quinzenal", "mensal", "bimestral", "trimestral")
 
 
 def _as_item_list(value) -> list[str]:
@@ -246,6 +253,11 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "ai_system_id": str(doc["ai_system_id"]) if doc.get("ai_system_id") else None,
         "prioridade": _clean_prioridade(doc.get("prioridade")),
         "mes_inicio": _clean_mes_inicio(doc.get("mes_inicio")),
+        "projeto_aprovado": bool(doc.get("projeto_aprovado")),
+        "aprovacao_comentario": str(doc.get("aprovacao_comentario") or "").strip(),
+        "data_inicio_real": str(doc.get("data_inicio_real") or "").strip(),
+        "periodicidade": _clean_periodicidade(doc.get("periodicidade")),
+        "aprovado_em": _iso_ts(doc.get("aprovado_em")),
     }
     if summary:
         return {
@@ -346,6 +358,28 @@ def _clean_prioridade(value) -> str:
 def _clean_mes_inicio(value) -> str:
     raw = str(value or "").strip().lower()
     return raw if raw in _MESES_INICIO else ""
+
+
+def _clean_periodicidade(value) -> str:
+    raw = str(value or "").strip().lower()
+    return raw if raw in _PERIODICIDADES else ""
+
+
+def _clean_iso_date(value) -> str:
+    raw = str(value or "").strip()[:10]
+    try:
+        datetime.strptime(raw, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Data de início real inválida. Use AAAA-MM-DD.")
+    return raw
+
+
+def _iso_ts(value) -> str | None:
+    if not value:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
 
 
 def _priority_rank(doc: dict) -> int:
@@ -669,6 +703,36 @@ def import_into_project(
         "available": len(mapped),
         "item": _to_item(doc),
     }
+
+
+@router.post("/{project_id}/aprovar")
+def aprovar_projeto(
+    project_id: str,
+    body: CanvasAprovarProjetoRequest,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Aprovação executiva (C-level): quem aprovou, data real de início e periodicidade de acompanhamento."""
+    doc = _get_owned(db, org_id, project_id)
+    now = datetime.now(timezone.utc)
+    comentario = (body.comentario or "").strip()
+    if not comentario:
+        raise HTTPException(status_code=400, detail="Informe as pessoas que aprovaram o projeto.")
+    updates = {
+        "projeto_aprovado": True,
+        "aprovacao_comentario": comentario[:1000],
+        "data_inicio_real": _clean_iso_date(body.data_inicio_real),
+        "periodicidade": body.periodicidade,
+        "updated_at": now,
+    }
+    if not doc.get("aprovado_em"):
+        updates["aprovado_em"] = now
+    db.canvas_projects.update_one(
+        {"_id": ObjectId(project_id), "organization_id": org_id},
+        {"$set": updates},
+    )
+    return _to_item(_get_owned(db, org_id, project_id))
 
 
 @router.post("/{project_id}/aprovar-portfolio")

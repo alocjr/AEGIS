@@ -371,7 +371,7 @@ function initiativePrefill(initiative: StrategicMapInitiative, item: StrategicMa
 async function reload(params?: { maturityResponseId?: string | null; swotId?: string | null }) {
   const [doc, list] = await Promise.all([fetchStrategicMap(params), listCanvasProjects()])
   map.value = doc
-  projects.value = list.items
+  projects.value = (list.items || []).filter((p) => p.projeto_aprovado)
   return doc
 }
 
@@ -498,7 +498,7 @@ function emptyHint(columnTitle: string, roman: string): string {
   if (roman === 'II') return head.value?.swot_id ? 'Sem posições nesta SWOT.' : 'Gere a SWOT para ver as posições.'
   if (roman === 'III') return 'Sem cruzamento TOWS ainda.'
   if (roman === 'IV') return map.value?.okr_cycle ? 'Objectives ainda sem origem no mapa.' : 'Ative um ciclo OKR.'
-  if (roman === 'V') return 'Sem projetos vinculados à árvore.'
+  if (roman === 'V') return 'Sem projetos aprovados vinculados à árvore.'
   return `Sem nós em ${columnTitle}.`
 }
 
@@ -848,7 +848,7 @@ watch([lens, graph, focusId], () => scheduleDraw())
                     @click="createProject(initiativePrefill(initiative, findInitiative(initiative.id)?.item ?? null))"
                   >Criar projeto pré-preenchido</button>
                   <p class="panel-label">ou vincular um projeto existente</p>
-                  <p v-if="!projects.length" class="panel-empty">Nenhum projeto criado ainda.</p>
+                  <p v-if="!projects.length" class="panel-empty">Nenhum projeto aprovado ainda. Aprove o projeto na lista de Projetos.</p>
                   <ul v-else class="panel-list">
                     <li v-for="project in projects" :key="project.id">
                       <button
@@ -884,7 +884,8 @@ watch([lens, graph, focusId], () => scheduleDraw())
                     @click="createProject(itemPrefill(item, findItemContext(item.id)?.dim, findItemContext(item.id)?.question))"
                   >Criar projeto pré-preenchido</button>
                   <p class="panel-label">ou vincular um projeto existente</p>
-                  <ul class="panel-list">
+                  <p v-if="!projects.length" class="panel-empty">Nenhum projeto aprovado ainda. Aprove o projeto na lista de Projetos.</p>
+                  <ul v-else class="panel-list">
                     <li v-for="project in projects" :key="project.id">
                       <button
                         type="button"

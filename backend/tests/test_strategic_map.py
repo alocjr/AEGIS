@@ -124,6 +124,7 @@ class StrategicMapTests(unittest.TestCase):
             "tows_ids": [initiative["id"]],
             "score_valor": 5,
             "score_viabilidade": 4,
+            "projeto_aprovado": True,
             "created_at": now,
             "updated_at": now,
         }
@@ -132,6 +133,7 @@ class StrategicMapTests(unittest.TestCase):
             "organization_id": org_id,
             "created_by_user_id": user_id,
             "title": "Projeto solto",
+            "projeto_aprovado": True,
             "created_at": now,
             "updated_at": now,
         }
@@ -358,6 +360,25 @@ class StrategicMapTests(unittest.TestCase):
                 self.assertEqual(question["items"], [])
         self.assertEqual(payload["stats"]["swot_items"], 0)
         self.assertEqual(payload["stats"]["projects_linked"], 0)
+
+    def test_unapproved_projects_are_excluded(self) -> None:
+        db, user, org_id, project, _initiative = self._fixture()
+        project["projeto_aprovado"] = False
+        for doc in db.canvas_projects.docs:
+            if doc.get("title") == "Projeto solto":
+                doc["projeto_aprovado"] = False
+        payload = _map_for(db, user, org_id)
+        self.assertEqual(payload["stats"]["projects_total"], 0)
+        self.assertEqual(payload["stats"]["projects_linked"], 0)
+        self.assertEqual(payload["unlinked"]["projects"], [])
+        question = next(
+            q
+            for dim in payload["dimensions"]
+            for q in dim["questions"]
+            if q["id"] == "EV1"
+        )
+        force = next(item for item in question["items"] if item["id"] == "f_ev1")
+        self.assertEqual(force["projects"], [])
 
 
 if __name__ == "__main__":
