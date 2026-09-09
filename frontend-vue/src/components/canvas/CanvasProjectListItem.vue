@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   CANVAS_PRIORIDADES,
@@ -8,10 +9,13 @@ import {
   type CanvasQuadrant,
 } from '@/api/canvasProjects'
 
-defineProps<{
+const props = defineProps<{
   item: CanvasProjectSummary
   approvingPortfolio?: boolean
 }>()
+
+const expanded = ref(false)
+const detailsId = `canvas-details-${props.item.id}`
 
 defineEmits<{
   prioridade: [ev: Event]
@@ -121,36 +125,48 @@ function formatInicioReal(iso: string): string {
         </button>
       </div>
 
-      <RouterLink :to="`/projetos/${item.id}`" class="list-link">
-        <dl class="list-fields">
-          <div class="list-field">
-            <dt>Área de negócio</dt>
-            <dd>{{ item.area_negocio || '—' }}</dd>
-          </div>
-          <div class="list-field">
-            <dt>Responsável</dt>
-            <dd>{{ item.responsavel || '—' }}</dd>
-          </div>
-          <div class="list-field">
-            <dt>Data</dt>
-            <dd>{{ item.data || '—' }}</dd>
-          </div>
-          <div class="list-field list-field-wide">
-            <dt>Objetivo estratégico da área</dt>
-            <dd>{{ item.objetivo_estrategico || '—' }}</dd>
-          </div>
-          <div class="list-field list-field-wide">
-            <dt>Próximo passo concreto</dt>
-            <dd>{{ item.proximo_passo || '—' }}</dd>
-          </div>
-        </dl>
-        <div class="list-foot">
-          <span v-if="item.quadrant" class="list-quad" :data-q="item.quadrant">
-            {{ QUADRANT_LABEL[item.quadrant] }}
-          </span>
-          <span class="list-meta">Atualizado {{ formatDate(item.updated_at) }}</span>
-        </div>
-      </RouterLink>
+      <div class="list-summary">
+        <span v-if="item.quadrant" class="list-quad" :data-q="item.quadrant">
+          {{ QUADRANT_LABEL[item.quadrant] }}
+        </span>
+        <span class="list-meta">Atualizado {{ formatDate(item.updated_at) }}</span>
+        <button
+          type="button"
+          class="btn-details"
+          :aria-expanded="expanded"
+          :aria-controls="detailsId"
+          @click="expanded = !expanded"
+        >
+          {{ expanded ? 'Ocultar detalhes' : 'Ver detalhes' }}
+        </button>
+      </div>
+
+      <div v-show="expanded" :id="detailsId" class="list-details">
+        <RouterLink :to="`/projetos/${item.id}`" class="list-link">
+          <dl class="list-fields">
+            <div class="list-field">
+              <dt>Área de negócio</dt>
+              <dd>{{ item.area_negocio || '—' }}</dd>
+            </div>
+            <div class="list-field">
+              <dt>Responsável</dt>
+              <dd>{{ item.responsavel || '—' }}</dd>
+            </div>
+            <div class="list-field">
+              <dt>Data</dt>
+              <dd>{{ item.data || '—' }}</dd>
+            </div>
+            <div class="list-field list-field-wide">
+              <dt>Objetivo estratégico da área</dt>
+              <dd>{{ item.objetivo_estrategico || '—' }}</dd>
+            </div>
+            <div class="list-field list-field-wide">
+              <dt>Próximo passo concreto</dt>
+              <dd>{{ item.proximo_passo || '—' }}</dd>
+            </div>
+          </dl>
+        </RouterLink>
+      </div>
     </div>
     <button type="button" class="btn-del" title="Excluir projeto" @click="$emit('delete', $event)">
       Excluir
@@ -206,7 +222,29 @@ function formatInicioReal(iso: string): string {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 10px;
-  padding: 10px 18px 4px;
+  padding: 10px 18px 0;
+}
+.list-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 18px 14px;
+}
+.btn-details {
+  margin-left: auto;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--k0);
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-details:hover {
+  color: var(--k3);
 }
 .toolbar-field {
   display: flex;
@@ -323,6 +361,9 @@ function formatInicioReal(iso: string): string {
 .badge-portfolio:hover {
   background: var(--goldbd);
 }
+.list-details {
+  border-top: 1px solid var(--bd);
+}
 .list-link {
   display: flex;
   flex-direction: column;
@@ -362,12 +403,6 @@ function formatInicioReal(iso: string): string {
   line-height: 1.4;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.list-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
 }
 .list-meta {
   font-size: 12px;
