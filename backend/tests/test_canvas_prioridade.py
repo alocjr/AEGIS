@@ -127,6 +127,74 @@ class CanvasPrioridadeTests(unittest.TestCase):
             ["Imediato", "Planejado", "Baixa"],
         )
 
+    def test_list_orders_priority_then_quadrant(self) -> None:
+        db = _FakeDb()
+        org_id = ObjectId()
+        t0 = datetime.now(timezone.utc)
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Evitar P0",
+                prioridade="P0",
+                score_valor=2,
+                score_viabilidade=2,
+                updated_at=t0,
+            )
+        )
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Ganho P0",
+                prioridade="P0",
+                score_valor=5,
+                score_viabilidade=5,
+                updated_at=t0,
+            )
+        )
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Aposta P0",
+                prioridade="P0",
+                score_valor=5,
+                score_viabilidade=2,
+                updated_at=t0,
+            )
+        )
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Incremental P0",
+                prioridade="P0",
+                score_valor=2,
+                score_viabilidade=5,
+                updated_at=t0,
+            )
+        )
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Ganho P1",
+                prioridade="P1",
+                score_valor=5,
+                score_viabilidade=4,
+                updated_at=t0,
+            )
+        )
+        db.canvas_projects.insert_one(
+            _project(
+                org_id,
+                title="Sem score P0",
+                prioridade="P0",
+                updated_at=t0,
+            )
+        )
+        listed = list_projects(q="", user={"_id": ObjectId()}, org_id=org_id, db=db)
+        self.assertEqual(
+            [i["title"] for i in listed["items"]],
+            ["Ganho P0", "Aposta P0", "Incremental P0", "Evitar P0", "Sem score P0", "Ganho P1"],
+        )
+
     def test_update_round_trips_priority_and_month(self) -> None:
         db = _FakeDb()
         org_id = ObjectId()

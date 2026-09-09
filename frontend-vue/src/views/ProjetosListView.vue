@@ -135,10 +135,21 @@ const unscoredCount = computed(
   () => displayedItems.value.length - scoredItems.value.length
 )
 
+const QUADRANT_RANK: Record<Exclude<CanvasQuadrant, null>, number> = {
+  ganho_rapido: 0,
+  aposta_estrategica: 1,
+  incremental: 2,
+  evitar: 3,
+}
+
 function sortByPriority(list: CanvasProjectSummary[]): CanvasProjectSummary[] {
   return [...list].sort((a, b) => {
-    const d = (PRIORITY_RANK[a.prioridade] ?? 4) - (PRIORITY_RANK[b.prioridade] ?? 4)
-    if (d !== 0) return d
+    const byPrio = (PRIORITY_RANK[a.prioridade] ?? 4) - (PRIORITY_RANK[b.prioridade] ?? 4)
+    if (byPrio !== 0) return byPrio
+    const qa = a.quadrant ? (QUADRANT_RANK[a.quadrant] ?? 4) : 4
+    const qb = b.quadrant ? (QUADRANT_RANK[b.quadrant] ?? 4) : 4
+    const byQuad = qa - qb
+    if (byQuad !== 0) return byQuad
     return (b.updated_at || '').localeCompare(a.updated_at || '')
   })
 }

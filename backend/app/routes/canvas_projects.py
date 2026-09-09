@@ -102,6 +102,12 @@ _EMPTY_FIELDS = {
 _SENSIBILIDADE_OPTIONS = frozenset({"publico", "interno", "pessoal", "sensivel"})
 _PRIORIDADES = ("P0", "P1", "P2", "P3", "P4")
 _PRIORITY_RANK = {code: i for i, code in enumerate(_PRIORIDADES)}
+_QUADRANT_RANK = {
+    "ganho_rapido": 0,
+    "aposta_estrategica": 1,
+    "incremental": 2,
+    "evitar": 3,
+}
 _MESES_INICIO = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
 _PERIODICIDADES = ("quinzenal", "mensal", "bimestral", "trimestral")
 
@@ -382,8 +388,19 @@ def _iso_ts(value) -> str | None:
     return str(value)
 
 
-def _priority_rank(doc: dict) -> int:
-    return _PRIORITY_RANK.get(_clean_prioridade(doc.get("prioridade")), 4)
+def _list_sort_key(doc: dict) -> tuple[int, int]:
+    """P0→P4, depois Ganho rápido → Aposta estratégica → Incremental → Evitar."""
+    prioridade = _PRIORITY_RANK.get(_clean_prioridade(doc.get("prioridade")), 4)
+    score_valor = doc.get("score_valor")
+    score_viabilidade = doc.get("score_viabilidade")
+    try:
+        valor = int(score_valor) if score_valor is not None else None
+        viab = int(score_viabilidade) if score_viabilidade is not None else None
+    except (TypeError, ValueError):
+        valor, viab = None, None
+    quadrant = _quadrant(valor, viab)
+    tipo = _QUADRANT_RANK.get(quadrant, 4) if quadrant else 4
+    return (prioridade, tipo)
 
 
 def _owned_swot_id(db: Database, org_id, raw) -> str | None:
@@ -617,13 +634,13 @@ def list_projects(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Lista projetos (canvas) da organização — P0→P4, depois mais recentes.
+    """Lista projetos (canvas) da organização — P0→P4, depois tipo de quadrante.
 
     `q` filtra por palavras em qualquer texto do canvas (AND, sem acento).
     """
     cursor = db.canvas_projects.find({"organization_id": org_id}).sort("updated_at", -1)
     docs = [doc for doc in cursor if _matches_canvas_query(doc, q)]
-    docs.sort(key=_priority_rank)
+    docs.sort(key=_list_sort_key)
     return {"items": [_to_item(doc, summary=True) for doc in docs]}
 
 
