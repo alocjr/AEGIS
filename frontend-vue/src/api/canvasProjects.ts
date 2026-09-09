@@ -16,6 +16,46 @@ export type CanvasListField =
   | 'custo'
   | 'riscos'
 
+export type CanvasPrioridade = 'P0' | 'P1' | 'P2' | 'P3' | 'P4'
+
+export type CanvasMesInicio =
+  | 'jan'
+  | 'fev'
+  | 'mar'
+  | 'abr'
+  | 'mai'
+  | 'jun'
+  | 'jul'
+  | 'ago'
+  | 'set'
+  | 'out'
+  | 'nov'
+  | 'dez'
+  | ''
+
+export const CANVAS_PRIORIDADES: { id: CanvasPrioridade; label: string }[] = [
+  { id: 'P0', label: 'P0 — Imediato' },
+  { id: 'P1', label: 'P1 — O mais cedo possível' },
+  { id: 'P2', label: 'P2 — Planejado' },
+  { id: 'P3', label: 'P3 — Quando possível' },
+  { id: 'P4', label: 'P4 — Não importante' },
+]
+
+export const CANVAS_MESES: { id: Exclude<CanvasMesInicio, ''>; label: string }[] = [
+  { id: 'jan', label: 'Jan' },
+  { id: 'fev', label: 'Fev' },
+  { id: 'mar', label: 'Mar' },
+  { id: 'abr', label: 'Abr' },
+  { id: 'mai', label: 'Mai' },
+  { id: 'jun', label: 'Jun' },
+  { id: 'jul', label: 'Jul' },
+  { id: 'ago', label: 'Ago' },
+  { id: 'set', label: 'Set' },
+  { id: 'out', label: 'Out' },
+  { id: 'nov', label: 'Nov' },
+  { id: 'dez', label: 'Dez' },
+]
+
 export interface CanvasProjectSummary {
   id: string
   title: string
@@ -41,6 +81,10 @@ export interface CanvasProjectSummary {
   status: 'rascunho' | 'aprovado_portfolio'
   /** Sistema de IA criado no módulo de Governança, se aprovado para o portfólio. */
   ai_system_id: string | null
+  /** Prioridade de investimento definida pelo C-level. */
+  prioridade: CanvasPrioridade
+  /** Mês em que o projeto deve iniciar. */
+  mes_inicio: CanvasMesInicio
 }
 
 export interface CanvasProject extends CanvasProjectSummary {
@@ -116,6 +160,8 @@ export type CanvasProjectPayload = Partial<{
   justificativa_tows: string
   kr_ids: string[]
   cronograma: CanvasCronograma
+  prioridade: CanvasPrioridade
+  mes_inicio: CanvasMesInicio
 }>
 
 export function listCanvasProjects(q?: string): Promise<{ items: CanvasProjectSummary[] }> {

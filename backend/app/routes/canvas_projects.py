@@ -89,9 +89,14 @@ _EMPTY_FIELDS = {
     "riscos_estruturado": {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
     "status": "rascunho",
     "ai_system_id": None,
+    "prioridade": "P4",
+    "mes_inicio": "",
 }
 
 _SENSIBILIDADE_OPTIONS = frozenset({"publico", "interno", "pessoal", "sensivel"})
+_PRIORIDADES = ("P0", "P1", "P2", "P3", "P4")
+_PRIORITY_RANK = {code: i for i, code in enumerate(_PRIORIDADES)}
+_MESES_INICIO = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
 
 
 def _as_item_list(value) -> list[str]:
@@ -239,6 +244,8 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "kr_ids": _clean_ref_ids(doc.get("kr_ids")),
         "status": doc.get("status") or "rascunho",
         "ai_system_id": str(doc["ai_system_id"]) if doc.get("ai_system_id") else None,
+        "prioridade": _clean_prioridade(doc.get("prioridade")),
+        "mes_inicio": _clean_mes_inicio(doc.get("mes_inicio")),
     }
     if summary:
         return {
@@ -329,6 +336,20 @@ def _matches_canvas_query(doc: dict, q: str) -> bool:
         return True
     blob = _fold_text(" ".join(_walk_text(doc)))
     return all(word in blob for word in words)
+
+
+def _clean_prioridade(value) -> str:
+    raw = str(value or "").strip().upper()
+    return raw if raw in _PRIORIDADES else "P4"
+
+
+def _clean_mes_inicio(value) -> str:
+    raw = str(value or "").strip().lower()
+    return raw if raw in _MESES_INICIO else ""
+
+
+def _priority_rank(doc: dict) -> int:
+    return _PRIORITY_RANK.get(_clean_prioridade(doc.get("prioridade")), 4)
 
 
 def _owned_swot_id(db: Database, org_id, raw) -> str | None:
@@ -562,12 +583,14 @@ def list_projects(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    """Lista projetos (canvas) da organização — mais recentes primeiro.
+    """Lista projetos (canvas) da organização — P0→P4, depois mais recentes.
 
     `q` filtra por palavras em qualquer texto do canvas (AND, sem acento).
     """
     cursor = db.canvas_projects.find({"organization_id": org_id}).sort("updated_at", -1)
-    return {"items": [_to_item(doc, summary=True) for doc in cursor if _matches_canvas_query(doc, q)]}
+    docs = [doc for doc in cursor if _matches_canvas_query(doc, q)]
+    docs.sort(key=_priority_rank)
+    return {"items": [_to_item(doc, summary=True) for doc in docs]}
 
 
 @router.post("")
@@ -783,9 +806,22 @@ def update_project(
             updates[key] = _clean_ref_ids(data[key])
     if "cronograma" in data and data["cronograma"] is not None:
         updates["cronograma"] = _clean_cronograma(data["cronograma"])
+    if "prioridade" in data:
+        updates["prioridade"] = _clean_prioridade(data["prioridade"])
+    if "mes_inicio" in data:
+        updates["mes_inicio"] = _clean_mes_inicio(data["mes_inicio"])
 
     for key, value in data.items():
-        if key in ("oportunidade_tipos", "swot_id", "swot_item_ids", "tows_ids", "kr_ids", "cronograma"):
+        if key in (
+            "oportunidade_tipos",
+            "swot_id",
+            "swot_item_ids",
+            "tows_ids",
+            "kr_ids",
+            "cronograma",
+            "prioridade",
+            "mes_inicio",
+        ):
             continue
         if key in _LIST_FIELDS:
             updates[key] = _clean_item_list(value)

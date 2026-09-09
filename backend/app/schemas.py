@@ -118,6 +118,12 @@ class CanvasCronograma(BaseModel):
     marcos: list[CanvasCronogramaMarco] = Field(default_factory=list, max_length=12)
 
 
+CanvasPrioridade = Literal["P0", "P1", "P2", "P3", "P4"]
+CanvasMesInicio = Literal[
+    "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"
+]
+
+
 class CanvasProjectUpdateRequest(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=200)
     area_negocio: str | None = Field(None, max_length=200)
@@ -145,6 +151,8 @@ class CanvasProjectUpdateRequest(BaseModel):
     # Key Results (OKR) que este projeto endereça
     kr_ids: list[str] | None = Field(None, max_length=20)
     cronograma: CanvasCronograma | None = None
+    prioridade: CanvasPrioridade | None = None
+    mes_inicio: CanvasMesInicio | Literal[""] | None = None
 
 
 class CanvasImportRequest(BaseModel):

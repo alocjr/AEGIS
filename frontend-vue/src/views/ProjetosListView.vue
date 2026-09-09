@@ -6,8 +6,13 @@ import {
   createCanvasProject,
   deleteCanvasProject,
   importCanvasProjects,
+  updateCanvasProject,
   aprovarPortfolio,
+  CANVAS_PRIORIDADES,
+  CANVAS_MESES,
   type CanvasProjectSummary,
+  type CanvasPrioridade,
+  type CanvasMesInicio,
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
@@ -31,6 +36,16 @@ const importState = ref<'idle' | 'importing' | 'ok' | 'error'>('idle')
 const importError = ref<string | null>(null)
 const importOkMsg = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const priorityFilter = ref<CanvasPrioridade[]>([])
+const execError = ref<string | null>(null)
+
+const PRIORITY_RANK: Record<CanvasPrioridade, number> = {
+  P0: 0,
+  P1: 1,
+  P2: 2,
+  P3: 3,
+  P4: 4,
+}
 
 const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
   ganho_rapido: 'Ganho rápido',
@@ -55,10 +70,18 @@ type PlotPoint = {
   responsavel: string
   objetivo_estrategico: string
   proximo_passo: string
+  prioridade: CanvasPrioridade
+  mes_inicio: CanvasMesInicio
 }
 
+const displayedItems = computed(() => {
+  if (!priorityFilter.value.length) return items.value
+  const allowed = new Set(priorityFilter.value)
+  return items.value.filter((i) => allowed.has(i.prioridade || 'P4'))
+})
+
 const scoredItems = computed(() =>
-  items.value.filter(
+  displayedItems.value.filter(
     (i) =>
       i.score_valor != null &&
       i.score_viabilidade != null &&
@@ -96,6 +119,8 @@ const plotPoints = computed<PlotPoint[]>(() => {
         responsavel: item.responsavel || '',
         objetivo_estrategico: item.objetivo_estrategico || '',
         proximo_passo: item.proximo_passo || '',
+        prioridade: item.prioridade || 'P4',
+        mes_inicio: item.mes_inicio || '',
       })
     })
   }
@@ -103,8 +128,48 @@ const plotPoints = computed<PlotPoint[]>(() => {
 })
 
 const unscoredCount = computed(
-  () => items.value.length - scoredItems.value.length
+  () => displayedItems.value.length - scoredItems.value.length
 )
+
+function sortByPriority(list: CanvasProjectSummary[]): CanvasProjectSummary[] {
+  return [...list].sort((a, b) => {
+    const d = (PRIORITY_RANK[a.prioridade] ?? 4) - (PRIORITY_RANK[b.prioridade] ?? 4)
+    if (d !== 0) return d
+    return (b.updated_at || '').localeCompare(a.updated_at || '')
+  })
+}
+
+function togglePriorityFilter(code: CanvasPrioridade) {
+  const current = priorityFilter.value
+  priorityFilter.value = current.includes(code)
+    ? current.filter((c) => c !== code)
+    : [...current, code]
+}
+
+async function patchExec(
+  item: CanvasProjectSummary,
+  body: { prioridade?: CanvasPrioridade; mes_inicio?: CanvasMesInicio }
+) {
+  execError.value = null
+  try {
+    const updated = await updateCanvasProject(item.id, body)
+    item.prioridade = updated.prioridade || 'P4'
+    item.mes_inicio = updated.mes_inicio || ''
+    items.value = sortByPriority(items.value)
+  } catch (e) {
+    execError.value = e instanceof Error ? e.message : 'Erro ao salvar prioridade.'
+  }
+}
+
+function onPrioridadeChange(item: CanvasProjectSummary, ev: Event) {
+  const value = (ev.target as HTMLSelectElement).value as CanvasPrioridade
+  void patchExec(item, { prioridade: value })
+}
+
+function onMesInicioChange(item: CanvasProjectSummary, ev: Event) {
+  const value = (ev.target as HTMLSelectElement).value as CanvasMesInicio
+  void patchExec(item, { mes_inicio: value })
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -162,7 +227,7 @@ function hideChartTooltip() {
 
 async function refresh() {
   const res = await listCanvasProjects(searchQuery.value)
-  items.value = res.items ?? []
+  items.value = sortByPriority(res.items ?? [])
 }
 
 watch(searchQuery, () => {
@@ -337,6 +402,21 @@ onUnmounted(() => {
         >
           {{ importState === 'importing' ? 'Importando…' : 'Importar JSON' }}
         </button>
+        <div class="prio-filter" role="group" aria-label="Filtrar por prioridade">
+          <span class="prio-filter-label">Prioridade</span>
+          <button
+            v-for="p in CANVAS_PRIORIDADES"
+            :key="p.id"
+            type="button"
+            class="prio-chip"
+            :class="{ on: priorityFilter.includes(p.id) }"
+            :title="p.label"
+            :aria-pressed="priorityFilter.includes(p.id)"
+            @click="togglePriorityFilter(p.id)"
+          >
+            {{ p.id }}
+          </button>
+        </div>
       </div>
 
       <div class="card card-chart">
@@ -472,7 +552,7 @@ onUnmounted(() => {
               class="dot-group"
               role="link"
               tabindex="0"
-              :aria-label="`${p.title}. ${QUADRANT_LABEL[p.quadrant]}. Valor ${p.score_valor}, Viabilidade ${p.score_viabilidade}. Abrir canvas.`"
+              :aria-label="`${p.title}. Prioridade ${p.prioridade}. ${QUADRANT_LABEL[p.quadrant]}. Valor ${p.score_valor}, Viabilidade ${p.score_viabilidade}. Abrir canvas.`"
               @click="openProject(p.id)"
               @keydown.enter.prevent="openProject(p.id)"
               @keydown.space.prevent="openProject(p.id)"
@@ -483,7 +563,7 @@ onUnmounted(() => {
               <circle
                 :cx="p.cx"
                 :cy="p.cy"
-                r="13"
+                r="15"
                 class="dot"
                 :data-q="p.quadrant"
               />
@@ -492,7 +572,7 @@ onUnmounted(() => {
                 :y="p.cy + 4"
                 class="dot-label"
                 text-anchor="middle"
-              >{{ p.title.slice(0, 1).toUpperCase() }}</text>
+              >{{ p.prioridade }}</text>
             </g>
           </svg>
 
@@ -508,6 +588,7 @@ onUnmounted(() => {
       </div>
 
       <div v-if="searchError" class="card error-msg">{{ searchError }}</div>
+      <div v-if="execError" class="card error-msg">{{ execError }}</div>
       <div v-if="importState === 'error'" class="card error-msg">{{ importError }}</div>
       <div v-else-if="importState === 'ok'" class="card import-ok">{{ importOkMsg }}</div>
 
@@ -524,8 +605,13 @@ onUnmounted(() => {
         </template>
       </div>
 
+      <div v-else-if="displayedItems.length === 0" class="card card-empty">
+        <p>Nenhum projeto com as prioridades selecionadas.</p>
+        <p class="empty-hint">Desmarque os filtros P0–P4 para ver todos.</p>
+      </div>
+
       <ul v-else class="list" :class="{ dimmed: searching }">
-        <li v-for="item in items" :key="item.id" class="list-item">
+        <li v-for="item in displayedItems" :key="item.id" class="list-item">
           <RouterLink :to="`/projetos/${item.id}`" class="list-link">
             <div class="list-main">
               <span class="list-title">{{ item.title || 'Novo projeto' }}</span>
@@ -560,6 +646,29 @@ onUnmounted(() => {
             </div>
             <span class="list-arrow">Abrir canvas →</span>
           </RouterLink>
+          <div class="list-exec" @click.stop>
+            <label>
+              <span>Prioridade</span>
+              <select
+                :value="item.prioridade || 'P4'"
+                :aria-label="'Prioridade de ' + (item.title || 'projeto')"
+                @change="onPrioridadeChange(item, $event)"
+              >
+                <option v-for="p in CANVAS_PRIORIDADES" :key="p.id" :value="p.id">{{ p.label }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Início</span>
+              <select
+                :value="item.mes_inicio || ''"
+                :aria-label="'Mês de início de ' + (item.title || 'projeto')"
+                @change="onMesInicioChange(item, $event)"
+              >
+                <option value="">Mês</option>
+                <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
+              </select>
+            </label>
+          </div>
           <div class="list-actions">
             <RouterLink
               v-if="item.status === 'aprovado_portfolio' && item.ai_system_id"
@@ -590,8 +699,11 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
-      <p v-if="searchQuery.trim() && items.length > 0" class="filter-hint">
-        {{ items.length }} {{ items.length === 1 ? 'projeto encontrado' : 'projetos encontrados' }}.
+      <p v-if="(searchQuery.trim() || priorityFilter.length) && displayedItems.length > 0" class="filter-hint">
+        {{ displayedItems.length }} {{ displayedItems.length === 1 ? 'projeto' : 'projetos' }}
+        <template v-if="priorityFilter.length">
+          · {{ priorityFilter.slice().sort().join(', ') }}
+        </template>
       </p>
       <p v-if="approveError" class="error-msg">{{ approveError }}</p>
     </template>
@@ -607,7 +719,7 @@ onUnmounted(() => {
         <template v-if="hoverPoint">
           <div class="chart-tooltip-title">{{ hoverPoint.title }}</div>
           <div class="chart-tooltip-quad" :data-q="hoverPoint.quadrant">
-            {{ QUADRANT_LABEL[hoverPoint.quadrant] }}
+            {{ hoverPoint.prioridade }} · {{ QUADRANT_LABEL[hoverPoint.quadrant] }}
           </div>
           <dl class="chart-tooltip-dl">
             <div>
@@ -625,6 +737,10 @@ onUnmounted(() => {
             <div v-if="hoverPoint.responsavel">
               <dt>Responsável</dt>
               <dd>{{ hoverPoint.responsavel }}</dd>
+            </div>
+            <div v-if="hoverPoint.mes_inicio">
+              <dt>Início</dt>
+              <dd>{{ hoverPoint.mes_inicio }}</dd>
             </div>
             <div v-if="hoverPoint.objetivo_estrategico" class="chart-tooltip-wide">
               <dt>Objetivo estratégico</dt>
@@ -791,8 +907,9 @@ onUnmounted(() => {
 }
 .dot-label {
   fill: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   pointer-events: none;
 }
 .chart-tooltip {
@@ -923,6 +1040,42 @@ onUnmounted(() => {
 .search-input::-webkit-search-cancel-button {
   cursor: pointer;
 }
+.prio-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.prio-filter-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--k5);
+  margin-right: 2px;
+}
+.prio-chip {
+  min-width: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--k4);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.prio-chip:hover {
+  border-color: var(--k0);
+  color: var(--k0);
+}
+.prio-chip.on {
+  background: var(--k0);
+  border-color: var(--k0);
+  color: var(--wh);
+}
 .btn-import {
   display: inline-flex;
   align-items: center;
@@ -996,11 +1149,44 @@ onUnmounted(() => {
 .list-item {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: 0;
   background: var(--wh);
   border: 1px solid var(--bd);
   border-radius: var(--r-lg);
-  overflow: hidden;
+  overflow: visible;
+}
+.list-exec {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-left: 1px solid var(--bd);
+  background: #faf9f6;
+  min-width: 196px;
+}
+.list-exec label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k5);
+}
+.list-exec select {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--k0);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  padding: 5px 6px;
+  background: #fff;
+  max-width: 200px;
 }
 .list-link {
   flex: 1;
@@ -1110,6 +1296,24 @@ onUnmounted(() => {
   }
   .list-arrow {
     display: none;
+  }
+  .list-item {
+    flex-wrap: wrap;
+  }
+  .list-exec {
+    flex-direction: row;
+    flex: 1 1 100%;
+    border-left: none;
+    border-top: 1px solid var(--bd);
+    min-width: 0;
+  }
+  .list-exec select {
+    max-width: none;
+    width: 100%;
+  }
+  .prio-filter {
+    margin-left: 0;
+    width: 100%;
   }
 }
 .list-actions {

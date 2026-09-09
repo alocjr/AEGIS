@@ -6,9 +6,13 @@ import {
   updateCanvasProject,
   importIntoCanvasProject,
   emptyCronograma,
+  CANVAS_PRIORIDADES,
+  CANVAS_MESES,
   type CanvasProject,
   type CanvasProjectPayload,
   type CanvasListField,
+  type CanvasPrioridade,
+  type CanvasMesInicio,
   type CanvasQuadrant,
   type CanvasImportDocument,
 } from '@/api/canvasProjects'
@@ -211,6 +215,8 @@ const form = ref({
   tows_ids: [] as string[],
   kr_ids: [] as string[],
   cronograma: emptyCronograma(),
+  prioridade: 'P4' as CanvasPrioridade,
+  mes_inicio: '' as CanvasMesInicio,
 })
 
 /** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
@@ -479,6 +485,8 @@ function applyProject(p: CanvasProject) {
       atividades: (p.cronograma?.atividades || []).map((a) => ({ ...a })),
       marcos: (p.cronograma?.marcos || []).map((m) => ({ ...m })),
     },
+    prioridade: p.prioridade || 'P4',
+    mes_inicio: p.mes_inicio || '',
   }
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
@@ -713,6 +721,19 @@ onUnmounted(() => {
               maxlength="2000"
               @blur="persist"
             />
+          </label>
+          <label>
+            <span>Prioridade (C-level)</span>
+            <select v-model="form.prioridade" @change="persist">
+              <option v-for="p in CANVAS_PRIORIDADES" :key="p.id" :value="p.id">{{ p.label }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Mês de início</span>
+            <select v-model="form.mes_inicio" @change="persist">
+              <option value="">A definir</option>
+              <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
+            </select>
           </label>
         </div>
         <label class="head-justify">
@@ -1323,7 +1344,8 @@ h1 span {
   margin-bottom: 2px;
 }
 .title-field input,
-.meta input {
+.meta input,
+.meta select {
   width: 100%;
   border: none;
   border-bottom: 1.5px dotted var(--slate);
@@ -1335,8 +1357,12 @@ h1 span {
   font-family: inherit;
   outline: none;
 }
+.meta select {
+  cursor: pointer;
+}
 .title-field input:focus,
 .meta input:focus,
+.meta select:focus,
 .write:focus {
   border-bottom-color: var(--amber);
   background: #fffef9;

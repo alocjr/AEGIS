@@ -406,7 +406,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def canvas_list(q: str = "") -> dict:
-        """Lista os projetos (canvas) da organização.
+        """Lista os projetos (canvas) da organização, ordenados de P0 a P4.
 
         `q` (opcional): busca por palavras em qualquer texto do canvas
         (título, área, dores, cronograma, etc.). Todas as palavras precisam aparecer.
@@ -473,6 +473,7 @@ def register_learner_tools(mcp) -> None:
         `fields.cronograma` substitui o Gantt inteiro. Para criar/editar/excluir o
         cronograma sem apagar atividades, use canvas_cronograma_create,
         canvas_cronograma_update, canvas_cronograma_delete e as tools de atividade/marco.
+        Prioridade C-level: `prioridade` (P0–P4) e `mes_inicio` (jan–dez).
         """
         user = _canvas_user()
         raw = parse_json_object(fields, label="fields")
