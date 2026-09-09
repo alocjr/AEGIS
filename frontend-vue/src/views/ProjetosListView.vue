@@ -69,6 +69,30 @@ type PlotPoint = {
   proximo_passo: string
   prioridade: CanvasPrioridade
   mes_inicio: CanvasMesInicio
+  fill: string
+}
+
+const QUAD_RGB: Record<Exclude<CanvasQuadrant, null>, [number, number, number]> = {
+  ganho_rapido: [47, 110, 74],
+  aposta_estrategica: [196, 138, 38],
+  incremental: [91, 122, 134],
+  evitar: [156, 59, 46],
+}
+
+/** P0 = cor cheia; P4 mistura quase toda com cinza. */
+const PRIO_FADE: Record<CanvasPrioridade, number> = {
+  P0: 0,
+  P1: 0.22,
+  P2: 0.48,
+  P3: 0.72,
+  P4: 0.9,
+}
+
+function dotFill(quadrant: Exclude<CanvasQuadrant, null>, prioridade: CanvasPrioridade): string {
+  const [r, g, b] = QUAD_RGB[quadrant]
+  const t = PRIO_FADE[prioridade] ?? PRIO_FADE.P4
+  const gray = 152
+  return `rgb(${Math.round(r + (gray - r) * t)}, ${Math.round(g + (gray - g) * t)}, ${Math.round(b + (gray - b) * t)})`
 }
 
 const displayedItems = computed(() => {
@@ -125,6 +149,7 @@ const plotPoints = computed<PlotPoint[]>(() => {
         proximo_passo: item.proximo_passo || '',
         prioridade: item.prioridade || 'P4',
         mes_inicio: item.mes_inicio || '',
+        fill: dotFill(item.quadrant as Exclude<CanvasQuadrant, null>, item.prioridade || 'P4'),
       })
     })
   }
@@ -543,6 +568,8 @@ onUnmounted(() => {
                 r="15"
                 class="dot"
                 :data-q="p.quadrant"
+                :data-prio="p.prioridade"
+                :style="{ fill: p.fill }"
               />
               <text
                 :x="p.cx"
@@ -836,18 +863,6 @@ onUnmounted(() => {
 .dot {
   stroke: #fff;
   stroke-width: 1.5;
-}
-.dot[data-q='ganho_rapido'] {
-  fill: #2f6e4a;
-}
-.dot[data-q='aposta_estrategica'] {
-  fill: #c48a26;
-}
-.dot[data-q='incremental'] {
-  fill: #5b7a86;
-}
-.dot[data-q='evitar'] {
-  fill: #9c3b2e;
 }
 .dot-label {
   fill: #fff;
