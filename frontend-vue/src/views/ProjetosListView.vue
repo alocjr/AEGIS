@@ -14,16 +14,21 @@ import {
   type CanvasMesInicio,
   type CanvasQuadrant,
   type CanvasAprovarProjetoPayload,
+  type CanvasProject,
 } from '@/api/canvasProjects'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
+import CanvasCloneModal from '@/components/canvas/CanvasCloneModal.vue'
 import CanvasProjectListItem from '@/components/canvas/CanvasProjectListItem.vue'
+import { useAuthStore } from '@/stores/auth'
+import { switchOrganization } from '@/api/auth'
 import type { ArtifactVisibility } from '@/lib/visibility'
 
 const router = useRouter()
+const auth = useAuthStore()
 const loading = ref(true)
 const creating = ref(false)
 const error = ref<string | null>(null)
@@ -302,6 +307,29 @@ function askDelete(item: CanvasProjectSummary, ev: Event) {
 function cancelDelete() {
   deleteTarget.value = null
   deleteError.value = null
+}
+
+const cloneTarget = ref<CanvasProjectSummary | null>(null)
+
+function askClone(item: CanvasProjectSummary, ev: Event) {
+  ev.preventDefault()
+  ev.stopPropagation()
+  cloneTarget.value = item
+}
+
+async function onCloned(cloned: CanvasProject & { dest_organization_id: string }) {
+  cloneTarget.value = null
+  const dest = cloned.dest_organization_id
+  if (dest && dest !== auth.user?.organization_id) {
+    try {
+      await switchOrganization(dest)
+      window.location.assign(`/projetos/${cloned.id}`)
+    } catch {
+      error.value = 'Projeto clonado. Troque a organização na barra para abri-lo.'
+    }
+    return
+  }
+  await router.push(`/projetos/${cloned.id}`)
 }
 
 const approvingId = ref<string | null>(null)
@@ -639,6 +667,7 @@ onUnmounted(() => {
               @approve="openApprove(item, $event)"
               @approve-portfolio="onApprovePortfolio(item, $event)"
               @delete="askDelete(item, $event)"
+              @clone="askClone(item, $event)"
             />
           </ul>
         </section>
@@ -663,6 +692,7 @@ onUnmounted(() => {
               @approve="openApprove(item, $event)"
               @approve-portfolio="onApprovePortfolio(item, $event)"
               @delete="askDelete(item, $event)"
+              @clone="askClone(item, $event)"
             />
           </ul>
         </section>
@@ -734,6 +764,13 @@ onUnmounted(() => {
         <AppButton variant="danger" @click="confirmDelete">Excluir</AppButton>
       </template>
     </AppModal>
+    <CanvasCloneModal
+      :open="!!cloneTarget"
+      :project-id="cloneTarget?.id || ''"
+      :source-title="cloneTarget?.title || ''"
+      @close="cloneTarget = null"
+      @cloned="onCloned"
+    />
     <CanvasAprovarModal
       :open="!!approveTarget"
       :saving="approvingExec"

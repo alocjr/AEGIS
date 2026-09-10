@@ -213,6 +213,13 @@ export function deleteCanvasProject(id: string): Promise<{ message: string; id: 
   )
 }
 
+export function cloneCanvasProject(
+  id: string,
+  body: { organization_id: string; title?: string }
+): Promise<CanvasProject> {
+  return post<CanvasProject>(`/api/canvas-projects/${encodeURIComponent(id)}/clone`, body)
+}
+
 export interface AprovarPortfolioResult {
   ai_system_id: string
   status: string

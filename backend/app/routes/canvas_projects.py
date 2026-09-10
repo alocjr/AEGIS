@@ -1,15 +1,24 @@
 """Canvas de Oportunidades de IA por área — projetos do mentorado."""
 
+import copy
 import unicodedata
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
-from app.orgs import VISIBILITY_SHARED, clean_visibility, deny_if_hidden, visible_query, visibility_of
+from app.orgs import (
+    VISIBILITY_SHARED,
+    clean_visibility,
+    deny_if_hidden,
+    is_member_of,
+    require_orgs_exist,
+    visible_query,
+    visibility_of,
+)
 from app.governance import repository as gov_repo
 from app.governance.rules.r3_canvas import (
     canvas_para_risco_preliminar,
@@ -19,6 +28,7 @@ from app.schemas import (
     OPPORTUNITY_TYPE_OPTIONS,
     CanvasAprovarProjetoRequest,
     CanvasImportRequest,
+    CanvasProjectCloneRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
 )
@@ -439,6 +449,73 @@ def _clip(text: str, max_len: int) -> str:
     return t[: max_len - 1].rstrip() + "…"
 
 
+def _clone_title(source_title: str, override: str | None) -> str:
+    if override and override.strip():
+        return override.strip()[:200]
+    base = (source_title or "Novo projeto").strip() or "Novo projeto"
+    suffix = " (cópia)"
+    if base.endswith(suffix):
+        return base[:200]
+    room = 200 - len(suffix)
+    return (base[:room].rstrip() + suffix) if len(base) + len(suffix) > 200 else base + suffix
+
+
+def _clone_doc(source: dict, *, dest_org_id: ObjectId, actor_id, title: str) -> dict:
+    """Copia o conteúdo do canvas. Não leva aprovação, portfólio nem vínculos de outra org."""
+    now = datetime.now(timezone.utc)
+    same_org = source.get("organization_id") == dest_org_id
+    cronograma = _clean_cronograma(copy.deepcopy(source.get("cronograma") or {}))
+    for act in cronograma.get("atividades") or []:
+        act["id"] = f"a_{ObjectId()}"
+    for marco in cronograma.get("marcos") or []:
+        marco["id"] = f"m_{ObjectId()}"
+    return {
+        "organization_id": dest_org_id,
+        "created_by_user_id": actor_id,
+        "title": title,
+        "area_negocio": source.get("area_negocio") or "",
+        "responsavel": source.get("responsavel") or "",
+        "data": source.get("data") or "",
+        "objetivo_estrategico": source.get("objetivo_estrategico") or "",
+        "contexto": _as_item_list(source.get("contexto")),
+        "dores": _as_item_list(source.get("dores")),
+        "oportunidade": _as_item_list(source.get("oportunidade")),
+        "oportunidade_tipos": list(source.get("oportunidade_tipos") or []),
+        "dados": _as_item_list(source.get("dados")),
+        "valor": _as_item_list(source.get("valor")),
+        "custo": _as_item_list(source.get("custo")),
+        "riscos": _as_item_list(source.get("riscos")),
+        "score_valor": source.get("score_valor"),
+        "score_viabilidade": source.get("score_viabilidade"),
+        "proximo_passo": source.get("proximo_passo") or "",
+        "justificativa_tows": source.get("justificativa_tows") or "",
+        "cronograma": cronograma,
+        "dados_estruturado": copy.deepcopy(
+            source.get("dados_estruturado") or {"descricao": "", "sensibilidade": None}
+        ),
+        "riscos_estruturado": copy.deepcopy(
+            source.get("riscos_estruturado")
+            or {"descricao": "", "regulatorio": [], "human_in_the_loop": None}
+        ),
+        "swot_id": source.get("swot_id") if same_org else None,
+        "swot_item_ids": list(source.get("swot_item_ids") or []) if same_org else [],
+        "tows_ids": list(source.get("tows_ids") or []) if same_org else [],
+        "kr_ids": list(source.get("kr_ids") or []) if same_org else [],
+        "prioridade": _clean_prioridade(source.get("prioridade")),
+        "mes_inicio": _clean_mes_inicio(source.get("mes_inicio")),
+        "visibility": visibility_of(source),
+        "status": "rascunho",
+        "ai_system_id": None,
+        "projeto_aprovado": False,
+        "aprovacao_comentario": "",
+        "data_inicio_real": "",
+        "periodicidade": "",
+        "aprovado_em": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
 def _score_1_5(value) -> int | None:
     if value is None or value == "":
         return None
@@ -668,6 +745,32 @@ def create_project(
         "created_at": now,
         "updated_at": now,
     }
+    result = db.canvas_projects.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return _to_item(doc)
+
+
+@router.post("/{project_id}/clone")
+def clone_project(
+    project_id: str,
+    body: CanvasProjectCloneRequest,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Copia o canvas para a organização informada (precisa ser membro)."""
+    source = _get_owned(db, org_id, project_id, user["_id"])
+    if not ObjectId.is_valid(body.organization_id):
+        raise HTTPException(status_code=400, detail="Organizacao invalida")
+    dest_id = ObjectId(body.organization_id)
+    if not is_member_of(user, dest_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não pertence a esta organização.",
+        )
+    require_orgs_exist(db, [dest_id])
+    title = _clone_title(str(source.get("title") or ""), body.title)
+    doc = _clone_doc(source, dest_org_id=dest_id, actor_id=user["_id"], title=title)
     result = db.canvas_projects.insert_one(doc)
     doc["_id"] = result.inserted_id
     return _to_item(doc)

@@ -26,6 +26,7 @@ defineEmits<{
   approve: [ev: Event]
   approvePortfolio: [ev: Event]
   delete: [ev: Event]
+  clone: [ev: Event]
 }>()
 
 const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
@@ -95,6 +96,13 @@ function formatInicioReal(iso: string): string {
           :model-value="item.visibility || 'shared'"
           @update:model-value="$emit('visibility', $event)"
         />
+        <button
+          type="button"
+          class="btn-clone"
+          @click="$emit('clone', $event)"
+        >
+          Clonar
+        </button>
         <button
           v-if="!item.projeto_aprovado"
           type="button"
@@ -276,6 +284,23 @@ function formatInicioReal(iso: string): string {
   padding: 5px 8px;
   background: #fff;
   max-width: 220px;
+}
+.btn-clone {
+  border: 1px solid var(--bd);
+  background: #fff;
+  color: var(--k0);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-clone:hover {
+  border-color: var(--k0);
 }
 .btn-approve-proj {
   border: 1px solid var(--k0);

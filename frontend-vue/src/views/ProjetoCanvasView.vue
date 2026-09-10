@@ -22,7 +22,10 @@ import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.v
 import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 import CanvasPdfExport from '@/components/canvas/CanvasPdfExport.vue'
+import CanvasCloneModal from '@/components/canvas/CanvasCloneModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import { useAuthStore } from '@/stores/auth'
+import { switchOrganization } from '@/api/auth'
 import {
   getSwotAnalysisById,
   listSwotAnalyses,
@@ -37,6 +40,7 @@ import { useAutosave } from '@/composables/useAutosave'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const projectId = computed(() => String(route.params.id || ''))
 
 const loading = ref(true)
@@ -594,6 +598,34 @@ onUnmounted(() => {
 
 const approveOpen = ref(false)
 const exportOpen = ref(false)
+const cloneOpen = ref(false)
+
+async function openExport() {
+  await autosave.flush()
+  exportOpen.value = true
+}
+
+async function openClone() {
+  await autosave.flush()
+  cloneOpen.value = true
+}
+
+async function onCloned(cloned: CanvasProject & { dest_organization_id: string }) {
+  cloneOpen.value = false
+  const dest = cloned.dest_organization_id
+  if (dest && dest !== auth.user?.organization_id) {
+    try {
+      await switchOrganization(dest)
+      window.location.assign(`/projetos/${cloned.id}`)
+    } catch {
+      error.value = 'Projeto clonado. Troque a organização na barra para abri-lo.'
+    }
+    return
+  }
+  if (cloned.id !== projectId.value) {
+    await router.push(`/projetos/${cloned.id}`)
+  }
+}
 const approvingExec = ref(false)
 const approveExecError = ref<string | null>(null)
 
@@ -607,11 +639,6 @@ function formatInicioReal(iso: string): string {
 function openApprove() {
   approveExecError.value = null
   approveOpen.value = true
-}
-
-async function openExport() {
-  await autosave.flush()
-  exportOpen.value = true
 }
 
 async function submitApprove(payload: CanvasAprovarProjetoPayload) {
@@ -634,6 +661,9 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
     <div class="toolbar">
       <RouterLink to="/projetos" class="back">← Projetos</RouterLink>
       <div class="toolbar-actions">
+        <AppButton variant="secondary" size="sm" :disabled="loading || !!error" @click="openClone">
+          Clonar
+        </AppButton>
         <AppButton variant="secondary" size="sm" :disabled="loading || !!error" @click="openExport">
           Exportar PDF
         </AppButton>
@@ -1176,6 +1206,13 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
       @submit="submitApprove"
     />
 
+    <CanvasCloneModal
+      :open="cloneOpen"
+      :project-id="projectId"
+      :source-title="form.title"
+      @close="cloneOpen = false"
+      @cloned="onCloned"
+    />
     <CanvasPdfExport
       :open="exportOpen"
       :title="form.title"

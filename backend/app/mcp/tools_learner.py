@@ -30,6 +30,7 @@ from app.routes import swot_analysis as swot_routes
 from app.schemas import (
     CanvasAprovarProjetoRequest,
     CanvasImportRequest,
+    CanvasProjectCloneRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
     MaturityAnswersRequest,
@@ -533,6 +534,31 @@ def register_learner_tools(mcp) -> None:
         body = validate_model(CanvasProjectCreateRequest, {"title": title})
         return call_route(
             canvas_routes.create_project, body=body, user=user, org_id=_org_id(user), db=get_db()
+        )
+
+    @mcp.tool
+    def canvas_clone(
+        project_id: str,
+        organization_id: str,
+        title: str | None = None,
+    ) -> dict:
+        """Clona o canvas (com cronograma) para uma organização da qual o usuário já é membro.
+
+        Aprovação e portfólio não são copiados. Vínculos SWOT/OKR só se o destino
+        for a mesma org. Depois, se o destino não for a org ativa, chame org_switch.
+        """
+        user = _canvas_user()
+        payload: dict = {"organization_id": organization_id}
+        if title:
+            payload["title"] = title
+        body = validate_model(CanvasProjectCloneRequest, payload)
+        return call_route(
+            canvas_routes.clone_project,
+            project_id=project_id,
+            body=body,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
         )
 
     @mcp.tool

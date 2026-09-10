@@ -50,6 +50,7 @@ EXPECTED_NEW_TOOLS = (
     "okr_create_key_result",
     "okr_update_key_result",
     "governance_create_assessment",
+    "canvas_clone",
     "admin_list_organizations",
     "admin_set_user_organizations",
 )

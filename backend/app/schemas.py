@@ -79,6 +79,13 @@ class CanvasProjectCreateRequest(BaseModel):
     title: str = Field(default="Novo projeto", min_length=1, max_length=200)
 
 
+class CanvasProjectCloneRequest(BaseModel):
+    """Copia o canvas para uma organização da qual o usuário já é membro."""
+
+    organization_id: str = Field(min_length=24, max_length=24)
+    title: str | None = Field(None, min_length=1, max_length=200)
+
+
 class CanvasDadosEstruturado(BaseModel):
     """Campo aditivo — preserva a estrutura de `dados` do aegis.canvas-oportunidades
     (perdida ao virar texto livre) para a regra R3 (canvas_para_risco_preliminar)."""

@@ -135,6 +135,7 @@ para autoavaliações.
 |------|-----------|
 | `canvas_list` / `canvas_get` | Leitura |
 | `canvas_create` | **Escrita** — projeto vazio |
+| `canvas_clone` | **Escrita** — copia para uma org da qual o usuário é membro |
 | `canvas_import` / `canvas_import_into` | **Escrita** — import `aegis.canvas-oportunidades` |
 | `canvas_update` | **Escrita** — campos do canvas (`cronograma` substitui o Gantt inteiro) |
 | `canvas_cronograma_get` | Leitura do Gantt do projeto |
