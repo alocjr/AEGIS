@@ -41,6 +41,7 @@ _AI_SYSTEM_FIELDS = (
     "hitl_obrigatorio",
     "hitl_descricao",
     "status",
+    "visibility",
 )
 
 
@@ -102,8 +103,9 @@ def create_ai_system(
     doc = {
         "organization_id": org_id,
         "canvas_project_id": ObjectId(canvas_project_id) if canvas_project_id else None,
-        **{k: data.get(k) for k in _AI_SYSTEM_FIELDS if k != "status"},
+        **{k: data.get(k) for k in _AI_SYSTEM_FIELDS if k not in ("status", "visibility")},
         "status": data.get("status") or "rascunho",
+        "visibility": data.get("visibility") or "shared",
         "classificacao_risco": {"nivel": None, "fonte": None, "avaliacao_id": None},
         "created_by_user_id": actor_user_id,
         "created_at": now,

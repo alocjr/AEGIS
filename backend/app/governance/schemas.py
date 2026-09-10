@@ -75,6 +75,7 @@ class AiSystemUpdateRequest(BaseModel):
     hitl_obrigatorio: bool | None = None
     hitl_descricao: str | None = Field(None, max_length=1000)
     status: SistemaStatus | None = None
+    visibility: Literal["shared", "private"] | None = None
 
 
 # ---- aegis.avaliacao-risco v1 ----

@@ -18,6 +18,8 @@ from app.governance.schemas import (
 )
 from app.mcp.auth import require_tool_access, require_verified_user
 from app.mcp.util import call_route, parse_json_list, parse_json_object, validate_model
+from app.orgs import org_ids_of, organizations_payload
+from app.routes import auth as auth_routes
 from app.routes import canvas_projects as canvas_routes
 from app.routes import course as course_routes
 from app.routes import governance as gov_routes
@@ -35,6 +37,7 @@ from app.schemas import (
     OkrCycleUpdateRequest,
     SwotAnalysisUpdateRequest,
     SwotImportRequest,
+    SwitchOrganizationRequest,
 )
 from app.tools import (
     TOOL_CANVAS,
@@ -53,8 +56,11 @@ except ImportError:  # pragma: no cover
 
 
 def _org_id(user: dict):
-    """Organizacao do usuario MCP — mesma regra de `deps.get_current_organization_id`."""
+    """Organizacao ativa do usuario MCP — mesma regra de `deps.get_current_organization_id`."""
     org_id = user.get("organization_id")
+    if not org_id:
+        ids = org_ids_of(user)
+        org_id = ids[0] if ids else None
     if not org_id:
         raise ToolError("Usuario sem organizacao atribuida. Contate o suporte.")
     return org_id
@@ -300,6 +306,26 @@ def register_learner_tools(mcp) -> None:
         user = require_verified_user()
         require_tool_access(user, TOOL_GOVERNANCE)
         return user
+
+    # ── Organizações (sem gate de ferramenta) ────────────────────────────────
+
+    @mcp.tool
+    def org_list() -> dict:
+        """Lista as organizações das quais o usuário é membro e qual está ativa."""
+        user = require_verified_user()
+        db = get_db()
+        org_id = user.get("organization_id")
+        return {
+            "organization_id": str(org_id) if org_id else None,
+            "organizations": organizations_payload(user, db),
+        }
+
+    @mcp.tool
+    def org_switch(organization_id: str) -> dict:
+        """Troca a organização ativa. Só aceita orgs das quais o usuário já é membro."""
+        user = require_verified_user()
+        body = validate_model(SwitchOrganizationRequest, {"organization_id": organization_id})
+        return call_route(auth_routes.switch_organization, payload=body, user=user, db=get_db())
 
     # ── SWOT / TOWS ──────────────────────────────────────────────────────────
 

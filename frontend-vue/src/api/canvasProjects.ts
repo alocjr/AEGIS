@@ -98,6 +98,8 @@ export interface CanvasProjectSummary {
   prioridade: CanvasPrioridade
   /** Mês em que o projeto deve iniciar. */
   mes_inicio: CanvasMesInicio
+  visibility?: 'shared' | 'private'
+  created_by_user_id?: string | null
   /** Aprovação executiva (C-level). Só projetos aprovados entram no Mapa Estratégico. */
   projeto_aprovado: boolean
   aprovacao_comentario: string
@@ -181,6 +183,7 @@ export type CanvasProjectPayload = Partial<{
   cronograma: CanvasCronograma
   prioridade: CanvasPrioridade
   mes_inicio: CanvasMesInicio
+  visibility?: 'shared' | 'private'
 }>
 
 export function listCanvasProjects(q?: string): Promise<{ items: CanvasProjectSummary[] }> {

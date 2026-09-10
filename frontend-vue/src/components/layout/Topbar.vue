@@ -36,6 +36,21 @@ function onLogout() {
 function toggleMenu() {
   menuOpen.value = !menuOpen.value
 }
+
+const orgOptions = computed(() => auth.user?.organizations ?? [])
+const showOrgSwitcher = computed(() => orgOptions.value.length > 1)
+const switchingOrg = ref(false)
+
+async function onSwitchOrg(ev: Event) {
+  const id = (ev.target as HTMLSelectElement).value
+  if (!id || id === auth.user?.organization_id) return
+  switchingOrg.value = true
+  try {
+    await auth.switchOrganization(id)
+  } catch {
+    switchingOrg.value = false
+  }
+}
 </script>
 
 <template>
@@ -43,6 +58,19 @@ function toggleMenu() {
     <RouterLink to="/" class="tb-brand" @click="menuOpen = false">
       <span class="tb-sub">Valorian 4 Future</span>
     </RouterLink>
+    <div v-if="auth.isLoggedIn && (showOrgSwitcher || auth.user?.organization_name)" class="tb-org">
+      <select
+        v-if="showOrgSwitcher"
+        class="tb-org-select"
+        :value="auth.user?.organization_id || ''"
+        :disabled="switchingOrg"
+        aria-label="Trocar organização"
+        @change="onSwitchOrg"
+      >
+        <option v-for="org in orgOptions" :key="org.id" :value="org.id">{{ org.name }}</option>
+      </select>
+      <span v-else class="tb-org-name">{{ auth.user?.organization_name }}</span>
+    </div>
     <button
       type="button"
       class="tb-burger"
@@ -154,6 +182,37 @@ function toggleMenu() {
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.9);
 }
+.tb-org {
+  margin-left: 16px;
+  min-width: 0;
+}
+.tb-org-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  display: block;
+}
+.tb-org-select {
+  height: 32px;
+  max-width: 220px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--r-xs);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+.tb-org-select:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
 .tb-burger {
   display: none;
   margin-left: auto;
@@ -228,6 +287,10 @@ function toggleMenu() {
 }
 
 @media (max-width: 1180px) {
+  .tb-org-select,
+  .tb-org-name {
+    max-width: 42vw;
+  }
   .tb-burger {
     display: flex;
   }

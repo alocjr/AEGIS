@@ -12,6 +12,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
+from app.orgs import VISIBILITY_SHARED, clean_visibility, deny_if_hidden, visible_query, visibility_of
 from app.schemas import (
     SwotAnalysisUpdateRequest,
     SwotImportRequest,
@@ -363,16 +364,19 @@ def _to_item(doc: dict) -> dict:
         "veredito_texto": doc.get("veredito_texto") or "",
         "created_at": created_at.isoformat() if created_at else None,
         "updated_at": updated_at.isoformat() if updated_at else None,
+        "visibility": visibility_of(doc),
+        "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
     }
 
 
-def _get_latest(db: Database, org_id) -> dict | None:
-    return db.swot_analyses.find_one({"organization_id": org_id}, sort=[("updated_at", -1), ("_id", -1)])
+def _get_latest(db: Database, org_id, user_id=None) -> dict | None:
+    query = visible_query(org_id, user_id) if user_id is not None else {"organization_id": org_id}
+    return db.swot_analyses.find_one(query, sort=[("updated_at", -1), ("_id", -1)])
 
 
 def _get_or_create_latest(db: Database, org_id, created_by_user_id) -> dict:
     """SWOT mais recente da organização; cria documento vazio se não houver nenhum."""
-    doc = _get_latest(db, org_id)
+    doc = _get_latest(db, org_id, created_by_user_id)
     if doc:
         return doc
     now = datetime.now(timezone.utc)
@@ -380,6 +384,7 @@ def _get_or_create_latest(db: Database, org_id, created_by_user_id) -> dict:
         "organization_id": org_id,
         "created_by_user_id": created_by_user_id,
         **_EMPTY_FIELDS,
+        "visibility": VISIBILITY_SHARED,
         "created_at": now,
         "updated_at": now,
     }
@@ -388,12 +393,14 @@ def _get_or_create_latest(db: Database, org_id, created_by_user_id) -> dict:
     return doc
 
 
-def _require_owned(db: Database, org_id, swot_id: str) -> dict:
+def _require_owned(db: Database, org_id, swot_id: str, user_id=None) -> dict:
     if not ObjectId.is_valid(swot_id):
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
     doc = db.swot_analyses.find_one({"_id": ObjectId(swot_id), "organization_id": org_id})
     if not doc:
         raise HTTPException(status_code=404, detail="SWOT não encontrada")
+    if user_id is not None:
+        deny_if_hidden(doc, user_id, detail="SWOT não encontrada")
     return doc
 
 
@@ -469,6 +476,8 @@ def _apply_updates(doc: dict, body: SwotAnalysisUpdateRequest, db: Database) -> 
         if tipo == "sustenta":
             tipo = "executavel"
         updates["veredito_tipo"] = tipo if tipo in _VEREDITO_TIPOS else ""
+    if "visibility" in updates:
+        updates["visibility"] = clean_visibility(updates.get("visibility"))
 
     updates["updated_at"] = datetime.now(timezone.utc)
     db.swot_analyses.update_one({"_id": doc["_id"]}, {"$set": updates})
@@ -553,7 +562,7 @@ def list_swots(
     db: Database = Depends(get_db),
 ):
     """Resumo das SWOTs da organização (não cria documento vazio)."""
-    cursor = db.swot_analyses.find({"organization_id": org_id}).sort(
+    cursor = db.swot_analyses.find(visible_query(org_id, user["_id"])).sort(
         [("updated_at", -1), ("_id", -1)]
     )
     items = []
@@ -575,6 +584,7 @@ def list_swots(
                 ),
                 "created_at": created_at.isoformat() if created_at else None,
                 "updated_at": updated_at.isoformat() if updated_at else None,
+                "visibility": visibility_of(doc),
             }
         )
     return {"items": items}
@@ -660,6 +670,7 @@ def create_swot_from_maturity(
         "created_by_user_id": user["_id"],
         "maturity_response_id": mid,
         **_EMPTY_FIELDS,
+        "visibility": VISIBILITY_SHARED,
         "created_at": now,
         "updated_at": now,
     }
@@ -677,7 +688,7 @@ def get_swot_by_id(
     db: Database = Depends(get_db),
 ):
     """Retorna uma SWOT específica da organização."""
-    doc = _migrate_doc_to_v2(_require_owned(db, org_id, swot_id), db)
+    doc = _migrate_doc_to_v2(_require_owned(db, org_id, swot_id, user["_id"]), db)
     return _to_item(doc)
 
 
@@ -707,7 +718,7 @@ def update_swot_by_id(
     db: Database = Depends(get_db),
 ):
     """Atualiza uma SWOT específica."""
-    doc = _require_owned(db, org_id, swot_id)
+    doc = _require_owned(db, org_id, swot_id, user["_id"])
     refreshed = _apply_updates(doc, body, db)
     if rebuild_tows:
         refreshed = _rebuild_tows_on_doc(refreshed, db, org_id)

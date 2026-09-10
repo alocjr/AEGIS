@@ -17,6 +17,8 @@ import {
   type CanvasQuadrant,
   type CanvasAprovarProjetoPayload,
 } from '@/api/canvasProjects'
+import type { ArtifactVisibility } from '@/lib/visibility'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
 import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 import {
@@ -215,6 +217,7 @@ const form = ref({
   cronograma: emptyCronograma(),
   prioridade: 'P4' as CanvasPrioridade,
   mes_inicio: '' as CanvasMesInicio,
+  visibility: 'shared' as ArtifactVisibility,
 })
 
 /** Origem estratégica: iniciativas TOWS da SWOT que justificam este projeto. */
@@ -485,6 +488,7 @@ function applyProject(p: CanvasProject) {
     },
     prioridade: p.prioridade || 'P4',
     mes_inicio: p.mes_inicio || '',
+    visibility: p.visibility || 'shared',
   }
   if (p.opportunity_type_options?.length) {
     typeOptions.value = p.opportunity_type_options
@@ -643,6 +647,10 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
             <span>por área de negócio</span>
           </h1>
           <p class="subtitle">Um canvas por área. Preencha na ordem 01 → 08: da dor real à decisão de investir.</p>
+          <ArtifactVisibilityToggle
+            :model-value="form.visibility"
+            @update:model-value="form.visibility = $event; persist()"
+          />
           <label class="title-field">
             <span>Nome do projeto</span>
             <input v-model="form.title" type="text" maxlength="200" @blur="persist" />

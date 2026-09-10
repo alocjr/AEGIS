@@ -51,6 +51,7 @@ export interface AiSystem {
   canvas_project_id: string | null
   classificacao_risco: AiSystemRisco
   created_by_user_id: string | null
+  visibility?: 'shared' | 'private'
   created_at: string | null
   updated_at: string | null
 }
@@ -71,7 +72,10 @@ export type AiSystemCreatePayload = {
   hitl_descricao?: string
 }
 
-export type AiSystemUpdatePayload = Partial<AiSystemCreatePayload> & { status?: SistemaStatus }
+export type AiSystemUpdatePayload = Partial<AiSystemCreatePayload> & {
+  status?: SistemaStatus
+  visibility?: 'shared' | 'private'
+}
 
 export function listAiSystems(): Promise<{ items: AiSystem[] }> {
   return get<{ items: AiSystem[] }>('/api/governance/systems')

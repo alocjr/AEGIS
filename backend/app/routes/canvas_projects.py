@@ -9,6 +9,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
+from app.orgs import VISIBILITY_SHARED, clean_visibility, deny_if_hidden, visible_query, visibility_of
 from app.governance import repository as gov_repo
 from app.governance.rules.r3_canvas import (
     canvas_para_risco_preliminar,
@@ -264,6 +265,8 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "data_inicio_real": str(doc.get("data_inicio_real") or "").strip(),
         "periodicidade": _clean_periodicidade(doc.get("periodicidade")),
         "aprovado_em": _iso_ts(doc.get("aprovado_em")),
+        "visibility": visibility_of(doc),
+        "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
     }
     if summary:
         return {
@@ -418,12 +421,14 @@ def _owned_swot_id(db: Database, org_id, raw) -> str | None:
     return swot_id
 
 
-def _get_owned(db: Database, org_id, project_id: str) -> dict:
+def _get_owned(db: Database, org_id, project_id: str, user_id=None) -> dict:
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="ID invalido")
     doc = db.canvas_projects.find_one({"_id": ObjectId(project_id), "organization_id": org_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Projeto nao encontrado")
+    if user_id is not None:
+        deny_if_hidden(doc, user_id, detail="Projeto nao encontrado")
     return doc
 
 
@@ -638,7 +643,7 @@ def list_projects(
 
     `q` filtra por palavras em qualquer texto do canvas (AND, sem acento).
     """
-    cursor = db.canvas_projects.find({"organization_id": org_id}).sort("updated_at", -1)
+    cursor = db.canvas_projects.find(visible_query(org_id, user["_id"])).sort("updated_at", -1)
     docs = [doc for doc in cursor if _matches_canvas_query(doc, q)]
     docs.sort(key=_list_sort_key)
     return {"items": [_to_item(doc, summary=True) for doc in docs]}
@@ -659,6 +664,7 @@ def create_project(
         "created_by_user_id": user["_id"],
         "title": title,
         **_EMPTY_FIELDS,
+        "visibility": VISIBILITY_SHARED,
         "created_at": now,
         "updated_at": now,
     }
@@ -683,6 +689,7 @@ def import_projects(
                 "organization_id": org_id,
                 "created_by_user_id": user["_id"],
                 **fields,
+                "visibility": VISIBILITY_SHARED,
                 "created_at": now,
                 "updated_at": now,
             }
@@ -704,7 +711,7 @@ def import_into_project(
     db: Database = Depends(get_db),
 ):
     """Importa o JSON e substitui o conteúdo do projeto aberto (1ª oportunidade, MCP)."""
-    _get_owned(db, org_id, project_id)
+    _get_owned(db, org_id, project_id, user["_id"])
     mapped = _projects_from_import(body)
     fields = mapped[0]
     updates = {**fields, "updated_at": datetime.now(timezone.utc)}
@@ -712,7 +719,7 @@ def import_into_project(
         {"_id": ObjectId(project_id), "organization_id": org_id},
         {"$set": updates},
     )
-    doc = _get_owned(db, org_id, project_id)
+    doc = _get_owned(db, org_id, project_id, user["_id"])
     return {
         "applied": 1,
         "available": len(mapped),
@@ -729,7 +736,7 @@ def aprovar_projeto(
     db: Database = Depends(get_db),
 ):
     """Aprovação executiva (C-level): quem aprovou, data real de início e periodicidade de acompanhamento."""
-    doc = _get_owned(db, org_id, project_id)
+    doc = _get_owned(db, org_id, project_id, user["_id"])
     now = datetime.now(timezone.utc)
     comentario = (body.comentario or "").strip()
     if not comentario:
@@ -747,7 +754,7 @@ def aprovar_projeto(
         {"_id": ObjectId(project_id), "organization_id": org_id},
         {"$set": updates},
     )
-    return _to_item(_get_owned(db, org_id, project_id))
+    return _to_item(_get_owned(db, org_id, project_id, user["_id"]))
 
 
 @router.post("/{project_id}/aprovar-portfolio")
@@ -761,7 +768,7 @@ def aprovar_portfolio(
     portfólio, cria (ou reaproveita, se já existir) o sistema de IA correspondente no
     módulo de Governança e roda a R3 para uma classificação de risco preliminar.
     Idempotente — reexecutar não duplica o sistema de IA."""
-    project = _get_owned(db, org_id, project_id)
+    project = _get_owned(db, org_id, project_id, user["_id"])
     project_oid = ObjectId(project_id)
     now = datetime.now(timezone.utc)
 
@@ -856,7 +863,7 @@ def get_project(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    doc = _get_owned(db, org_id, project_id)
+    doc = _get_owned(db, org_id, project_id, user["_id"])
     return _to_item(doc)
 
 
@@ -869,7 +876,7 @@ def update_project(
     db: Database = Depends(get_db),
 ):
     """Salva preenchimento do canvas."""
-    _get_owned(db, org_id, project_id)
+    _get_owned(db, org_id, project_id, user["_id"])
     updates: dict = {"updated_at": datetime.now(timezone.utc)}
     data = body.model_dump(exclude_unset=True)
 
@@ -889,6 +896,8 @@ def update_project(
         updates["prioridade"] = _clean_prioridade(data["prioridade"])
     if "mes_inicio" in data:
         updates["mes_inicio"] = _clean_mes_inicio(data["mes_inicio"])
+    if "visibility" in data:
+        updates["visibility"] = clean_visibility(data["visibility"])
 
     for key, value in data.items():
         if key in (
@@ -900,6 +909,7 @@ def update_project(
             "cronograma",
             "prioridade",
             "mes_inicio",
+            "visibility",
         ):
             continue
         if key in _LIST_FIELDS:
@@ -926,7 +936,7 @@ def update_project(
         {"_id": ObjectId(project_id), "organization_id": org_id},
         {"$set": updates},
     )
-    doc = _get_owned(db, org_id, project_id)
+    doc = _get_owned(db, org_id, project_id, user["_id"])
     return _to_item(doc)
 
 
@@ -937,8 +947,7 @@ def delete_project(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    if not ObjectId.is_valid(project_id):
-        raise HTTPException(status_code=400, detail="ID invalido")
+    _get_owned(db, org_id, project_id, user["_id"])
     result = db.canvas_projects.delete_one(
         {"_id": ObjectId(project_id), "organization_id": org_id}
     )

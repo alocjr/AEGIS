@@ -17,6 +17,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_org_admin, get_current_organization_id
+from app.orgs import is_org_admin_of, members_of_org_query, membership_set, org_admin_ids_of, org_ids_of
 from app.schemas import OrgMemberCreateRequest, OrgMemberUpdateRequest
 from app.security import hash_password
 from app.tools import default_tools
@@ -24,14 +25,14 @@ from app.tools import default_tools
 router = APIRouter(prefix="/api/org-admin", tags=["org-admin"])
 
 
-def _serialize_member(doc: dict) -> dict:
+def _serialize_member(doc: dict, org_id=None) -> dict:
     created_at = doc.get("created_at")
     return {
         "id": str(doc["_id"]),
         "name": doc.get("name") or "",
         "email": doc.get("email") or "",
         "phone": doc.get("phone") or "",
-        "is_org_admin": bool(doc.get("is_org_admin")),
+        "is_org_admin": is_org_admin_of(doc, org_id) if org_id is not None else bool(doc.get("is_org_admin")),
         "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else None,
     }
 
@@ -39,7 +40,7 @@ def _serialize_member(doc: dict) -> dict:
 def _get_org_member(db: Database, org_id: ObjectId, user_id: str) -> dict:
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-    member = db.users.find_one({"_id": ObjectId(user_id), "organization_id": org_id})
+    member = db.users.find_one({"_id": ObjectId(user_id), **members_of_org_query(org_id)})
     if not member:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado")
     return member
@@ -63,8 +64,8 @@ def list_members(
     db: Database = Depends(get_db),
 ):
     """Lista os membros da própria organização."""
-    members = db.users.find({"organization_id": org_id}).sort("created_at", 1)
-    return {"items": [_serialize_member(m) for m in members]}
+    members = db.users.find(members_of_org_query(org_id)).sort("created_at", 1)
+    return {"items": [_serialize_member(m, org_id) for m in members]}
 
 
 @router.post("/members")
@@ -85,7 +86,7 @@ def create_member(
         "email": email,
         "password_hash": hash_password(payload.password),
         "course_slugs": [],
-        "organization_id": org_id,
+        **membership_set([org_id], [], org_id),
         "created_at": now,
         "updated_at": now,
         "email_verified": True,
@@ -97,7 +98,7 @@ def create_member(
         user_doc["phone"] = payload.phone.strip()
     result = db.users.insert_one(user_doc)
     user_doc["_id"] = result.inserted_id
-    return _serialize_member(user_doc)
+    return _serialize_member(user_doc, org_id)
 
 
 @router.patch("/members/{user_id}")
@@ -127,7 +128,7 @@ def update_member(
 
     db.users.update_one({"_id": member["_id"]}, {"$set": updates})
     refreshed = db.users.find_one({"_id": member["_id"]})
-    return _serialize_member(refreshed)
+    return _serialize_member(refreshed, org_id)
 
 
 @router.delete("/members/{user_id}")
@@ -143,6 +144,15 @@ def delete_member(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Nao e possivel remover seu proprio usuario"
         )
     _forbid_platform_admin(member, "remover")
+
+    remaining = [oid for oid in org_ids_of(member) if oid != org_id]
+    if remaining:
+        admin_ids = [oid for oid in org_admin_ids_of(member) if oid != org_id]
+        db.users.update_one(
+            {"_id": member["_id"]},
+            {"$set": membership_set(remaining, admin_ids, member.get("organization_id"))},
+        )
+        return {"message": "Membro removido da organização", "id": user_id}
 
     db.users.delete_one({"_id": member["_id"]})
     db.progress.delete_many({"user_id": member["_id"]})

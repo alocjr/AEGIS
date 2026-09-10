@@ -22,6 +22,8 @@ import {
   type SwotWatchlistItem,
 } from '@/api/swotAnalysis'
 import { useAutosave } from '@/composables/useAutosave'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const route = useRoute()
 const router = useRouter()
@@ -371,6 +373,7 @@ const form = ref({
   veredito_tipo: '' as SwotVereditoTipo,
   veredito_titulo: '',
   veredito_texto: '',
+  visibility: 'shared' as ArtifactVisibility,
 })
 
 type DraftKey = `${SwotListField}:${string}`
@@ -416,6 +419,7 @@ function applyDoc(doc: SwotAnalysis) {
     veredito_tipo: (doc.veredito_tipo || '') as SwotVereditoTipo,
     veredito_titulo: doc.veredito_titulo || '',
     veredito_texto: doc.veredito_texto || '',
+    visibility: (doc.visibility === 'private' ? 'private' : 'shared') as ArtifactVisibility,
   }
   const routeId = typeof route.params.id === 'string' ? route.params.id : ''
   if (doc.id && routeId !== doc.id) {
@@ -683,6 +687,10 @@ onUnmounted(() => {
         </p>
       </div>
       <div class="header-actions">
+        <ArtifactVisibilityToggle
+          :model-value="form.visibility"
+          @update:model-value="form.visibility = $event; persist()"
+        />
         <RouterLink class="maturity-link" to="/ai-maturity">Modelo de Maturidade</RouterLink>
         <div class="save-pill" :data-state="saveState">
           <span v-if="saveState === 'saving'">Salvando…</span>

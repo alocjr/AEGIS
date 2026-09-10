@@ -78,6 +78,8 @@ export interface SwotAnalysis {
   veredito_tipo: SwotVereditoTipo
   veredito_titulo: string
   veredito_texto: string
+  visibility?: 'shared' | 'private'
+  created_by_user_id?: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -97,6 +99,7 @@ export type SwotAnalysisPayload = Partial<{
   veredito_tipo: SwotVereditoTipo
   veredito_titulo: string
   veredito_texto: string
+  visibility?: 'shared' | 'private'
 }>
 
 export type SwotPillar = {

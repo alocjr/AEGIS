@@ -13,6 +13,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
+from app.orgs import can_view_artifact, clean_visibility, is_org_admin_of, members_of_org_query, visible_query, visibility_of
 from app.governance import repository as gov_repo
 from app.governance.gate_template import TEMPLATE_VERSION, montar_checklist_base
 from app.governance.rules.r1_maturidade import (
@@ -63,7 +64,7 @@ def _require_org_member(db: Database, org_id: ObjectId, user_id: str) -> dict:
         raise HTTPException(
             status_code=422, detail={"code": "USER_NOT_IN_ORGANIZATION", "message": "Usuário inválido."}
         )
-    member = db.users.find_one({"_id": ObjectId(user_id), "organization_id": org_id})
+    member = db.users.find_one({"_id": ObjectId(user_id), **members_of_org_query(org_id)})
     if not member:
         raise HTTPException(
             status_code=422,
@@ -118,6 +119,7 @@ def _serialize_system(doc: dict) -> dict:
             "avaliacao_id": str(risco["avaliacao_id"]) if risco.get("avaliacao_id") else None,
         },
         "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
+        "visibility": visibility_of(doc),
         "created_at": _iso(doc.get("created_at")),
         "updated_at": _iso(doc.get("updated_at")),
     }
@@ -176,7 +178,7 @@ def list_organization_members(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    members = db.users.find({"organization_id": org_id}, {"name": 1, "email": 1, "is_admin": 1})
+    members = db.users.find(members_of_org_query(org_id), {"name": 1, "email": 1, "is_admin": 1})
     return {
         "items": [
             {
@@ -198,7 +200,13 @@ def list_systems(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    return {"items": [_serialize_system(d) for d in gov_repo.list_ai_systems(db, org_id=org_id)]}
+    return {
+        "items": [
+            _serialize_system(d)
+            for d in gov_repo.list_ai_systems(db, org_id=org_id)
+            if can_view_artifact(d, user["_id"])
+        ]
+    }
 
 
 @router.post("/systems")
@@ -221,7 +229,10 @@ def get_system(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    return _serialize_system(_get_system_or_404(db, org_id, system_id))
+    system = _get_system_or_404(db, org_id, system_id)
+    if not can_view_artifact(system, user["_id"]):
+        raise HTTPException(status_code=404, detail="Sistema de IA não encontrado")
+    return _serialize_system(system)
 
 
 @router.patch("/systems/{system_id}")
@@ -233,12 +244,18 @@ def update_system(
     db: Database = Depends(get_db),
 ):
     try:
+        system = _get_system_or_404(db, org_id, system_id)
+        if not can_view_artifact(system, user["_id"]):
+            raise HTTPException(status_code=404, detail="Sistema de IA não encontrado")
+        payload = body.model_dump(exclude_unset=True)
+        if "visibility" in payload:
+            payload["visibility"] = clean_visibility(payload["visibility"])
         system = gov_repo.update_ai_system(
             db,
             org_id=org_id,
             actor_user_id=user["_id"],
             system_id=system_id,
-            updates=body.model_dump(exclude_unset=True),
+            updates=payload,
         )
     except gov_repo.GovernanceError as exc:
         _raise(exc)
@@ -416,7 +433,7 @@ def decide_gate(
     decisao = body.decisao
 
     aprovador = _require_org_member(db, org_id, decisao.aprovador_user_id)
-    if not (aprovador.get("is_admin") or aprovador.get("is_org_admin")):
+    if not is_org_admin_of(aprovador, org_id):
         raise HTTPException(
             status_code=422,
             detail={

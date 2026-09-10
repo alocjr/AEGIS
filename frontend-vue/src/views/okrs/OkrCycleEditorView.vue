@@ -12,6 +12,8 @@ import {
   type OkrCycleTipo,
   type Objective,
 } from '@/api/okrs'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 import {
   getSwotAnalysisById,
   listSwotAnalyses,
@@ -174,6 +176,7 @@ function buildPayload(): { body: OkrCyclePayload; sent: SentRow[] } {
       ano: safeAno(),
       trimestre: form.value.tipo === 'trimestre' ? form.value.trimestre : null,
       objectives,
+      visibility: cycle.value?.visibility,
     },
     sent,
   }
@@ -255,6 +258,12 @@ function runSaves(): Promise<void> {
 function saveNow(): Promise<void> {
   clearAutosaveTimer()
   return runSaves()
+}
+
+function onVisibility(value: ArtifactVisibility) {
+  if (!cycle.value) return
+  cycle.value.visibility = value
+  void saveNow()
 }
 
 /** Espera a fila esvaziar — usada antes de sair da página ou mudar o status do ciclo. */
@@ -541,6 +550,10 @@ onBeforeUnmount(() => {
             maxlength="120"
           />
           <span class="status-badge" :data-status="cycle.status">{{ STATUS_LABEL[cycle.status] }}</span>
+          <ArtifactVisibilityToggle
+            :model-value="cycle.visibility || 'shared'"
+            @update:model-value="onVisibility($event)"
+          />
         </div>
         <div class="head-row head-meta">
           <label class="head-field">

@@ -21,6 +21,8 @@ import type {
   SensibilidadeDados,
   Traceability,
 } from '@/api/governance'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +71,7 @@ const form = ref({
   origem_ia: 'interno' as OrigemIA,
   hitl_obrigatorio: false,
   hitl_descricao: '',
+  visibility: 'shared' as ArtifactVisibility,
 })
 // AR-03: antes desta extração, persist() não tinha NENHUMA guarda de
 // concorrência. Os 11 campos do formulário abaixo chamam persist() no
@@ -96,6 +99,7 @@ function applySystem(s: AiSystem) {
     origem_ia: s.origem_ia ?? 'interno',
     hitl_obrigatorio: s.hitl_obrigatorio,
     hitl_descricao: s.hitl_descricao,
+    visibility: (s.visibility === 'private' ? 'private' : 'shared') as ArtifactVisibility,
   }
 }
 
@@ -235,6 +239,10 @@ onMounted(async () => {
         <RouterLink to="/governanca/inventario" class="back-link">← Inventário</RouterLink>
         <h1 class="page-title">{{ system.nome || 'Sistema sem nome' }}</h1>
         <p class="page-sub">{{ system.area_negocio || 'Área não definida' }} · Status: {{ system.status }}</p>
+        <ArtifactVisibilityToggle
+          :model-value="form.visibility"
+          @update:model-value="form.visibility = $event; persist()"
+        />
       </header>
 
       <nav class="tabs">

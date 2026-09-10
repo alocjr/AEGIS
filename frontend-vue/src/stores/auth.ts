@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchMe, logoutApi } from '@/api/auth'
+import { fetchMe, logoutApi, switchOrganization as switchOrganizationApi } from '@/api/auth'
 import type { AuthUser } from '@/api/auth'
 import { firstEnabledToolPath } from '@/lib/tools'
 
@@ -58,6 +58,12 @@ export const useAuthStore = defineStore('auth', () => {
     currentCourseSlug.value = null
   }
 
+  async function switchOrganization(organizationId: string) {
+    if (!organizationId || organizationId === user.value?.organization_id) return
+    await switchOrganizationApi(organizationId)
+    window.location.reload()
+  }
+
   return {
     user,
     loaded,
@@ -71,6 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
     loadUser,
     setUser,
     setCurrentCourseSlug,
+    switchOrganization,
     logout,
   }
 })

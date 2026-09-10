@@ -8,13 +8,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 
 from app.routes.canvas_projects import _matches_canvas_query, list_projects
-
-
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if doc.get(key) != expected:
-            return False
-    return True
+from tests.query_match import matches
 
 
 class _Cursor:
@@ -41,7 +35,7 @@ class _Collection:
         return type("Result", (), {"inserted_id": doc["_id"]})()
 
     def find(self, flt: dict | None = None, projection=None):
-        return _Cursor([d for d in self.docs if _matches(d, flt)])
+        return _Cursor([d for d in self.docs if matches(d, flt)])
 
 
 class _FakeDb:

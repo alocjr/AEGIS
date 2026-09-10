@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 
 from app.routes.swot_analysis import list_swots
+from tests.query_match import matches
 
 
 class _Cursor:
@@ -27,7 +28,7 @@ class _Collection:
 
     def find(self, flt: dict | None = None, projection=None) -> _Cursor:
         return _Cursor(
-            [d for d in self.docs if all(d.get(k) == v for k, v in (flt or {}).items())]
+            [d for d in self.docs if matches(d, flt)]
         )
 
 

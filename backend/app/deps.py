@@ -8,6 +8,7 @@ from app.config import settings
 from app.database import get_db
 from app.security import _jwt_key_bytes
 from app.tools import user_has_tool
+from app.orgs import org_ids_of
 from app.utils.auth_cookie import AUTH_COOKIE_NAME
 
 
@@ -82,7 +83,7 @@ def get_current_admin(user=Depends(get_verified_user)):
 
 
 def get_current_org_admin(user=Depends(get_verified_user)):
-    """Admin da plataforma OU admin da própria organização (gestão de membros, sem trilha)."""
+    """Admin da plataforma OU admin da organização **ativa** (gestão de membros, sem trilha)."""
     if not (user.get("is_admin") or user.get("is_org_admin")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -116,8 +117,11 @@ def require_tool(tool_id: str):
 
 
 def get_current_organization_id(user=Depends(get_verified_user)) -> ObjectId:
-    """Organizacao do usuario logado — chave de escopo para dados compartilhados pelo time."""
+    """Organização ativa do usuário logado — chave de escopo dos artefatos do time."""
     org_id = user.get("organization_id")
+    if not org_id:
+        ids = org_ids_of(user)
+        org_id = ids[0] if ids else None
     if not org_id:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -22,6 +22,7 @@ from app.tools import (
     user_has_tool,
     user_tools,
 )
+from tests.query_match import matches
 
 
 class CatalogTests(unittest.TestCase):
@@ -65,7 +66,7 @@ class _UsersColl:
 
     def find_one(self, flt, *args, **kwargs):
         for d in self.docs:
-            if all(d.get(k) == v for k, v in flt.items()):
+            if matches(d, flt):
                 return d
         return None
 
@@ -78,7 +79,7 @@ class _UsersColl:
     def update_many(self, flt, update):
         n = 0
         for d in self.docs:
-            if all(d.get(k) == v for k, v in flt.items()):
+            if matches(d, flt):
                 if "$set" in update:
                     d.update(update["$set"])
                 n += 1
@@ -86,7 +87,7 @@ class _UsersColl:
 
     def find(self, flt=None, *args, **kwargs):
         flt = flt or {}
-        return [d for d in self.docs if all(d.get(k) == v for k, v in flt.items())]
+        return [d for d in self.docs if matches(d, flt)]
 
 
 class _OrgsColl:
@@ -95,7 +96,7 @@ class _OrgsColl:
 
     def find_one(self, flt, *args, **kwargs):
         for d in self.docs:
-            if all(d.get(k) == v for k, v in flt.items()):
+            if matches(d, flt):
                 return d
         return None
 

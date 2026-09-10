@@ -6,7 +6,8 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
-from app.schemas import MaturityAnswersRequest
+from app.orgs import VISIBILITY_PRIVATE, VISIBILITY_SHARED, can_view_artifact, clean_visibility, visibility_of
+from app.schemas import MaturityAnswersRequest, MaturityVisibilityRequest
 from app.tools import TOOL_MATURITY
 
 
@@ -135,6 +136,8 @@ def _owned_response(db: Database, org_id, user_id, response_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     if not doc.get("complete") and doc.get("created_by_user_id") != user_id:
         raise HTTPException(status_code=404, detail="Resposta nao encontrada")
+    if not can_view_artifact(doc, user_id):
+        raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     return doc
 
 
@@ -200,7 +203,13 @@ def list_my_responses(
         {
             "organization_id": org_id,
             "model_id": model_oid,
-            "$or": [{"complete": True}, {"created_by_user_id": user["_id"]}],
+            "$and": [
+                {"$or": [{"complete": True}, {"created_by_user_id": user["_id"]}]},
+                {"$or": [
+                    {"visibility": {"$ne": VISIBILITY_PRIVATE}},
+                    {"created_by_user_id": user["_id"]},
+                ]},
+            ],
         }
     ).sort("submitted_at", -1)
     items = []
@@ -214,6 +223,8 @@ def list_my_responses(
             "submitted_at": submitted_at.isoformat() if submitted_at else None,
             "tier": doc.get("tier") or result.get("tier"),
             "complete": bool(doc.get("complete")),
+            "visibility": visibility_of(doc),
+            "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
             "result": {
                 "total_score": result.get("total_score", 0),
                 "max_score": result.get("max_score", 0),
@@ -242,6 +253,38 @@ def get_my_response_by_id(
         "answers": doc.get("answers", {}),
         "tier": doc.get("tier"),
         "complete": bool(doc.get("complete")),
+        "visibility": visibility_of(doc),
+        "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
+        "submitted_at": submitted_at.isoformat() if submitted_at else None,
+        "result": doc.get("result"),
+    }
+
+
+@router.patch("/my-responses/{response_id}")
+def patch_my_response_visibility(
+    response_id: str,
+    body: MaturityVisibilityRequest,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Altera a visibilidade de uma autoavaliação (compartilhada com a org ou privada)."""
+    doc = _owned_response(db, org_id, user["_id"], response_id)
+    visibility = clean_visibility(body.visibility)
+    db.maturity_responses.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"visibility": visibility}},
+    )
+    doc["visibility"] = visibility
+    submitted_at = doc.get("submitted_at")
+    return {
+        "id": str(doc["_id"]),
+        "model_id": str(doc["model_id"]) if doc.get("model_id") else None,
+        "answers": doc.get("answers", {}),
+        "tier": doc.get("tier"),
+        "complete": bool(doc.get("complete")),
+        "visibility": visibility_of(doc),
+        "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
         "submitted_at": submitted_at.isoformat() if submitted_at else None,
         "result": doc.get("result"),
     }
@@ -381,7 +424,7 @@ def save_my_response(
         )
         if not existing or (
             not existing.get("complete") and existing.get("created_by_user_id") != user["_id"]
-        ):
+        ) or not can_view_artifact(existing, user["_id"]):
             raise HTTPException(status_code=404, detail="Resposta nao encontrada")
     else:
         # Autosave sem id: reutiliza o rascunho incompleto mais recente do mesmo autor/modelo
@@ -414,6 +457,7 @@ def save_my_response(
         doc = {
             "organization_id": org_id,
             "created_by_user_id": user["_id"],
+            "visibility": VISIBILITY_SHARED,
             **common_fields,
             "submitted_at": now,
         }
@@ -427,6 +471,7 @@ def save_my_response(
         "answers": answers,
         "tier": tier,
         "complete": complete,
+        "visibility": visibility_of(existing) if existing else VISIBILITY_SHARED,
         "submitted_at": submitted_at.isoformat() if hasattr(submitted_at, "isoformat") else submitted_at,
         "result": result,
     }

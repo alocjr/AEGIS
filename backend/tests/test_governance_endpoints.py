@@ -21,22 +21,10 @@ from app.governance.schemas import (
     RiskAssessmentCreateRequest,
 )
 from app.routes import governance as gov_routes
+from tests.query_match import matches as _matches
 
 
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if isinstance(expected, dict) and "$exists" in expected:
-            has = key in doc and doc.get(key) is not None
-            if has != expected["$exists"]:
-                return False
-            continue
-        if isinstance(expected, dict) and "$ne" in expected:
-            if doc.get(key) == expected["$ne"]:
-                return False
-            continue
-        if doc.get(key) != expected:
-            return False
-    return True
+from tests.query_match import matches as _matches
 
 
 class _Cursor:

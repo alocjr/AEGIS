@@ -5,6 +5,7 @@ import {
   listOkrCycles,
   createOkrCycle,
   deleteOkrCycle,
+  updateOkrCycle,
   type OkrCycleSummary,
   type OkrCycleTipo,
 } from '@/api/okrs'
@@ -12,6 +13,8 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const router = useRouter()
 const loading = ref(true)
@@ -80,6 +83,15 @@ function askDelete(item: OkrCycleSummary, ev: Event) {
   ev.stopPropagation()
   deleteTarget.value = item
   deleteError.value = null
+}
+
+async function onVisibility(item: OkrCycleSummary, value: ArtifactVisibility) {
+  try {
+    const updated = await updateOkrCycle(item.id, { visibility: value })
+    item.visibility = updated.visibility || 'shared'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erro ao alterar visibilidade.'
+  }
 }
 
 function cancelDelete() {
@@ -177,7 +189,12 @@ onMounted(async () => {
             </div>
             <span class="list-arrow">Abrir →</span>
           </RouterLink>
-          <div class="list-actions">
+          <div class="list-actions" @click.stop>
+            <ArtifactVisibilityToggle
+              compact
+              :model-value="item.visibility || 'shared'"
+              @update:model-value="onVisibility(item, $event)"
+            />
             <button type="button" class="btn-del" title="Excluir ciclo" @click="askDelete(item, $event)">
               Excluir
             </button>
@@ -385,6 +402,8 @@ onMounted(async () => {
 .list-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding-right: 8px;
 }
 .btn-del {
   border: none;

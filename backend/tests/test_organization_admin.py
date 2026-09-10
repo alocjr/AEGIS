@@ -10,17 +10,7 @@ from fastapi import HTTPException
 from app.deps import get_current_org_admin
 from app.routes import organization_admin as org_routes
 from app.schemas import OrgMemberCreateRequest, OrgMemberUpdateRequest
-
-
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if isinstance(expected, dict) and "$ne" in expected:
-            if doc.get(key) == expected["$ne"]:
-                return False
-            continue
-        if doc.get(key) != expected:
-            return False
-    return True
+from tests.query_match import matches
 
 
 class _Cursor:
@@ -46,29 +36,29 @@ class _Collection:
         return type("Result", (), {"inserted_id": doc["_id"]})()
 
     def find_one(self, flt: dict | None = None, projection=None, sort=None) -> dict | None:
-        candidates = [d for d in self.docs if _matches(d, flt)]
+        candidates = [d for d in self.docs if matches(d, flt)]
         return dict(candidates[0]) if candidates else None
 
     def find(self, flt: dict | None = None, projection=None) -> _Cursor:
-        return _Cursor([dict(d) for d in self.docs if _matches(d, flt)])
+        return _Cursor([dict(d) for d in self.docs if matches(d, flt)])
 
     def update_one(self, flt: dict, update: dict) -> None:
         for d in self.docs:
-            if _matches(d, flt):
+            if matches(d, flt):
                 d.update(update.get("$set", {}))
                 break
 
     def delete_one(self, flt: dict) -> None:
         for d in list(self.docs):
-            if _matches(d, flt):
+            if matches(d, flt):
                 self.docs.remove(d)
                 break
 
     def delete_many(self, flt: dict) -> None:
-        self.docs = [d for d in self.docs if not _matches(d, flt)]
+        self.docs = [d for d in self.docs if not matches(d, flt)]
 
     def count_documents(self, flt: dict | None = None) -> int:
-        return len([d for d in self.docs if _matches(d, flt)])
+        return len([d for d in self.docs if matches(d, flt)])
 
 
 class _FakeDb:
@@ -122,6 +112,23 @@ class ListMembersTests(unittest.TestCase):
         names = {m["name"] for m in result["items"]}
         self.assertEqual(names, {"U", "Colega"})
 
+    def test_lists_member_whose_active_org_is_another(self) -> None:
+        db = _FakeDb()
+        org_a, org_b = ObjectId(), ObjectId()
+        admin = _user(org_a, is_org_admin=True)
+        guest = _user(
+            org_b,
+            name="Convidado",
+            organization_ids=[org_a, org_b],
+            organization_id=org_b,
+        )
+        for u in (admin, guest):
+            db.users.insert_one(u)
+
+        result = org_routes.list_members(org_admin=admin, org_id=org_a, db=db)
+        names = {m["name"] for m in result["items"]}
+        self.assertIn("Convidado", names)
+
 
 class CreateMemberTests(unittest.TestCase):
     def test_creates_member_without_trilha_or_admin_flags(self) -> None:
@@ -140,7 +147,7 @@ class CreateMemberTests(unittest.TestCase):
         self.assertEqual(stored["organization_id"], org_id)
         self.assertEqual(stored["course_slugs"], [])
         self.assertNotIn("is_admin", stored)
-        self.assertNotIn("is_org_admin", stored)
+        self.assertFalse(stored["is_org_admin"])
         # Org-admin não gerencia ferramentas — membro nasce com o catálogo completo
         # (mesmo padrão do registro público); o admin da plataforma restringe depois.
         from app.tools import default_tools

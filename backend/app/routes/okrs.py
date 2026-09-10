@@ -12,6 +12,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
+from app.orgs import VISIBILITY_SHARED, can_view_artifact, clean_visibility, deny_if_hidden, visible_query, visibility_of
 from app.schemas import KeyResult, Objective, OkrCycleCreateRequest, OkrCycleUpdateRequest
 from app.tools import TOOL_OKR
 
@@ -252,6 +253,8 @@ def _to_item(doc: dict, *, summary: bool = False, include_drafts: bool = True) -
         "key_results_count": len(kr_pcts),
         "drafts_count": _drafts_count(objectives),
         "progress_pct": round(sum(kr_pcts) / len(kr_pcts), 1) if kr_pcts else None,
+        "visibility": visibility_of(doc),
+        "created_by_user_id": str(doc["created_by_user_id"]) if doc.get("created_by_user_id") else None,
         "created_at": created_at.isoformat() if created_at else None,
         "updated_at": updated_at.isoformat() if updated_at else None,
     }
@@ -260,16 +263,21 @@ def _to_item(doc: dict, *, summary: bool = False, include_drafts: bool = True) -
     return {**base, "objectives": objectives if include_drafts else published}
 
 
-def _get_active(db: Database, org_id) -> dict | None:
-    return db.okr_cycles.find_one({"organization_id": org_id, "status": "ativo"})
+def _get_active(db: Database, org_id, user_id=None) -> dict | None:
+    doc = db.okr_cycles.find_one({"organization_id": org_id, "status": "ativo"})
+    if doc and user_id is not None and not can_view_artifact(doc, user_id):
+        return None
+    return doc
 
 
-def _require_owned(db: Database, org_id, cycle_id: str) -> dict:
+def _require_owned(db: Database, org_id, cycle_id: str, user_id=None) -> dict:
     if not ObjectId.is_valid(cycle_id):
         raise HTTPException(status_code=404, detail="Ciclo OKR não encontrado")
     doc = db.okr_cycles.find_one({"_id": ObjectId(cycle_id), "organization_id": org_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Ciclo OKR não encontrado")
+    if user_id is not None:
+        deny_if_hidden(doc, user_id, detail="Ciclo OKR não encontrado")
     return doc
 
 
@@ -280,7 +288,7 @@ def list_cycles(
     db: Database = Depends(get_db),
 ):
     """Resumo dos ciclos OKR da organização, mais recentes primeiro."""
-    cursor = db.okr_cycles.find({"organization_id": org_id}).sort(
+    cursor = db.okr_cycles.find(visible_query(org_id, user["_id"])).sort(
         [("ano", -1), ("trimestre", -1), ("updated_at", -1)]
     )
     return {"items": [_to_item(doc, summary=True) for doc in cursor]}
@@ -306,6 +314,7 @@ def create_cycle(
         "nome": (body.nome or "").strip()[:120],
         "status": "planejamento",
         "objectives": [],
+        "visibility": VISIBILITY_SHARED,
         "created_at": now,
         "updated_at": now,
     }
@@ -322,7 +331,7 @@ def get_active_cycle(
 ):
     """Ciclo OKR ativo da organização, só com Objectives/KRs publicados — é a fonte para
     vincular KRs no Canvas (404 se nenhum ciclo estiver ativo)."""
-    doc = _get_active(db, org_id)
+    doc = _get_active(db, org_id, user["_id"])
     if not doc:
         raise HTTPException(status_code=404, detail="Nenhum ciclo OKR ativo")
     return _to_item(doc, include_drafts=False)
@@ -335,7 +344,7 @@ def get_cycle(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    return _to_item(_require_owned(db, org_id, cycle_id))
+    return _to_item(_require_owned(db, org_id, cycle_id, user["_id"]))
 
 
 @router.put("/cycles/{cycle_id}")
@@ -347,7 +356,7 @@ def update_cycle(
     db: Database = Depends(get_db),
 ):
     """Atualiza um ciclo OKR (full-replace de objectives quando informado)."""
-    doc = _require_owned(db, org_id, cycle_id)
+    doc = _require_owned(db, org_id, cycle_id, user["_id"])
     updates = body.model_dump(exclude_unset=True)
 
     tipo = updates.get("tipo", doc.get("tipo"))
@@ -358,6 +367,8 @@ def update_cycle(
         updates["objectives"] = _clean_objectives(body.objectives, db, org_id)
     if "nome" in updates:
         updates["nome"] = (updates.get("nome") or "").strip()[:120]
+    if "visibility" in updates:
+        updates["visibility"] = clean_visibility(updates.get("visibility"))
 
     updates["updated_at"] = datetime.now(timezone.utc)
     db.okr_cycles.update_one({"_id": doc["_id"]}, {"$set": updates})
@@ -372,7 +383,7 @@ def activate_cycle(
     db: Database = Depends(get_db),
 ):
     """Ativa este ciclo, encerrando qualquer outro ciclo ativo da organização. Idempotente."""
-    doc = _require_owned(db, org_id, cycle_id)
+    doc = _require_owned(db, org_id, cycle_id, user["_id"])
     now = datetime.now(timezone.utc)
     db.okr_cycles.update_one(
         {"organization_id": org_id, "status": "ativo", "_id": {"$ne": doc["_id"]}},
@@ -389,7 +400,7 @@ def archive_cycle(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    doc = _require_owned(db, org_id, cycle_id)
+    doc = _require_owned(db, org_id, cycle_id, user["_id"])
     db.okr_cycles.update_one(
         {"_id": doc["_id"]}, {"$set": {"status": "encerrado", "updated_at": datetime.now(timezone.utc)}}
     )
@@ -403,6 +414,6 @@ def delete_cycle(
     org_id=Depends(get_current_organization_id),
     db: Database = Depends(get_db),
 ):
-    doc = _require_owned(db, org_id, cycle_id)
+    doc = _require_owned(db, org_id, cycle_id, user["_id"])
     db.okr_cycles.delete_one({"_id": doc["_id"]})
     return {"message": "Ciclo OKR removido", "id": str(doc["_id"])}

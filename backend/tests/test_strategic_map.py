@@ -11,15 +11,9 @@ from bson import ObjectId
 
 from app.routes.strategic_map import get_strategic_map
 from app.swot_from_maturity import build_swot_fields_from_maturity
+from tests.query_match import matches as _matches
 
 _SEED = Path(__file__).resolve().parents[1] / "data" / "ai_maturity_model.json"
-
-
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if doc.get(key) != expected:
-            return False
-    return True
 
 
 class _Cursor:

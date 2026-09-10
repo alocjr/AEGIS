@@ -8,6 +8,8 @@ import {
   type CanvasProjectSummary,
   type CanvasQuadrant,
 } from '@/api/canvasProjects'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const props = defineProps<{
   item: CanvasProjectSummary
@@ -20,6 +22,7 @@ const detailsId = `canvas-details-${props.item.id}`
 defineEmits<{
   prioridade: [ev: Event]
   mes: [ev: Event]
+  visibility: [value: ArtifactVisibility]
   approve: [ev: Event]
   approvePortfolio: [ev: Event]
   delete: [ev: Event]
@@ -87,6 +90,11 @@ function formatInicioReal(iso: string): string {
             <option v-for="m in CANVAS_MESES" :key="m.id" :value="m.id">{{ m.label }}</option>
           </select>
         </label>
+        <ArtifactVisibilityToggle
+          compact
+          :model-value="item.visibility || 'shared'"
+          @update:model-value="$emit('visibility', $event)"
+        />
         <button
           v-if="!item.projeto_aprovado"
           type="button"

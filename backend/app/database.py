@@ -9,6 +9,7 @@ from bson import ObjectId
 from app import analytics
 from app.config import settings
 from app.tools import default_tools
+from app.orgs import backfill_memberships
 
 _DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 _MATURITY_SEED_FILE = _DATA_DIR / "ai_maturity_model.json"
@@ -181,8 +182,10 @@ def purge_legacy_swot_analyses() -> int:
 def init_indexes() -> None:
     db.users.create_index("email", unique=True)
     db.users.create_index("organization_id")
+    db.users.create_index("organization_ids")
     migrate_users_to_organizations()
     backfill_user_tools()
+    backfill_memberships(db)
     db.password_resets.create_index("token_hash", unique=True)
     db.password_resets.create_index("expires_at", expireAfterSeconds=0)
     db.password_resets.create_index([("user_id", 1), ("created_at", -1)])

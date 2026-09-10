@@ -21,6 +21,7 @@ import AppModal from '@/components/ui/AppModal.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 import CanvasProjectListItem from '@/components/canvas/CanvasProjectListItem.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const router = useRouter()
 const loading = ref(true)
@@ -188,13 +189,14 @@ function togglePriorityFilter(code: CanvasPrioridade) {
 
 async function patchExec(
   item: CanvasProjectSummary,
-  body: { prioridade?: CanvasPrioridade; mes_inicio?: CanvasMesInicio }
+  body: { prioridade?: CanvasPrioridade; mes_inicio?: CanvasMesInicio; visibility?: ArtifactVisibility }
 ) {
   execError.value = null
   try {
     const updated = await updateCanvasProject(item.id, body)
     item.prioridade = updated.prioridade || 'P4'
     item.mes_inicio = updated.mes_inicio || ''
+    item.visibility = updated.visibility || 'shared'
     items.value = sortByPriority(items.value)
   } catch (e) {
     execError.value = e instanceof Error ? e.message : 'Erro ao salvar prioridade.'
@@ -209,6 +211,10 @@ function onPrioridadeChange(item: CanvasProjectSummary, ev: Event) {
 function onMesInicioChange(item: CanvasProjectSummary, ev: Event) {
   const value = (ev.target as HTMLSelectElement).value as CanvasMesInicio
   void patchExec(item, { mes_inicio: value })
+}
+
+function onVisibilityChange(item: CanvasProjectSummary, value: ArtifactVisibility) {
+  void patchExec(item, { visibility: value })
 }
 
 function openProject(id: string) {
@@ -629,6 +635,7 @@ onUnmounted(() => {
               :approving-portfolio="approvingId === item.id"
               @prioridade="onPrioridadeChange(item, $event)"
               @mes="onMesInicioChange(item, $event)"
+              @visibility="onVisibilityChange(item, $event)"
               @approve="openApprove(item, $event)"
               @approve-portfolio="onApprovePortfolio(item, $event)"
               @delete="askDelete(item, $event)"
@@ -652,6 +659,7 @@ onUnmounted(() => {
               :approving-portfolio="approvingId === item.id"
               @prioridade="onPrioridadeChange(item, $event)"
               @mes="onMesInicioChange(item, $event)"
+              @visibility="onVisibilityChange(item, $event)"
               @approve="openApprove(item, $event)"
               @approve-portfolio="onApprovePortfolio(item, $event)"
               @delete="askDelete(item, $event)"

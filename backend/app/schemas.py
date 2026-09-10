@@ -33,6 +33,13 @@ class VerifyEmailRequest(BaseModel):
     token: str = Field(min_length=20, max_length=512)
 
 
+class SwitchOrganizationRequest(BaseModel):
+    organization_id: str = Field(min_length=24, max_length=24)
+
+
+ArtifactVisibility = Literal["shared", "private"]
+
+
 class GenericMessageResponse(BaseModel):
     message: str
 
@@ -153,6 +160,7 @@ class CanvasProjectUpdateRequest(BaseModel):
     cronograma: CanvasCronograma | None = None
     prioridade: CanvasPrioridade | None = None
     mes_inicio: CanvasMesInicio | Literal[""] | None = None
+    visibility: ArtifactVisibility | None = None
 
 
 CanvasPeriodicidade = Literal["quinzenal", "mensal", "bimestral", "trimestral"]
@@ -247,6 +255,7 @@ class SwotAnalysisUpdateRequest(BaseModel):
     veredito_tipo: str | None = Field(None, max_length=40)
     veredito_titulo: str | None = Field(None, max_length=300)
     veredito_texto: str | None = Field(None, max_length=8000)
+    visibility: ArtifactVisibility | None = None
 
 
 class SwotImportRequest(BaseModel):
@@ -320,6 +329,11 @@ class OkrCycleUpdateRequest(BaseModel):
     ano: int | None = Field(None, ge=2020, le=2100)
     trimestre: int | None = Field(None, ge=1, le=4)
     objectives: list[Objective] | None = Field(None, max_length=20)
+    visibility: ArtifactVisibility | None = None
+
+
+class MaturityVisibilityRequest(BaseModel):
+    visibility: ArtifactVisibility
 
 
 class QuizSubmitRequest(BaseModel):
@@ -333,7 +347,9 @@ class AdminCreateUserRequest(BaseModel):
     course_slugs: list[str] = Field(default_factory=list, max_length=50)  # vazio = sem trilha (ex.: membro de organização)
     phone: str | None = Field(None, max_length=30)  # telefone completo para WhatsApp (ex.: 5511987654321)
     encontro_agendas: dict[str, str] | None = None  # encontro_id -> ISO datetime string (aplica à primeira trilha)
-    organization_id: str | None = Field(None, max_length=24)  # se omitido, cria organização solo
+    organization_id: str | None = Field(None, max_length=24)  # se omitido e sem organization_ids, cria organização solo
+    organization_ids: list[str] | None = Field(None, max_length=50)
+    org_admin_ids: list[str] | None = Field(None, max_length=50)
     tools: list[str] | None = Field(None, max_length=50)  # ferramentas do AI Hub; None = catálogo completo
 
 
@@ -346,7 +362,9 @@ class AdminUpdateUserRequest(BaseModel):
     is_admin: bool | None = None
     is_org_admin: bool | None = None
     encontro_agendas: dict[str, str] | None = None
-    organization_id: str | None = Field(None, max_length=24)  # move o usuário para outra organização
+    organization_id: str | None = Field(None, max_length=24)  # organização ativa (deve pertencer às memberships)
+    organization_ids: list[str] | None = Field(None, max_length=50)
+    org_admin_ids: list[str] | None = Field(None, max_length=50)
     tools: list[str] | None = Field(None, max_length=50)  # None = não altera; [] = nenhuma ferramenta
     apply_tools_to_organization: bool = False  # replica `tools` para todos os membros da organização
 

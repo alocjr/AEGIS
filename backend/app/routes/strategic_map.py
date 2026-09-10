@@ -8,6 +8,7 @@ from pymongo.database import Database
 
 from app.database import get_db
 from app.deps import get_current_organization_id, get_verified_user, require_tool
+from app.orgs import can_view_artifact
 from app.routes.canvas_projects import _to_item as _project_to_item
 from app.routes.okrs import _to_item as _okr_cycle_to_item
 from app.routes.swot_analysis import _get_latest as _latest_swot
@@ -40,13 +41,15 @@ def _visible(question_tier: str, selected_tier: str) -> bool:
     return _TIER_ORDER.get(question_tier, 99) <= _TIER_ORDER.get(selected_tier, 0)
 
 
-def _list_sources(db: Database, org_id) -> list[dict]:
+def _list_sources(db: Database, org_id, user_id) -> list[dict]:
     """Autoavaliações da organização (mais recentes primeiro) com a SWOT vinculada."""
-    swots = list(
-        db.swot_analyses.find(
-            {"organization_id": org_id}, {"maturity_response_id": 1, "updated_at": 1}
+    swots = [
+        doc
+        for doc in db.swot_analyses.find(
+            {"organization_id": org_id}, {"maturity_response_id": 1, "updated_at": 1, "visibility": 1, "created_by_user_id": 1}
         ).sort([("updated_at", -1), ("_id", -1)])
-    )
+        if can_view_artifact(doc, user_id)
+    ]
     swot_by_maturity: dict[str, str] = {}
     for doc in swots:
         mid = doc.get("maturity_response_id")
@@ -58,6 +61,8 @@ def _list_sources(db: Database, org_id) -> list[dict]:
         [("submitted_at", -1), ("_id", -1)]
     )
     for doc in cursor:
+        if not can_view_artifact(doc, user_id):
+            continue
         result = doc.get("result") or {}
         level = result.get("level") or {}
         tier = _key(doc.get("tier") or result.get("tier") or "basico")
@@ -100,14 +105,17 @@ def _resolve_target(
     org_id,
     maturity_response_id: str | None,
     swot_id: str | None,
+    user_id,
 ) -> tuple[dict | None, dict | None]:
     """Resolve o par (resposta de maturidade, SWOT) a exibir no mapa."""
     if swot_id:
-        swot_doc = _owned_swot(db, org_id, swot_id)
+        swot_doc = _owned_swot(db, org_id, swot_id, user_id)
         mid = swot_doc.get("maturity_response_id")
         maturity_doc = (
             db.maturity_responses.find_one({"_id": mid, "organization_id": org_id}) if mid else None
         )
+        if maturity_doc and not can_view_artifact(maturity_doc, user_id):
+            maturity_doc = None
         return maturity_doc, swot_doc
 
     if maturity_response_id:
@@ -115,22 +123,28 @@ def _resolve_target(
             raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
         mid = ObjectId(maturity_response_id)
         maturity_doc = db.maturity_responses.find_one({"_id": mid, "organization_id": org_id})
-        if not maturity_doc:
+        if not maturity_doc or not can_view_artifact(maturity_doc, user_id):
             raise HTTPException(status_code=404, detail="Resposta de maturidade não encontrada")
         swot_doc = db.swot_analyses.find_one({"organization_id": org_id, "maturity_response_id": mid})
+        if swot_doc and not can_view_artifact(swot_doc, user_id):
+            swot_doc = None
         return maturity_doc, swot_doc
 
-    swot_doc = _latest_swot(db, org_id)
+    swot_doc = _latest_swot(db, org_id, user_id)
     if swot_doc:
         mid = swot_doc.get("maturity_response_id")
         maturity_doc = (
             db.maturity_responses.find_one({"_id": mid, "organization_id": org_id}) if mid else None
         )
+        if maturity_doc and not can_view_artifact(maturity_doc, user_id):
+            maturity_doc = None
         return maturity_doc, swot_doc
 
     maturity_doc = db.maturity_responses.find_one(
         {"organization_id": org_id, "complete": True}, sort=[("submitted_at", -1), ("_id", -1)]
     )
+    if maturity_doc and not can_view_artifact(maturity_doc, user_id):
+        return None, None
     return maturity_doc, None
 
 
@@ -237,8 +251,8 @@ def get_strategic_map(
     db: Database = Depends(get_db),
 ):
     """Árvore de rastreabilidade: resposta de maturidade → itens SWOT → TOWS → projetos."""
-    maturity_doc, swot_doc = _resolve_target(db, org_id, maturity_response_id, swot_id)
-    sources = _list_sources(db, org_id)
+    maturity_doc, swot_doc = _resolve_target(db, org_id, maturity_response_id, swot_id, user["_id"])
+    sources = _list_sources(db, org_id, user["_id"])
 
     swot = _swot_to_item(swot_doc) if swot_doc else None
     result = (maturity_doc or {}).get("result") or {}
@@ -254,7 +268,7 @@ def get_strategic_map(
     projects = [
         _project_to_item(doc, summary=True)
         for doc in db.canvas_projects.find({"organization_id": org_id}).sort([("updated_at", -1)])
-        if doc.get("projeto_aprovado")
+        if doc.get("projeto_aprovado") and can_view_artifact(doc, user["_id"])
     ]
     items_by_id: dict[str, dict] = {}
     items_by_question: dict[str, list[dict]] = {}
@@ -285,6 +299,8 @@ def get_strategic_map(
 
     # Ciclo OKR ativo da organização (nenhum = camada de OKR fica vazia, sem erro)
     active_cycle_doc = db.okr_cycles.find_one({"organization_id": org_id, "status": "ativo"})
+    if active_cycle_doc and not can_view_artifact(active_cycle_doc, user["_id"]):
+        active_cycle_doc = None
     active_cycle = (
         _okr_cycle_to_item(active_cycle_doc, include_drafts=False) if active_cycle_doc else None
     )

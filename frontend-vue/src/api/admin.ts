@@ -13,11 +13,18 @@ export interface AdminUser {
   /** Pode criar/editar/remover membros da própria organização (sem trilha/mentoria). */
   is_org_admin: boolean
   created_at: string | null
-  /** Organização (time) à qual o usuário pertence — SWOT/Canvas/Maturidade são compartilhados nela. */
+  /** Organização ativa — SWOT/Canvas/Maturidade são compartilhados nela. */
   organization_id: string | null
   organization_name: string
+  organizations?: AdminUserOrganization[]
   /** Ferramentas do AI Hub liberadas (ids do catálogo). */
   tools: string[]
+}
+
+export interface AdminUserOrganization {
+  id: string
+  name: string
+  is_org_admin: boolean
 }
 
 export interface AdminUserDetail extends AdminUser {
@@ -51,6 +58,8 @@ export function createUser(body: {
   phone?: string
   encontro_agendas?: Record<string, string>
   organization_id?: string
+  organization_ids?: string[]
+  org_admin_ids?: string[]
   tools?: string[]
 }): Promise<{ message: string; user_id: string; email: string; course_slugs: string[]; tools: string[] }> {
   return post('/api/admin/users', body)
@@ -68,6 +77,8 @@ export function updateUser(
     is_org_admin?: boolean
     encontro_agendas?: Record<string, string>
     organization_id?: string
+    organization_ids?: string[]
+    org_admin_ids?: string[]
     tools?: string[]
     apply_tools_to_organization?: boolean
   }

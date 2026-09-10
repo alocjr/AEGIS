@@ -15,13 +15,7 @@ from app.routes.canvas_projects import (
     update_project,
 )
 from app.schemas import CanvasProjectUpdateRequest
-
-
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if doc.get(key) != expected:
-            return False
-    return True
+from tests.query_match import matches
 
 
 class _Cursor:
@@ -51,15 +45,15 @@ class _Collection:
         return type("Result", (), {"inserted_id": doc["_id"]})()
 
     def find(self, flt: dict | None = None, projection=None):
-        return _Cursor([d for d in self.docs if _matches(d, flt)])
+        return _Cursor([d for d in self.docs if matches(d, flt)])
 
     def find_one(self, flt: dict | None = None, projection=None, sort=None) -> dict | None:
-        candidates = [d for d in self.docs if _matches(d, flt)]
+        candidates = [d for d in self.docs if matches(d, flt)]
         return dict(candidates[0]) if candidates else None
 
     def update_one(self, flt: dict, update: dict) -> None:
         for d in self.docs:
-            if _matches(d, flt):
+            if matches(d, flt):
                 d.update(update.get("$set", {}))
                 break
 

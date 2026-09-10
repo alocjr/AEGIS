@@ -1,12 +1,20 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pymongo.database import Database
 
 from app.config import settings
 from app.database import get_db, provision_solo_organization
-from app.deps import get_current_user, is_email_verified
+from app.deps import get_current_user, get_verified_user, is_email_verified
+from app.orgs import (
+    is_member_of,
+    membership_set,
+    organizations_payload,
+    org_admin_ids_of,
+    org_ids_of,
+)
 from app.schemas import (
     AuthResponse,
     ForgotPasswordRequest,
@@ -14,6 +22,7 @@ from app.schemas import (
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    SwitchOrganizationRequest,
     VerifyEmailRequest,
 )
 from app.security import (
@@ -40,6 +49,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def _user_payload(user: dict, db: Database) -> dict:
     org_id = user.get("organization_id")
     org = db.organizations.find_one({"_id": org_id}, {"name": 1}) if org_id else None
+    orgs = organizations_payload(user, db)
     return {
         "id": str(user["_id"]),
         "name": user["name"],
@@ -49,6 +59,7 @@ def _user_payload(user: dict, db: Database) -> dict:
         "email_verified": is_email_verified(user),
         "organization_id": str(org_id) if org_id else None,
         "organization_name": (org or {}).get("name") or "",
+        "organizations": orgs,
         # Ferramentas liberadas pelo admin — o frontend usa para montar o menu e barrar rotas.
         "tools": user_tools(user),
     }
@@ -60,11 +71,12 @@ def register(payload: RegisterRequest, response: Response, db: Database = Depend
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ja cadastrado")
 
+    org_id = provision_solo_organization(payload.name)
     user_doc = {
         "name": payload.name.strip(),
         "email": payload.email.lower(),
         "password_hash": hash_password(payload.password),
-        "organization_id": provision_solo_organization(payload.name),
+        **membership_set([org_id], [], org_id),
         "email_verified": False,
         "tools": default_tools(),
         "created_at": datetime.now(timezone.utc),
@@ -112,6 +124,28 @@ def me(user=Depends(get_current_user), db: Database = Depends(get_db)):
         **_user_payload(user, db),
         "course_slugs": course_slugs,
     }
+
+
+@router.post("/active-organization")
+def switch_organization(
+    payload: SwitchOrganizationRequest,
+    user=Depends(get_verified_user),
+    db: Database = Depends(get_db),
+):
+    """Troca a organização ativa. Só aceita orgs das quais o usuário já é membro."""
+    if not ObjectId.is_valid(payload.organization_id):
+        raise HTTPException(status_code=400, detail="Organizacao invalida")
+    org_id = ObjectId(payload.organization_id)
+    if not is_member_of(user, org_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não pertence a esta organização.",
+        )
+    fields = membership_set(org_ids_of(user), org_admin_ids_of(user), org_id)
+    db.users.update_one({"_id": user["_id"]}, {"$set": fields})
+    user = {**user, **fields}
+    course_slugs = user.get("course_slugs") or ([user.get("course_slug")] if user.get("course_slug") else [])
+    return {**_user_payload(user, db), "course_slugs": course_slugs}
 
 
 @router.post("/verify-email", response_model=GenericMessageResponse)

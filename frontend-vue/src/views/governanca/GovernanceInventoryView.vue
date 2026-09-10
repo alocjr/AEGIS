@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listAiSystems, createAiSystem } from '@/api/governance'
+import { listAiSystems, createAiSystem, updateAiSystem } from '@/api/governance'
 import type { AiSystem, SistemaStatus, RiscoNivel, OrigemIA } from '@/api/governance'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const router = useRouter()
 
@@ -67,6 +69,15 @@ async function onCreate() {
   }
 }
 
+async function onVisibility(s: AiSystem, value: ArtifactVisibility) {
+  try {
+    const updated = await updateAiSystem(s.id, { visibility: value })
+    s.visibility = updated.visibility || 'shared'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erro ao alterar visibilidade.'
+  }
+}
+
 onMounted(async () => {
   try {
     const res = await listAiSystems()
@@ -123,6 +134,7 @@ onMounted(async () => {
             <th>Origem</th>
             <th>Status</th>
             <th>Risco</th>
+            <th>Visibilidade</th>
             <th></th>
           </tr>
         </thead>
@@ -142,6 +154,13 @@ onMounted(async () => {
                 {{ RISCO_LABEL[s.classificacao_risco.nivel] }}
               </span>
               <span v-else class="muted">Não classificado</span>
+            </td>
+            <td @click.stop>
+              <ArtifactVisibilityToggle
+                compact
+                :model-value="s.visibility || 'shared'"
+                @update:model-value="onVisibility(s, $event)"
+              />
             </td>
             <td class="origin-cell">
               <span v-if="s.canvas_project_id" class="badge-origin" title="Criado a partir do portfólio de oportunidades">

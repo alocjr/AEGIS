@@ -10,6 +10,14 @@ from pymongo.database import Database
 from app import analytics
 from app.database import get_db, provision_solo_organization
 from app.deps import get_current_admin
+from app.orgs import (
+    members_of_org_query,
+    membership_set,
+    org_admin_ids_of,
+    org_ids_of,
+    parse_object_ids,
+    require_orgs_exist,
+)
 from app.routes.course import NoTrilhaAssignedError, _progress_with_quiz_effect, _require_primary_course_slug
 from app.utils.course_payload import payload_for_json
 from app.utils.material_gratuito import (
@@ -170,7 +178,7 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
     users = list(
         db.users.find(
             {"$or": [{"is_admin": {"$ne": True}}, {"is_admin": {"$exists": False}}]},
-            {"_id": 1, "name": 1, "email": 1, "course_slug": 1, "course_slugs": 1, "phone": 1, "organization_id": 1},
+            {"_id": 1, "name": 1, "email": 1, "course_slug": 1, "course_slugs": 1, "phone": 1, "organization_id": 1, "organization_ids": 1},
         )
     )
     progress_by_user_slug = {(p["user_id"], p["course_slug"]): p for p in db.progress.find({})}
@@ -201,26 +209,24 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
     orgs: dict = {}  # organization_id -> group dict
     for u in users:
         uid = u["_id"]
-        org_id = u.get("organization_id")
-
-        group = orgs.setdefault(
-            org_id,
-            {
-                "id": str(org_id) if org_id else None,
-                "name": org_names.get(org_id, "") if org_id else "—",
-                "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
-                "maturity_total": 1,
-                "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
-                "canvas_count": canvas_count_by_org.get(org_id, 0),
-                "members": [],
-                "_next_ts": None,
-            },
-        )
-
+        member_org_ids = org_ids_of(u) or [u.get("organization_id")]
         slugs = u.get("course_slugs") or ([u.get("course_slug")] if u.get("course_slug") else [])
         if not slugs:
-            # Sem trilha atribuída: não é "aluno" para este dashboard, mesmo que tenha
-            # progresso/quiz órfãos de uma trilha antiga — nunca contam para as métricas.
+            # Sem trilha atribuída: não é "aluno" para este dashboard.
+            for org_id in member_org_ids:
+                orgs.setdefault(
+                    org_id,
+                    {
+                        "id": str(org_id) if org_id else None,
+                        "name": org_names.get(org_id, "") if org_id else "—",
+                        "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
+                        "maturity_total": 1,
+                        "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
+                        "canvas_count": canvas_count_by_org.get(org_id, 0),
+                        "members": [],
+                        "_next_ts": None,
+                    },
+                )
             continue
         primary_slug = slugs[0]
         progress = progress_by_user_slug.get((uid, primary_slug)) or {}
@@ -268,9 +274,23 @@ def get_dashboard(admin=Depends(get_current_admin), db: Database = Depends(get_d
             "next_meeting_iso": next_iso,
         }
 
-        group["members"].append(member)
-        if next_ts is not None and (group["_next_ts"] is None or next_ts < group["_next_ts"]):
-            group["_next_ts"] = next_ts
+        for org_id in member_org_ids:
+            group = orgs.setdefault(
+                org_id,
+                {
+                    "id": str(org_id) if org_id else None,
+                    "name": org_names.get(org_id, "") if org_id else "—",
+                    "maturity_done": 1 if org_id in maturity_responded_org_ids else 0,
+                    "maturity_total": 1,
+                    "swot_filled": bool(swot_filled_by_org.get(org_id, False)),
+                    "canvas_count": canvas_count_by_org.get(org_id, 0),
+                    "members": [],
+                    "_next_ts": None,
+                },
+            )
+            group["members"].append(member)
+            if next_ts is not None and (group["_next_ts"] is None or next_ts < group["_next_ts"]):
+                group["_next_ts"] = next_ts
 
     result = list(orgs.values())
     result.sort(key=lambda g: (g["_next_ts"] is None, g["_next_ts"] or 0))
@@ -296,15 +316,19 @@ def create_user(
         if not db.courses.find_one({"slug": slug}):
             raise HTTPException(status_code=404, detail=f"Trilha nao encontrada: {slug}")
 
-    org_id: ObjectId
+    org_ids = parse_object_ids(payload.organization_ids, label="Organização")
     if payload.organization_id:
-        if not ObjectId.is_valid(payload.organization_id):
-            raise HTTPException(status_code=400, detail="Organizacao invalida")
-        org_id = ObjectId(payload.organization_id)
-        if not db.organizations.find_one({"_id": org_id}, {"_id": 1}):
-            raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
+        extra = parse_object_ids([payload.organization_id], label="Organização")
+        for oid in extra:
+            if oid not in org_ids:
+                org_ids.append(oid)
+    if org_ids:
+        require_orgs_exist(db, org_ids)
+        org_id = extra[0] if payload.organization_id else org_ids[0]
     else:
         org_id = provision_solo_organization(payload.name)
+        org_ids = [org_id]
+    admin_ids = parse_object_ids(payload.org_admin_ids, label="Admin da organização")
 
     now = datetime.now(timezone.utc)
     user_doc = {
@@ -312,7 +336,7 @@ def create_user(
         "email": email,
         "password_hash": hash_password(payload.password),
         "course_slugs": course_slugs,
-        "organization_id": org_id,
+        **membership_set(org_ids, admin_ids, org_id),
         "created_at": now,
         "updated_at": now,
         "email_verified": True,
@@ -379,9 +403,9 @@ def resource_access_analytics(
 def list_organizations(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
     """Lista organizações (para atribuição/realocação de usuários). Apenas admin."""
     member_counts: dict = {}
-    for r in db.users.aggregate([{"$group": {"_id": "$organization_id", "count": {"$sum": 1}}}]):
-        if r["_id"] is not None:
-            member_counts[r["_id"]] = int(r["count"])
+    for u in db.users.find({}, {"organization_id": 1, "organization_ids": 1}):
+        for oid in org_ids_of(u):
+            member_counts[oid] = member_counts.get(oid, 0) + 1
     out = []
     for org in db.organizations.find({}).sort("name", 1):
         out.append({
@@ -395,7 +419,7 @@ def list_organizations(admin=Depends(get_current_admin), db: Database = Depends(
 def _apply_tools_to_organization(db: Database, org_id: ObjectId, tools: list[str]) -> int:
     """Grava o mesmo conjunto de ferramentas em todos os membros da organização."""
     result = db.users.update_many(
-        {"organization_id": org_id},
+        members_of_org_query(org_id),
         {"$set": {"tools": tools, "updated_at": datetime.now(timezone.utc)}},
     )
     return int(result.modified_count)
@@ -451,6 +475,18 @@ def _serialize_created_at(doc: dict) -> str | None:
     return str(val) if val else None
 
 
+def _org_summaries(user: dict, org_names: dict) -> list[dict]:
+    admin_ids = set(org_admin_ids_of(user))
+    out = []
+    for oid in org_ids_of(user):
+        out.append({
+            "id": str(oid),
+            "name": org_names.get(oid, ""),
+            "is_org_admin": oid in admin_ids,
+        })
+    return out
+
+
 @router.get("/users")
 def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db)):
     """Lista todos os usuários (alunos). Apenas admin."""
@@ -468,14 +504,19 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
                 "created_at": 1,
                 "phone": 1,
                 "organization_id": 1,
+                "organization_ids": 1,
+                "org_admin_ids": 1,
                 "tools": 1,
             },
         )
     )
+    org_ids: list = []
+    for u in users:
+        org_ids.extend(org_ids_of(u))
     org_names = {
         o["_id"]: o.get("name") or ""
         for o in db.organizations.find(
-            {"_id": {"$in": [u["organization_id"] for u in users if u.get("organization_id")]}},
+            {"_id": {"$in": list({oid for oid in org_ids if oid})}},
             {"name": 1},
         )
     }
@@ -483,6 +524,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
     for u in users:
         slugs = u.get("course_slugs") or ([u.get("course_slug")] if u.get("course_slug") else [])
         org_id = u.get("organization_id")
+        orgs = _org_summaries(u, org_names)
         out.append({
             "id": str(u["_id"]),
             "name": u.get("name", ""),
@@ -495,6 +537,7 @@ def list_users(admin=Depends(get_current_admin), db: Database = Depends(get_db))
             "created_at": _serialize_created_at(u),
             "organization_id": str(org_id) if org_id else None,
             "organization_name": org_names.get(org_id, "") if org_id else "",
+            "organizations": orgs,
             "tools": user_tools(u),
         })
     return out
@@ -514,6 +557,10 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         {"course_slug": 1, "encontro_agendas": 1},
     )
     org_id = user.get("organization_id")
+    org_names = {
+        o["_id"]: o.get("name") or ""
+        for o in db.organizations.find({"_id": {"$in": org_ids_of(user)}}, {"name": 1})
+    }
     org = db.organizations.find_one({"_id": org_id}, {"name": 1}) if org_id else None
     return {
         "id": str(user["_id"]),
@@ -528,6 +575,7 @@ def get_user(user_id: str, admin=Depends(get_current_admin), db: Database = Depe
         "encontro_agendas": progress.get("encontro_agendas", {}) if progress else {},
         "organization_id": str(org_id) if org_id else None,
         "organization_name": (org or {}).get("name") or "",
+        "organizations": _org_summaries(user, org_names),
         "tools": user_tools(user),
     }
 
@@ -569,17 +617,43 @@ def update_user(
         updates["phone"] = payload.phone.strip() if payload.phone.strip() else ""
     if payload.is_admin is not None:
         updates["is_admin"] = payload.is_admin
-    if payload.is_org_admin is not None:
-        updates["is_org_admin"] = payload.is_org_admin
-    if payload.organization_id is not None:
-        if not ObjectId.is_valid(payload.organization_id):
-            raise HTTPException(status_code=400, detail="Organizacao invalida")
-        new_org_id = ObjectId(payload.organization_id)
-        if not db.organizations.find_one({"_id": new_org_id}, {"_id": 1}):
-            raise HTTPException(status_code=404, detail="Organizacao nao encontrada")
-        updates["organization_id"] = new_org_id
     if payload.tools is not None:
         updates["tools"] = sanitize_tools(payload.tools)
+
+    membership_touched = (
+        payload.organization_ids is not None
+        or payload.org_admin_ids is not None
+        or payload.organization_id is not None
+        or payload.is_org_admin is not None
+    )
+    if membership_touched:
+        current_ids = org_ids_of(user)
+        current_admin = org_admin_ids_of(user)
+        current_active = user.get("organization_id")
+        if payload.organization_ids is not None:
+            current_ids = parse_object_ids(payload.organization_ids, label="Organização")
+        elif payload.organization_id is not None and not current_ids:
+            current_ids = parse_object_ids([payload.organization_id], label="Organização")
+        if payload.organization_id is not None:
+            active_oid = parse_object_ids([payload.organization_id], label="Organização")[0]
+            if active_oid not in current_ids:
+                current_ids.append(active_oid)
+            current_active = active_oid
+        if payload.org_admin_ids is not None:
+            current_admin = parse_object_ids(payload.org_admin_ids, label="Admin da organização")
+        elif payload.is_org_admin is not None and current_active:
+            if payload.is_org_admin:
+                if current_active not in current_admin:
+                    current_admin.append(current_active)
+            else:
+                current_admin = [oid for oid in current_admin if oid != current_active]
+        if not current_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="O usuário precisa pertencer a pelo menos uma organização.",
+            )
+        require_orgs_exist(db, current_ids)
+        updates.update(membership_set(current_ids, current_admin, current_active))
 
     if updates:
         db.users.update_one({"_id": uid}, {"$set": updates})

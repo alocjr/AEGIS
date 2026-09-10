@@ -4,6 +4,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import {
   fetchMaturityModel,
   fetchMaturityResponseById,
+  updateMaturityVisibility,
   type MaturityModel,
   type MaturityResult,
   type MaturityTier,
@@ -12,6 +13,8 @@ import {
   createSwotFromMaturity,
   getSwotByMaturityResponse,
 } from '@/api/swotAnalysis'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +29,7 @@ const swotId = ref<string | null>(null)
 const swotBusy = ref(false)
 const swotError = ref<string | null>(null)
 const isComplete = ref(false)
+const visibility = ref<ArtifactVisibility>('shared')
 
 const TIER_LABELS: Record<string, string> = {
   basico: 'Básico',
@@ -209,6 +213,15 @@ async function openSwot() {
   }
 }
 
+async function onVisibility(value: ArtifactVisibility) {
+  try {
+    const updated = await updateMaturityVisibility(responseId, value)
+    visibility.value = updated.visibility === 'private' ? 'private' : 'shared'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erro ao alterar visibilidade.'
+  }
+}
+
 onMounted(async () => {
   if (!responseId) {
     error.value = 'Resposta não encontrada.'
@@ -224,6 +237,7 @@ onMounted(async () => {
     displayedResult.value = resp.result ?? null
     submittedAt.value = resp.submitted_at ?? null
     isComplete.value = resp.complete === true
+    visibility.value = resp.visibility === 'private' ? 'private' : 'shared'
     error.value = null
     if (isComplete.value) {
       try {
@@ -265,6 +279,7 @@ onMounted(async () => {
           <span class="meta-item">{{ formatDate(submittedAt) }}</span>
           <span v-if="tierLabel" class="meta-pill">{{ tierLabel }}</span>
           <span v-if="model.version" class="meta-pill muted">v{{ model.version }}</span>
+          <ArtifactVisibilityToggle :model-value="visibility" @update:model-value="onVisibility" />
         </div>
       </header>
 

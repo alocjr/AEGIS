@@ -13,26 +13,10 @@ from app.routes import auth as auth_routes
 from app.routes import course as course_routes
 from app.routes import progress as progress_routes
 from app.schemas import AdminCreateUserRequest, AdminUpdateUserRequest, LiberarEncontroRequest
+from tests.query_match import matches as _matches
 
 
-def _matches(doc: dict, flt: dict | None) -> bool:
-    for key, expected in (flt or {}).items():
-        if key == "$or":
-            if not any(_matches(doc, sub) for sub in expected):
-                return False
-            continue
-        if isinstance(expected, dict):
-            if "$ne" in expected:
-                if doc.get(key) == expected["$ne"]:
-                    return False
-                continue
-            if "$exists" in expected:
-                if (key in doc) != expected["$exists"]:
-                    return False
-                continue
-        if doc.get(key) != expected:
-            return False
-    return True
+from tests.query_match import matches as _matches
 
 
 class _Cursor:

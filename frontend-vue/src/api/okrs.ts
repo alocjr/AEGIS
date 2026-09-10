@@ -59,6 +59,8 @@ export interface OkrCycleSummary {
   key_results_count: number
   drafts_count: number
   progress_pct: number | null
+  visibility?: 'shared' | 'private'
+  created_by_user_id?: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -80,6 +82,7 @@ export type OkrCyclePayload = Partial<{
   ano: number
   trimestre: number | null
   objectives: Objective[]
+  visibility?: 'shared' | 'private'
 }>
 
 export function listOkrCycles(): Promise<{ items: OkrCycleSummary[] }> {

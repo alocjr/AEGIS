@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { fetchMyMaturityResponses, fetchMaturityModel, type MaturityResponseListItem, type MaturityModel } from '@/api/maturity'
+import { fetchMyMaturityResponses, fetchMaturityModel, updateMaturityVisibility, type MaturityResponseListItem, type MaturityModel } from '@/api/maturity'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
+import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -81,6 +83,15 @@ function radarLabelPos(i: number, n: number): { x: number; y: number } {
   return {
     x: RADAR_CX + RADAR_LABEL_R * Math.cos(angle),
     y: RADAR_CY + RADAR_LABEL_R * Math.sin(angle),
+  }
+}
+
+async function onVisibility(item: MaturityResponseListItem, value: ArtifactVisibility) {
+  try {
+    const updated = await updateMaturityVisibility(item.id, value)
+    item.visibility = updated.visibility || 'shared'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Erro ao alterar visibilidade.'
   }
 }
 
@@ -192,6 +203,11 @@ onMounted(async () => {
             </div>
           </RouterLink>
           <div class="list-actions">
+            <ArtifactVisibilityToggle
+              compact
+              :model-value="item.visibility || 'shared'"
+              @update:model-value="onVisibility(item, $event)"
+            />
             <RouterLink :to="`/ai-maturity/${item.id}/edit`" class="btn-edit" @click.stop>
               Editar respostas
             </RouterLink>

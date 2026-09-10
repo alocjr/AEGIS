@@ -26,8 +26,16 @@ export interface AuthUser {
   /** Organização (time) do usuário — SWOT/Canvas/Maturidade são compartilhados dentro dela. */
   organization_id?: string | null
   organization_name?: string
+  /** Memberships: o usuário pode pertencer a várias orgs e trocar a ativa na barra. */
+  organizations?: AuthOrganization[]
   /** Ferramentas do AI Hub liberadas pelo admin da plataforma (ids: maturity, swot, …). */
   tools?: string[]
+}
+
+export interface AuthOrganization {
+  id: string
+  name: string
+  is_org_admin: boolean
 }
 
 export interface AuthResponse {
@@ -50,6 +58,10 @@ export function logoutApi(): Promise<GenericMessageResponse> {
 
 export function fetchMe(): Promise<AuthUser> {
   return get<AuthUser>('/api/auth/me')
+}
+
+export function switchOrganization(organizationId: string): Promise<AuthUser> {
+  return post<AuthUser>('/api/auth/active-organization', { organization_id: organizationId })
 }
 
 export function forgotPassword(payload: ForgotPasswordPayload): Promise<GenericMessageResponse> {

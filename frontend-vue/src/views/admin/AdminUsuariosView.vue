@@ -64,8 +64,8 @@ const form = ref<{
   course_slugs: string[]
   phone: string
   is_admin: boolean
-  is_org_admin: boolean
-  organization_id: string
+  organization_ids: string[]
+  org_admin_ids: string[]
   tools: string[]
   apply_tools_to_organization: boolean
 }>({
@@ -75,8 +75,8 @@ const form = ref<{
   course_slugs: [],
   phone: '',
   is_admin: false,
-  is_org_admin: false,
-  organization_id: '',
+  organization_ids: [],
+  org_admin_ids: [],
   tools: [],
   apply_tools_to_organization: false,
 })
@@ -93,8 +93,8 @@ function resetForm() {
     course_slugs: courses.value[0]?.slug ? [courses.value[0].slug] : [],
     phone: '',
     is_admin: false,
-    is_org_admin: false,
-    organization_id: '',
+    organization_ids: [],
+    org_admin_ids: [],
     tools: platformTools.value.map((t) => t.id),
     apply_tools_to_organization: false,
   }
@@ -108,6 +108,34 @@ function toolsLabel(tools: string[] | undefined): string {
   if (n === 0) return 'Nenhuma'
   if (n >= total) return 'Todas'
   return `${n}/${total}`
+}
+
+function orgLabel(u: AdminUser): string {
+  const orgs = u.organizations?.length
+    ? u.organizations
+    : u.organization_name
+      ? [{ id: u.organization_id || '', name: u.organization_name, is_org_admin: u.is_org_admin }]
+      : []
+  if (!orgs.length) return '—'
+  return orgs.map((o) => (o.is_org_admin ? `${o.name} (admin)` : o.name)).join(', ')
+}
+
+function toggleOrg(id: string) {
+  const ids = form.value.organization_ids
+  if (ids.includes(id)) {
+    form.value.organization_ids = ids.filter((x) => x !== id)
+    form.value.org_admin_ids = form.value.org_admin_ids.filter((x) => x !== id)
+  } else {
+    form.value.organization_ids = [...ids, id]
+  }
+}
+
+function toggleOrgAdmin(id: string) {
+  if (!form.value.organization_ids.includes(id)) return
+  const admins = form.value.org_admin_ids
+  form.value.org_admin_ids = admins.includes(id)
+    ? admins.filter((x) => x !== id)
+    : [...admins, id]
 }
 
 function openCreate() {
@@ -141,8 +169,14 @@ async function openEdit(user: AdminUser) {
       course_slugs: [...slugs],
       phone: detail.phone || '',
       is_admin: detail.is_admin,
-      is_org_admin: detail.is_org_admin,
-      organization_id: detail.organization_id || '',
+      organization_ids: (detail.organizations?.length
+        ? detail.organizations.map((o) => o.id)
+        : detail.organization_id
+          ? [detail.organization_id]
+          : []),
+      org_admin_ids: (detail.organizations || [])
+        .filter((o) => o.is_org_admin)
+        .map((o) => o.id),
       tools: [...(detail.tools || [])],
       apply_tools_to_organization: false,
     }
@@ -172,7 +206,7 @@ function formatDate(iso: string | null | undefined) {
 
 async function saveModal() {
   modalError.value = null
-  const { name, email, password, course_slugs, phone, is_admin, is_org_admin } = form.value
+  const { name, email, password, course_slugs, phone, is_admin } = form.value
   if (!name.trim()) {
     modalError.value = 'Nome é obrigatório.'
     return
@@ -190,6 +224,10 @@ async function saveModal() {
     return
   }
   const slugs = (course_slugs ?? []).filter((s) => s?.trim())
+  if (modalMode.value === 'edit' && form.value.organization_ids.length === 0) {
+    modalError.value = 'O usuário precisa pertencer a pelo menos uma organização.'
+    return
+  }
 
   modalSaving.value = true
   try {
@@ -200,7 +238,10 @@ async function saveModal() {
         password: password,
         course_slugs: slugs,
         phone: phone.trim() || undefined,
-        organization_id: form.value.organization_id || undefined,
+        organization_ids: form.value.organization_ids.length
+          ? [...form.value.organization_ids]
+          : undefined,
+        org_admin_ids: [...form.value.org_admin_ids],
         tools: [...form.value.tools],
       })
       users.value = await listUsers()
@@ -213,12 +254,12 @@ async function saveModal() {
         course_slugs: slugs,
         phone: phone.trim() || '',
         is_admin,
-        is_org_admin,
+        organization_ids: [...form.value.organization_ids],
+        org_admin_ids: [...form.value.org_admin_ids],
         tools: [...form.value.tools],
         apply_tools_to_organization: form.value.apply_tools_to_organization,
       }
       if (password.trim()) body.password = password
-      if (form.value.organization_id) body.organization_id = form.value.organization_id
       const result = await updateUser(id, body)
       users.value = await listUsers()
       if (result.members_updated && result.members_updated > 1) {
@@ -272,7 +313,9 @@ async function createOrgInline() {
   try {
     const org = await createOrganization(name)
     organizations.value = [...organizations.value, { id: org.id, name: org.name, member_count: 0 }]
-    form.value.organization_id = org.id
+    if (!form.value.organization_ids.includes(org.id)) {
+      form.value.organization_ids = [...form.value.organization_ids, org.id]
+    }
     newOrgName.value = ''
   } catch (e) {
     modalError.value = e instanceof Error ? e.message : 'Erro ao criar organização.'
@@ -343,7 +386,7 @@ onMounted(async () => {
             <td class="name-cell">{{ u?.name ?? '—' }}</td>
             <td>{{ u?.email ?? '—' }}</td>
             <td>{{ u?.phone || '—' }}</td>
-            <td>{{ u?.organization_name || '—' }}</td>
+            <td>{{ orgLabel(u) }}</td>
             <td class="slug-cell">
               <span v-if="(u?.course_slugs?.length ?? 0) > 0">{{ (u?.course_slugs ?? []).join(', ') }}</span>
               <code v-else>{{ u?.course_slug || '—' }}</code>
@@ -456,17 +499,33 @@ onMounted(async () => {
               </label>
             </div>
             <div class="form-group">
-              <label for="user-org">Organização</label>
+              <span class="label-block">Organizações</span>
               <p class="form-hint">
-                Usuários da mesma organização compartilham SWOT, Canvas e Maturidade.
-                Deixe em branco ao criar para gerar uma organização solo.
+                O usuário pode pertencer a várias organizações e trocar a ativa na barra superior.
+                Ao criar, deixe todas desmarcadas para gerar uma organização solo.
               </p>
-              <select id="user-org" v-model="form.organization_id" class="input">
-                <option value="">— Nova organização solo —</option>
-                <option v-for="o in organizations" :key="o.id" :value="o.id">
-                  {{ o.name }} ({{ o.member_count }})
-                </option>
-              </select>
+              <div class="org-memberships">
+                <div v-for="o in organizations" :key="o.id" class="org-row">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      :checked="form.organization_ids.includes(o.id)"
+                      @change="toggleOrg(o.id)"
+                    />
+                    {{ o.name }} ({{ o.member_count }})
+                  </label>
+                  <label class="checkbox-label org-admin-flag">
+                    <input
+                      type="checkbox"
+                      :disabled="!form.organization_ids.includes(o.id)"
+                      :checked="form.org_admin_ids.includes(o.id)"
+                      @change="toggleOrgAdmin(o.id)"
+                    />
+                    Admin desta org.
+                  </label>
+                </div>
+                <p v-if="organizations.length === 0" class="form-hint">Nenhuma organização ainda — crie uma abaixo.</p>
+              </div>
               <div class="org-inline-create">
                 <input
                   v-model="newOrgName"
@@ -495,15 +554,6 @@ onMounted(async () => {
                 Administrador
               </label>
               <span class="form-hint">Usuários admin podem acessar o painel e gerir a plataforma.</span>
-            </div>
-            <div v-if="modalMode === 'edit'" class="form-group form-group-check">
-              <label>
-                <input v-model="form.is_org_admin" type="checkbox" />
-                Admin da organização
-              </label>
-              <span class="form-hint">
-                Pode criar/editar/remover membros da própria organização (sem atribuir trilha/mentoria).
-              </span>
             </div>
       <template #footer>
         <AppButton variant="secondary" @click="closeModal">Cancelar</AppButton>
@@ -757,6 +807,26 @@ onMounted(async () => {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--bd);
+  font-size: 13px;
+  color: var(--k3);
+}
+
+.org-memberships {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.org-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.org-admin-flag {
   font-size: 13px;
   color: var(--k3);
 }

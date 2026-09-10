@@ -1,4 +1,5 @@
-import { get, post } from './client'
+import { get, post, patch } from './client'
+import type { ArtifactVisibility } from '@/lib/visibility'
 
 export type MaturityTier = 'basico' | 'completo' | 'complementar'
 
@@ -118,6 +119,8 @@ export interface MaturityMyResponse {
   submitted_at: string | null
   result: MaturityResult | null
   complete?: boolean
+  visibility?: ArtifactVisibility
+  created_by_user_id?: string | null
 }
 
 /** Item resumido na lista de autoavaliações */
@@ -127,6 +130,8 @@ export interface MaturityResponseListItem {
   submitted_at: string | null
   tier?: MaturityTier | string
   complete?: boolean
+  visibility?: ArtifactVisibility
+  created_by_user_id?: string | null
   result: {
     total_score: number
     max_score: number
@@ -177,4 +182,14 @@ export function saveMaturityResponse(
     tier,
     response_id: responseId || undefined,
   })
+}
+
+export function updateMaturityVisibility(
+  id: string,
+  visibility: ArtifactVisibility
+): Promise<MaturityMyResponse & { id: string }> {
+  return patch<MaturityMyResponse & { id: string }>(
+    `/api/maturity/my-responses/${encodeURIComponent(id)}`,
+    { visibility }
+  )
 }
