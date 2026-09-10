@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import {
   listCanvasProjects,
   createCanvasProject,
@@ -421,7 +421,11 @@ onUnmounted(() => {
     <PageHeader
       title="Projetos · Canvas de Oportunidades"
       subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08)."
-    />
+    >
+      <template #actions>
+        <RouterLink to="/roadmap" class="link-roadmap">Roadmap →</RouterLink>
+      </template>
+    </PageHeader>
 
     <StateBlock v-if="loading" state="loading" />
     <StateBlock v-else-if="error" state="error" :message="error" />
@@ -790,6 +794,16 @@ onUnmounted(() => {
   max-width: 1080px;
   margin: 0 auto;
   padding: 28px 20px 60px;
+}
+.link-roadmap {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--k0);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.link-roadmap:hover {
+  text-decoration: underline;
 }
 .page-header {
   margin-bottom: 24px;

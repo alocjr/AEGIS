@@ -34,6 +34,7 @@ const PATH_TOOL_RULES: { prefix: string; tool: ToolId }[] = [
   { prefix: '/swot', tool: TOOL_SWOT },
   { prefix: '/okrs', tool: TOOL_OKR },
   { prefix: '/projetos', tool: TOOL_CANVAS },
+  { prefix: '/roadmap', tool: TOOL_CANVAS },
   { prefix: '/mapa-estrategico', tool: TOOL_STRATEGIC_MAP },
   { prefix: '/governanca', tool: TOOL_GOVERNANCE },
 ]

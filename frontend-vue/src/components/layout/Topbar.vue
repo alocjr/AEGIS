@@ -115,6 +115,12 @@ async function onSwitchOrg(ev: Event) {
           @click="menuOpen = false"
         >AI Canvas</RouterLink>
         <RouterLink
+          v-if="auth.hasTool(TOOL_CANVAS)"
+          to="/roadmap"
+          class="tb-pill"
+          @click="menuOpen = false"
+        >Roadmap</RouterLink>
+        <RouterLink
           v-if="auth.hasTool(TOOL_STRATEGIC_MAP)"
           to="/mapa-estrategico"
           class="tb-pill"

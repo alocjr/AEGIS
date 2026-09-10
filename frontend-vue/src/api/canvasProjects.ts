@@ -1,4 +1,4 @@
-import { del, get, post, put } from './client'
+import { del, get, patch, post, put } from './client'
 
 export type CanvasQuadrant =
   | 'ganho_rapido'
@@ -218,6 +218,23 @@ export function cloneCanvasProject(
   body: { organization_id: string; title?: string }
 ): Promise<CanvasProject> {
   return post<CanvasProject>(`/api/canvas-projects/${encodeURIComponent(id)}/clone`, body)
+}
+
+export interface CanvasRoadmapItem extends CanvasProjectSummary {
+  semanas: number
+}
+
+export function listRoadmapProjects(): Promise<{ items: CanvasRoadmapItem[] }> {
+  return get<{ items: CanvasRoadmapItem[] }>('/api/canvas-projects/roadmap')
+}
+
+export function moveRoadmapProject(
+  id: string,
+  dataInicioReal: string
+): Promise<CanvasRoadmapItem> {
+  return patch<CanvasRoadmapItem>(`/api/canvas-projects/${encodeURIComponent(id)}/inicio`, {
+    data_inicio_real: dataInicioReal,
+  })
 }
 
 export interface AprovarPortfolioResult {

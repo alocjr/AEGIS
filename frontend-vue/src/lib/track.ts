@@ -30,6 +30,7 @@ const RESOURCE_BY_ROUTE_NAME: Record<string, string> = {
   SwotAnalysis: 'swot.editor',
   ProjetosList: 'canvas.lista',
   ProjetoCanvas: 'canvas.projeto',
+  Roadmap: 'canvas.roadmap',
   OkrCyclesList: 'okr.ciclos',
   OkrCycleEditor: 'okr.editor',
   MapaEstrategico: 'strategic_map.painel',

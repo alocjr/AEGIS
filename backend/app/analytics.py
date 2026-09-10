@@ -77,6 +77,7 @@ RESOURCES: tuple[TrackedResource, ...] = (
     TrackedResource(f"{TOOL_SWOT}.editor", "Matriz SWOT e TOWS", CATEGORY_TOOL, "SWOT de IA"),
     TrackedResource(f"{TOOL_CANVAS}.lista", "Portfólio de projetos", CATEGORY_TOOL, "AI Canvas"),
     TrackedResource(f"{TOOL_CANVAS}.projeto", "Canvas do projeto", CATEGORY_TOOL, "AI Canvas"),
+    TrackedResource(f"{TOOL_CANVAS}.roadmap", "Roadmap de projetos", CATEGORY_TOOL, "AI Canvas"),
     TrackedResource(f"{TOOL_OKR}.ciclos", "Lista de ciclos", CATEGORY_TOOL, "OKR"),
     TrackedResource(f"{TOOL_OKR}.editor", "Editor do ciclo", CATEGORY_TOOL, "OKR"),
     TrackedResource(f"{TOOL_STRATEGIC_MAP}.painel", "Mapa estratégico", CATEGORY_TOOL, "Mapa Estratégico"),

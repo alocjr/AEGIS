@@ -31,6 +31,7 @@ from app.schemas import (
     CanvasProjectCloneRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
+    CanvasRoadmapMoveRequest,
 )
 from app.tools import TOOL_CANVAS
 
@@ -377,6 +378,24 @@ def _clean_prioridade(value) -> str:
 def _clean_mes_inicio(value) -> str:
     raw = str(value or "").strip().lower()
     return raw if raw in _MESES_INICIO else ""
+
+
+def _is_iso_date(raw: str) -> bool:
+    try:
+        datetime.strptime((raw or "")[:10], "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def _mes_from_iso(iso: str) -> str:
+    try:
+        month = int(iso[5:7])
+    except (TypeError, ValueError, IndexError):
+        return ""
+    if 1 <= month <= 12:
+        return _MESES_INICIO[month - 1]
+    return ""
 
 
 def _clean_periodicidade(value) -> str:
@@ -726,6 +745,26 @@ def list_projects(
     return {"items": [_to_item(doc, summary=True) for doc in docs]}
 
 
+@router.get("/roadmap")
+def list_roadmap(
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Projetos aprovados com data de início — barras do Gantt de 18 meses."""
+    query = {**visible_query(org_id, user["_id"]), "projeto_aprovado": True}
+    items = []
+    for doc in db.canvas_projects.find(query):
+        start = str(doc.get("data_inicio_real") or "").strip()
+        if not _is_iso_date(start):
+            continue
+        item = _to_item(doc, summary=True)
+        item["semanas"] = _clean_cronograma(doc.get("cronograma")).get("semanas") or 8
+        items.append(item)
+    items.sort(key=lambda i: (i.get("data_inicio_real") or "", i.get("title") or ""))
+    return {"items": items}
+
+
 @router.post("")
 def create_project(
     body: CanvasProjectCreateRequest,
@@ -774,6 +813,39 @@ def clone_project(
     result = db.canvas_projects.insert_one(doc)
     doc["_id"] = result.inserted_id
     return _to_item(doc)
+
+
+@router.patch("/{project_id}/inicio")
+def move_roadmap_project(
+    project_id: str,
+    body: CanvasRoadmapMoveRequest,
+    user=Depends(get_verified_user),
+    org_id=Depends(get_current_organization_id),
+    db: Database = Depends(get_db),
+):
+    """Move a data de início real. Só projetos já aprovados (Roadmap)."""
+    doc = _get_owned(db, org_id, project_id, user["_id"])
+    if not doc.get("projeto_aprovado"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Só projetos aprovados entram no roadmap.",
+        )
+    start = _clean_iso_date(body.data_inicio_real)
+    now = datetime.now(timezone.utc)
+    db.canvas_projects.update_one(
+        {"_id": ObjectId(project_id), "organization_id": org_id},
+        {
+            "$set": {
+                "data_inicio_real": start,
+                "mes_inicio": _mes_from_iso(start),
+                "updated_at": now,
+            }
+        },
+    )
+    updated = _get_owned(db, org_id, project_id, user["_id"])
+    item = _to_item(updated, summary=True)
+    item["semanas"] = _clean_cronograma(updated.get("cronograma")).get("semanas") or 8
+    return item
 
 
 def import_projects(

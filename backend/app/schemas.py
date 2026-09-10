@@ -181,6 +181,12 @@ class CanvasAprovarProjetoRequest(BaseModel):
     periodicidade: CanvasPeriodicidade
 
 
+class CanvasRoadmapMoveRequest(BaseModel):
+    """Reagenda a data de início real de um projeto aprovado (Roadmap)."""
+
+    data_inicio_real: str = Field(..., min_length=10, max_length=10)
+
+
 class CanvasImportRequest(BaseModel):
     """Envelope aegis.canvas-oportunidades (prompt → JSON importável)."""
 

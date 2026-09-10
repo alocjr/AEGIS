@@ -344,6 +344,10 @@ if USE_VUE_UI:
     def projetos_page():
         return _vue_index()
 
+    @app.get("/roadmap")
+    def roadmap_page():
+        return _vue_index()
+
     @app.get("/swot")
     def swot_page():
         return _vue_index()

@@ -661,6 +661,7 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
     <div class="toolbar">
       <RouterLink to="/projetos" class="back">← Projetos</RouterLink>
       <div class="toolbar-actions">
+        <AppButton variant="ghost" size="sm" to="/roadmap">Roadmap</AppButton>
         <AppButton variant="secondary" size="sm" :disabled="loading || !!error" @click="openClone">
           Clonar
         </AppButton>
