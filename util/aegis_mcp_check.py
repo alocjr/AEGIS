@@ -40,6 +40,9 @@ CLAUDE_REDIRECT = "https://claude.ai/api/mcp/auth_callback"
 # Tools adicionadas depois do catálogo inicial. Se tools/list não as tiver,
 # o deploy está atrasado — não é cache do Claude.
 EXPECTED_NEW_TOOLS = (
+    "org_list",
+    "org_switch",
+    "maturity_set_visibility",
     "maturity_questionnaire",
     "maturity_answer",
     "okr_create_objective",
@@ -47,6 +50,8 @@ EXPECTED_NEW_TOOLS = (
     "okr_create_key_result",
     "okr_update_key_result",
     "governance_create_assessment",
+    "admin_list_organizations",
+    "admin_set_user_organizations",
 )
 
 

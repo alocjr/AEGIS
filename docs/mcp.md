@@ -87,8 +87,24 @@ O script simula o que o Claude faz ao adicionar um connector: discovery
 
 Cada grupo exige a ferramenta correspondente liberada na conta (`users.tools`).
 
+**Multi-organização:** o usuário pode pertencer a várias orgs. `org_list` / `org_switch`
+definem a org **ativa**. Maturidade, SWOT, OKR, Canvas, Governança e Mapa Estratégico
+são dessa org (artefato `private` só o autor vê). Mentoria (`course_get`) é por pessoa.
+Depois de `org_switch`, as demais tools só no turno seguinte — nunca em paralelo com o switch.
+
 Catálogo versionado em `TOOLS_CATALOG_VERSION` (`backend/app/mcp/server.py`). Bump
 esse valor sempre que adicionar ou mudar tools — o Claude cacheia `tools/list`.
+
+### Organizações
+
+| Tool | Descrição |
+|------|-----------|
+| `org_list` | Memberships + org ativa (`active` em cada item) |
+| `org_switch` | **Escrita** — troca a org ativa (precisa já ser membro) |
+
+`swot_update`, `canvas_update`, `okr_update` e `governance_update_system` aceitam
+`visibility` (`shared` \| `private`) no `fields`. `maturity_set_visibility` faz o mesmo
+para autoavaliações.
 
 ### Maturidade
 
@@ -101,6 +117,7 @@ esse valor sempre que adicionar ou mudar tools — o Claude cacheia `tools/list`
 | `maturity_get` | Uma autoavaliação (respostas + resultado) |
 | `maturity_export` | Envelope `aegis.maturidade-ia` |
 | `maturity_save` | **Escrita** — substitui o mapa inteiro de answers |
+| `maturity_set_visibility` | **Escrita** — `shared` ou `private` |
 
 ### SWOT / TOWS
 
@@ -165,7 +182,9 @@ esse valor sempre que adicionar ou mudar tools — o Claude cacheia `tools/list`
 | Tool | Descrição |
 |------|-----------|
 | `admin_dashboard` | Alunos e métricas |
-| `admin_list_users` | Lista resumida |
+| `admin_list_users` | Lista resumida (inclui `organizations[]`) |
+| `admin_list_organizations` | Organizações da plataforma |
+| `admin_set_user_organizations` | **Escrita** — memberships (`organization_ids`, `org_admin_ids`, org ativa) |
 | `admin_user_progress` | Curso/progresso de um aluno |
 | `admin_liberar_encontro` | Liberar encontro |
 

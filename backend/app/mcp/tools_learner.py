@@ -33,6 +33,7 @@ from app.schemas import (
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
     MaturityAnswersRequest,
+    MaturityVisibilityRequest,
     OkrCycleCreateRequest,
     OkrCycleUpdateRequest,
     SwotAnalysisUpdateRequest,
@@ -55,15 +56,64 @@ except ImportError:  # pragma: no cover
         pass
 
 
-def _org_id(user: dict):
-    """Organizacao ativa do usuario MCP — mesma regra de `deps.get_current_organization_id`."""
+def _reload_membership(user: dict) -> dict:
+    """Releia organization_id/organization_ids no Mongo — a org ativa pode ter mudado
+    via org_switch (ou pelo admin) desde que o dict foi resolvido."""
+    uid = user.get("_id")
+    if not uid:
+        return user
+    fresh = get_db().users.find_one(
+        {"_id": uid},
+        {"organization_id": 1, "organization_ids": 1, "org_admin_ids": 1, "is_org_admin": 1},
+    )
+    if not fresh:
+        return user
+    return {**user, **fresh}
+
+
+def _with_org(user: dict) -> tuple[dict, Any]:
+    """Usuário com membership atual + org ativa (mesmo critério de deps.get_current_organization_id).
+
+    Sempre consulta o documento atual: tools em paralelo com `org_switch` ainda
+    podem ver a org antiga; depois do switch, a próxima tool usa a nova.
+    """
+    user = _reload_membership(user)
     org_id = user.get("organization_id")
     if not org_id:
         ids = org_ids_of(user)
         org_id = ids[0] if ids else None
     if not org_id:
         raise ToolError("Usuario sem organizacao atribuida. Contate o suporte.")
-    return org_id
+    return user, org_id
+
+
+def _org_id(user: dict):
+    """Organizacao ativa — atalho quando o caller já tem o dict fresco."""
+    return _with_org(user)[1]
+
+
+def build_org_context(user: dict, db) -> dict:
+    """Payload de org_list / org_switch — memberships + org ativa para o modelo."""
+    ids = org_ids_of(user)
+    active = user.get("organization_id") or (ids[0] if ids else None)
+    orgs = organizations_payload(user, db)
+    for item in orgs:
+        item["active"] = bool(active) and item["id"] == str(active)
+    active_name = next((item["name"] for item in orgs if item.get("active")), "")
+    multi = len(orgs) > 1
+    return {
+        "organization_id": str(active) if active else None,
+        "organization_name": active_name,
+        "organizations": orgs,
+        "hint": (
+            "Maturidade, SWOT, OKR, Canvas, Governança e Mapa Estratégico são da "
+            "organização ativa. Para mudar, chame org_switch com o id e só então as "
+            "demais tools — nunca no mesmo turno em paralelo. Artefatos com "
+            "visibility=private só o autor vê."
+            if multi
+            else "Usuário com uma única organização. Artefatos com visibility=private só o autor vê."
+        ),
+    }
 
 
 _OBJ_KEYS = (
@@ -280,52 +330,68 @@ def register_learner_tools(mcp) -> None:
     def _swot_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_SWOT)
-        return user
+        return _reload_membership(user)
 
     def _canvas_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_CANVAS)
-        return user
+        return _reload_membership(user)
 
     def _maturity_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_MATURITY)
-        return user
+        return _reload_membership(user)
 
     def _map_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_STRATEGIC_MAP)
-        return user
+        return _reload_membership(user)
 
     def _okr_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_OKR)
-        return user
+        return _reload_membership(user)
 
     def _gov_user() -> dict:
         user = require_verified_user()
         require_tool_access(user, TOOL_GOVERNANCE)
-        return user
+        return _reload_membership(user)
 
     # ── Organizações (sem gate de ferramenta) ────────────────────────────────
 
     @mcp.tool
     def org_list() -> dict:
-        """Lista as organizações das quais o usuário é membro e qual está ativa."""
-        user = require_verified_user()
-        db = get_db()
-        org_id = user.get("organization_id")
-        return {
-            "organization_id": str(org_id) if org_id else None,
-            "organizations": organizations_payload(user, db),
-        }
+        """Lista as organizações do usuário e qual está ativa.
+
+        Mentoria (progresso/quiz) é por pessoa. Maturidade, SWOT, OKR, Canvas,
+        Governança e Mapa Estratégico são da organização ativa. Se houver mais
+        de uma, chame org_switch antes de trabalhar na outra — nunca em paralelo
+        com outras tools no mesmo turno.
+        """
+        user = _reload_membership(require_verified_user())
+        return build_org_context(user, get_db())
 
     @mcp.tool
     def org_switch(organization_id: str) -> dict:
-        """Troca a organização ativa. Só aceita orgs das quais o usuário já é membro."""
+        """Troca a organização ativa. Só aceita orgs das quais o usuário já é membro.
+
+        Depois desta tool, as demais (swot_*, canvas_*, okr_*, maturity_*,
+        governance_*, strategic_map) passam a ler/gravar nesta org. Não chame
+        essas tools no mesmo turno em paralelo — espere o resultado do switch.
+        """
         user = require_verified_user()
         body = validate_model(SwitchOrganizationRequest, {"organization_id": organization_id})
-        return call_route(auth_routes.switch_organization, payload=body, user=user, db=get_db())
+        updated = call_route(auth_routes.switch_organization, payload=body, user=user, db=get_db())
+        # Recarrega o doc: switch reescreve organization_id / is_org_admin no Mongo.
+        fresh = get_db().users.find_one({"_id": user["_id"]}) or {**user}
+        ctx = build_org_context(fresh, get_db())
+        ctx["user"] = {
+            "id": updated.get("id"),
+            "is_org_admin": updated.get("is_org_admin"),
+            "organization_id": updated.get("organization_id"),
+            "organization_name": updated.get("organization_name"),
+        }
+        return ctx
 
     # ── SWOT / TOWS ──────────────────────────────────────────────────────────
 
@@ -349,7 +415,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def swot_list() -> dict:
-        """Lista as SWOTs da organização (resumo, com contagem de itens e estratégias TOWS)."""
+        """Lista as SWOTs da organização ativa (privadas de outros membros ficam ocultas)."""
         user = _swot_user()
         return call_route(swot_routes.list_swots, user=user, org_id=_org_id(user), db=get_db())
 
@@ -381,10 +447,11 @@ def register_learner_tools(mcp) -> None:
         swot_id: str | None = None,
         rebuild_tows: bool = False,
     ) -> dict:
-        """Atualiza a SWOT (ótica, quadrantes, TOWS, veredito). Sem swot_id, usa a mais recente.
+        """Atualiza a SWOT (ótica, quadrantes, TOWS, veredito, visibilidade). Sem swot_id, usa a mais recente.
 
         Campos: optica, pilares, forcas, fraquezas, oportunidades, ameacas, watchlist,
-        tows_fo, tows_fa, tows_fxo, tows_fxa, veredito_tipo, veredito_titulo, veredito_texto.
+        tows_fo, tows_fa, tows_fxo, tows_fxa, veredito_tipo, veredito_titulo, veredito_texto,
+        visibility (shared|private). Escopo: organização ativa.
         rebuild_tows=true recalcula as iniciativas TOWS a partir dos itens marcados (tows=true).
         """
         user = _swot_user()
@@ -433,7 +500,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def canvas_list(q: str = "") -> dict:
-        """Lista os projetos (canvas) da organização, ordenados de P0 a P4.
+        """Lista os projetos (canvas) da organização ativa, ordenados de P0 a P4.
 
         `q` (opcional): busca por palavras em qualquer texto do canvas
         (título, área, dores, cronograma, etc.). Todas as palavras precisam aparecer.
@@ -495,12 +562,13 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def canvas_update(project_id: str, fields: dict[str, Any] | str) -> dict:
-        """Atualiza campos de um projeto/canvas existente.
+        """Atualiza campos de um projeto/canvas existente. Escopo: organização ativa.
 
         `fields.cronograma` substitui o Gantt inteiro. Para criar/editar/excluir o
         cronograma sem apagar atividades, use canvas_cronograma_create,
         canvas_cronograma_update, canvas_cronograma_delete e as tools de atividade/marco.
         Prioridade C-level: `prioridade` (P0–P4) e `mes_inicio` (jan–dez).
+        Visibilidade: `visibility` (`shared` | `private`).
         """
         user = _canvas_user()
         raw = parse_json_object(fields, label="fields")
@@ -680,7 +748,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def course_get(course_slug: str | None = None) -> dict:
-        """Retorna a trilha atual e o progresso do mentorado."""
+        """Retorna a trilha atual e o progresso do mentorado (por pessoa, não por organização)."""
         user = require_verified_user()
         return call_route(
             course_routes.get_current_course,
@@ -699,7 +767,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def maturity_my_responses() -> dict:
-        """Lista as autoavaliações de maturidade da organização (rascunhos, só as do próprio autor)."""
+        """Lista as autoavaliações da organização ativa (rascunhos e privados, só os do autor)."""
         user = _maturity_user()
         return call_route(
             maturity_routes.list_my_responses, user=user, org_id=_org_id(user), db=get_db()
@@ -730,7 +798,7 @@ def register_learner_tools(mcp) -> None:
         )
 
     def _maturity_load_draft(user: dict, response_id: str | None, tier: str) -> tuple[str | None, dict[str, int], str, dict]:
-        org_id = _org_id(user)
+        user, org_id = _with_org(user)
         db = get_db()
 
         def _answers_of(doc: dict) -> dict[str, int]:
@@ -878,6 +946,20 @@ def register_learner_tools(mcp) -> None:
             db=get_db(),
         )
 
+    @mcp.tool
+    def maturity_set_visibility(response_id: str, visibility: str) -> dict:
+        """Define se a autoavaliação é compartilhada com a org (`shared`) ou só do autor (`private`)."""
+        user = _maturity_user()
+        body = validate_model(MaturityVisibilityRequest, {"visibility": visibility})
+        return call_route(
+            maturity_routes.patch_my_response_visibility,
+            response_id=response_id,
+            body=body,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+
     # ── Mapa estratégico ─────────────────────────────────────────────────────
 
     @mcp.tool
@@ -900,7 +982,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def okr_list() -> dict:
-        """Lista os ciclos OKR da organização (resumo)."""
+        """Lista os ciclos OKR da organização ativa (privados de outros membros ficam ocultos)."""
         user = _okr_user()
         return call_route(okr_routes.list_cycles, user=user, org_id=_org_id(user), db=get_db())
 
@@ -923,7 +1005,7 @@ def register_learner_tools(mcp) -> None:
         )
 
     def _okr_load(user: dict, cycle_id: str | None) -> tuple[str, dict]:
-        org_id = _org_id(user)
+        user, org_id = _with_org(user)
         db = get_db()
         if cycle_id:
             cycle = call_route(
@@ -934,13 +1016,14 @@ def register_learner_tools(mcp) -> None:
         return str(cycle["id"]), cycle
 
     def _okr_put_objectives(user: dict, cycle_id: str, objectives: list[dict]) -> dict:
+        user, org_id = _with_org(user)
         body = validate_model(OkrCycleUpdateRequest, {"objectives": objectives})
         return call_route(
             okr_routes.update_cycle,
             cycle_id=cycle_id,
             body=body,
             user=user,
-            org_id=_org_id(user),
+            org_id=org_id,
             db=get_db(),
         )
 
@@ -978,7 +1061,8 @@ def register_learner_tools(mcp) -> None:
 
         Para criar/editar um Objective ou KR sem apagar os outros, use okr_create_objective,
         okr_update_objective, okr_create_key_result ou okr_update_key_result.
-        Campos de ciclo: nome, tipo, ano, trimestre.
+        Campos de ciclo: nome, tipo, ano, trimestre, visibility (shared|private).
+        Escopo: organização ativa.
         """
         user = _okr_user()
         raw = parse_json_object(fields, label="fields")
@@ -1141,7 +1225,7 @@ def register_learner_tools(mcp) -> None:
 
     @mcp.tool
     def governance_update_system(system_id: str, fields: dict[str, Any] | str) -> dict:
-        """Atualiza ficha de um sistema de IA (nome, finalidade, responsáveis, HITL, status…)."""
+        """Atualiza ficha de um sistema de IA (nome, finalidade, responsáveis, HITL, status, visibility). Escopo: organização ativa."""
         user = _gov_user()
         raw = parse_json_object(fields, label="fields")
         body = validate_model(AiSystemUpdateRequest, raw)

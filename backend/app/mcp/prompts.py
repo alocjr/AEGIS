@@ -26,7 +26,9 @@ def register_prompts(mcp) -> None:
             "Para ajustes incrementais (quadrantes, veredito ou iniciativas TOWS) use "
             "`swot_update`; para só recalcular TOWS a partir dos itens marcados, use "
             "`tows_rebuild`. "
-            "Antes, você pode consultar o resource `aegis://schema/swot-ia` ou "
+            "Antes, confirme a organização ativa com `org_list` (e `org_switch` se o "
+            "mentorado tiver mais de uma). A importação grava na org ativa. "
+            "Você pode consultar o resource `aegis://schema/swot-ia` ou "
             "`aegis://data/swot-pillars` se precisar validar a estrutura.\n"
         )
 
@@ -46,7 +48,8 @@ def register_prompts(mcp) -> None:
             "para editar campos, `canvas_update`. Cronograma (Gantt): "
             "`canvas_cronograma_create` / `canvas_cronograma_update` / "
             "`canvas_cronograma_delete`, ou as tools de atividade/marco. "
-            "`canvas_approve_portfolio` envia o projeto ao inventário de Governança.\n"
+            "`canvas_approve_portfolio` envia o projeto ao inventário de Governança. "
+            "Confirme a organização ativa com `org_list` / `org_switch` antes de importar.\n"
         )
 
     @mcp.prompt
@@ -54,6 +57,10 @@ def register_prompts(mcp) -> None:
         """Conduz o Diagnóstico de Maturidade em IA com o mentorado e grava as respostas."""
         return (
             "Você é o mentor Valorian conduzindo o Diagnóstico de Maturidade em IA pela plataforma AEGIS.\n\n"
+            "## Organização\n"
+            "Chame `org_list` no início. Se o mentorado tiver mais de uma organização, "
+            "confirme em qual trabalhar e use `org_switch` **antes** das tools de maturidade "
+            "(não no mesmo turno em paralelo).\n\n"
             "## Como proceder\n"
             "1. Chame `maturity_questionnaire` (tier `basico` por padrão; `completo` ou `complementar` se o usuário pedir).\n"
             "2. Apresente as perguntas **uma a uma** (ou no máximo um bloco da mesma dimensão). "

@@ -17,7 +17,7 @@ MCP_PATH = "/mcp"
 # Bump quando o catálogo de tools mudar. O Claude cacheia tools/list por URL/nome
 # do connector e ignora notifications/tools/list_changed; serverInfo.version
 # diferente ajuda alguns clientes a tratar o catálogo como novo.
-TOOLS_CATALOG_VERSION = "2026.09.10"
+TOOLS_CATALOG_VERSION = "2026.09.11"
 
 
 def get_auth() -> AegisOAuthProvider:
@@ -44,7 +44,13 @@ def create_mcp() -> FastMCP:
             "ou Authorization: Bearer com JWT/OAuth token. "
             "Tools de mentorado exigem email verificado e a ferramenta do AI Hub "
             "liberada na conta (maturidade, SWOT/TOWS, OKR, canvas, governança). "
-            "Tools admin_* exigem is_admin. "
+            "O usuário pode pertencer a várias organizações: org_list mostra as "
+            "memberships e a org ativa; org_switch troca a ativa. Maturidade, SWOT, "
+            "OKR, Canvas, Governança e Mapa Estratégico são sempre da org ativa — "
+            "depois de org_switch, chame as demais tools só no turno seguinte "
+            "(nunca em paralelo com o switch). Artefatos visibility=private só o "
+            "autor vê; shared o time vê. Mentoria (course_get) é por pessoa. "
+            "Tools admin_* exigem is_admin (admin_set_user_organizations atribui orgs). "
             "Escrita: maturity_questionnaire / maturity_answer; swot_update / swot_import / swot_from_maturity / tows_rebuild; "
             "okr_create / okr_create_objective / okr_update_objective / "
             "okr_create_key_result / okr_update_key_result / okr_activate; "
@@ -52,8 +58,8 @@ def create_mcp() -> FastMCP:
             "canvas_cronograma_create / canvas_cronograma_update / canvas_cronograma_delete; "
             "governance_create_system / governance_update_system / governance_create_assessment / "
             "governance_create_gate / governance_decide_gate. "
-            "Se o cliente ainda listar um catálogo antigo (sem maturity_answer / "
-            "okr_create_objective), remova e recoloque o connector e abra um chat novo."
+            "Se o cliente ainda listar um catálogo antigo (sem org_list / "
+            "org_switch / maturity_set_visibility), remova e recoloque o connector e abra um chat novo."
         ),
         auth=auth,
     )

@@ -21,6 +21,8 @@ import type { ArtifactVisibility } from '@/lib/visibility'
 import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
 import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
+import CanvasPdfExport from '@/components/canvas/CanvasPdfExport.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 import {
   getSwotAnalysisById,
   listSwotAnalyses,
@@ -591,6 +593,7 @@ onUnmounted(() => {
 })
 
 const approveOpen = ref(false)
+const exportOpen = ref(false)
 const approvingExec = ref(false)
 const approveExecError = ref<string | null>(null)
 
@@ -604,6 +607,11 @@ function formatInicioReal(iso: string): string {
 function openApprove() {
   approveExecError.value = null
   approveOpen.value = true
+}
+
+async function openExport() {
+  await autosave.flush()
+  exportOpen.value = true
 }
 
 async function submitApprove(payload: CanvasAprovarProjetoPayload) {
@@ -626,6 +634,9 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
     <div class="toolbar">
       <RouterLink to="/projetos" class="back">← Projetos</RouterLink>
       <div class="toolbar-actions">
+        <AppButton variant="secondary" size="sm" :disabled="loading || !!error" @click="openExport">
+          Exportar PDF
+        </AppButton>
         <div class="save-status">
           <span v-if="saveState === 'saving'">Salvando…</span>
           <span v-else-if="saveState === 'saved'" class="ok">Salvo</span>
@@ -1163,6 +1174,32 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
       :initial-periodicidade="project?.periodicidade || ''"
       @close="approveOpen = false"
       @submit="submitApprove"
+    />
+
+    <CanvasPdfExport
+      :open="exportOpen"
+      :title="form.title"
+      :area-negocio="form.area_negocio"
+      :responsavel="form.responsavel"
+      :data="form.data"
+      :objetivo-estrategico="form.objetivo_estrategico"
+      :prioridade="form.prioridade"
+      :mes-inicio="form.mes_inicio"
+      :contexto="form.contexto"
+      :dores="form.dores"
+      :oportunidade="form.oportunidade"
+      :oportunidade-tipos="form.oportunidade_tipos"
+      :dados="form.dados"
+      :valor="form.valor"
+      :custo="form.custo"
+      :riscos="form.riscos"
+      :score-valor="form.score_valor"
+      :score-viabilidade="form.score_viabilidade"
+      :quadrant="quadrant"
+      :proximo-passo="form.proximo_passo"
+      :justificativa-tows="form.justificativa_tows"
+      :cronograma="form.cronograma"
+      @close="exportOpen = false"
     />
   </div>
 </template>

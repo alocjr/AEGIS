@@ -107,3 +107,50 @@ body { font-family: var(--sans); background: var(--k9); color: var(--k0); font-s
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 #app { min-height: 100vh; }
+
+@media print {
+  @page {
+    size: A3 landscape;
+    margin: 0;
+  }
+  html.printing-canvas,
+  html.printing-canvas body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+  }
+  html.printing-canvas #app {
+    display: none !important;
+  }
+  html.printing-canvas body > *:not(.pdf-root) {
+    display: none !important;
+  }
+  html.printing-canvas .pdf-chrome {
+    display: none !important;
+  }
+  html.printing-canvas .pdf-stage {
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  html.printing-canvas .pdf-root {
+    position: static !important;
+    inset: auto !important;
+    background: none !important;
+    display: block !important;
+    height: auto !important;
+  }
+  html.printing-canvas .canvas-pdf-sheet {
+    width: 420mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    margin-bottom: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: hidden !important;
+  }
+}
