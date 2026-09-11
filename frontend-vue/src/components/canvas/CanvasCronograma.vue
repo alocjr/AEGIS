@@ -158,6 +158,52 @@ function removeAtividade(id: string) {
   persist()
 }
 
+const dragFrom = ref<number | null>(null)
+const dragOver = ref<number | null>(null)
+
+function moveAtividade(from: number, to: number) {
+  const list = crono.value.atividades
+  if (from === to) return
+  if (from < 0 || from >= list.length || to < 0 || to >= list.length) return
+  const [item] = list.splice(from, 1)
+  if (!item) return
+  list.splice(to, 0, item)
+  persist()
+}
+
+function moveBy(idx: number, delta: number) {
+  moveAtividade(idx, idx + delta)
+}
+
+function onOrdDragStart(idx: number, ev: DragEvent) {
+  dragFrom.value = idx
+  dragOver.value = idx
+  if (ev.dataTransfer) {
+    ev.dataTransfer.effectAllowed = 'move'
+    ev.dataTransfer.setData('text/plain', String(idx))
+  }
+}
+
+function onOrdDragOver(idx: number, ev: DragEvent) {
+  ev.preventDefault()
+  if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move'
+  dragOver.value = idx
+}
+
+function onOrdDrop(idx: number, ev: DragEvent) {
+  ev.preventDefault()
+  const from = dragFrom.value
+  dragFrom.value = null
+  dragOver.value = null
+  if (from == null) return
+  moveAtividade(from, idx)
+}
+
+function onOrdDragEnd() {
+  dragFrom.value = null
+  dragOver.value = null
+}
+
 function marcosAt(week: number): CanvasCronogramaMarco[] {
   return crono.value.marcos.filter((m) => m.semana === week)
 }
@@ -267,6 +313,7 @@ const draftRange = computed(() => {
     <div class="gantt-wrap">
       <div class="gantt">
         <div class="gantt-head">
+          <div class="c-ord" aria-hidden="true" />
           <div class="c-id">ID</div>
           <div class="c-act">Atividade / entrega</div>
           <div class="c-lead">Liderança¹</div>
@@ -292,8 +339,47 @@ const draftRange = computed(() => {
           v-for="(act, idx) in crono.atividades"
           :key="act.id"
           class="gantt-row"
-          :class="{ zebra: idx % 2 === 1 }"
+          :class="{
+            zebra: idx % 2 === 1,
+            'drag-over': dragOver === idx && dragFrom !== idx,
+            dragging: dragFrom === idx,
+          }"
+          @dragover="onOrdDragOver(idx, $event)"
+          @drop="onOrdDrop(idx, $event)"
         >
+          <div class="c-ord">
+            <button
+              type="button"
+              class="ord-btn"
+              :disabled="idx === 0"
+              aria-label="Subir atividade"
+              title="Subir"
+              @click="moveBy(idx, -1)"
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              class="ord-handle"
+              draggable="true"
+              aria-label="Arrastar para reordenar"
+              title="Arrastar para reordenar"
+              @dragstart="onOrdDragStart(idx, $event)"
+              @dragend="onOrdDragEnd"
+            >
+              ⋮⋮
+            </button>
+            <button
+              type="button"
+              class="ord-btn"
+              :disabled="idx === crono.atividades.length - 1"
+              aria-label="Descer atividade"
+              title="Descer"
+              @click="moveBy(idx, 1)"
+            >
+              ▼
+            </button>
+          </div>
           <div class="c-id">{{ padId(idx) }}</div>
           <input
             v-model="act.titulo"
@@ -373,6 +459,7 @@ const draftRange = computed(() => {
 
         <form class="add-form" @submit.prevent="addAtividade">
           <div class="add-row">
+          <div class="c-ord" aria-hidden="true" />
           <div class="c-id muted">+</div>
           <input
             v-model="draft.titulo"
@@ -520,6 +607,7 @@ const draftRange = computed(() => {
       <span>FS = iniciar após a conclusão da predecessora.</span>
       <span>SS = iniciar em paralelo.</span>
       <span>¹ Papéis sugeridos — ajuste conforme o cliente. Clique no losango para remover o marco.</span>
+      <span>Use as setas ou arraste ⋮⋮ para reordenar as atividades.</span>
     </footer>
 
     <datalist id="crono-lider">
@@ -652,7 +740,7 @@ h2 {
   padding: 0 12px 8px;
 }
 .gantt {
-  min-width: 860px;
+  min-width: 890px;
   border: 1px solid var(--navy);
 }
 .gantt-head,
@@ -661,7 +749,7 @@ h2 {
 .marco-row {
   display: grid;
   grid-template-columns:
-    40px minmax(150px, 1.7fr) minmax(92px, 0.9fr) 90px 64px minmax(260px, 1.9fr);
+    32px 40px minmax(150px, 1.7fr) minmax(92px, 0.9fr) 90px 64px minmax(260px, 1.9fr);
   align-items: stretch;
 }
 .gantt-head {
@@ -687,6 +775,54 @@ h2 {
 }
 .gantt-head .c-id {
   color: #fff;
+}
+.c-ord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2px 0;
+}
+.ord-btn,
+.ord-handle {
+  width: 24px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ord-btn {
+  height: 12px;
+  font-size: 8px;
+}
+.ord-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.ord-btn:not(:disabled):hover,
+.ord-handle:hover {
+  color: var(--navy);
+}
+.ord-handle {
+  height: 14px;
+  font-size: 11px;
+  letter-spacing: -1px;
+  cursor: grab;
+  touch-action: none;
+}
+.ord-handle:active {
+  cursor: grabbing;
+}
+.gantt-row.drag-over {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+.gantt-row.dragging {
+  opacity: 0.55;
 }
 .c-act,
 .c-lead,
@@ -903,7 +1039,7 @@ h2 {
   min-height: 52px;
 }
 .marco-label {
-  grid-column: 1 / 6;
+  grid-column: 1 / 7;
   display: flex;
   align-items: center;
   padding: 0 12px;

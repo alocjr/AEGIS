@@ -282,6 +282,22 @@ def _delete_cronograma_atividade(current: dict, atividade_id: str) -> dict:
     return canvas_routes._clean_cronograma(out)
 
 
+def _move_cronograma_atividade(current: dict, atividade_id: str, index: int) -> dict:
+    """Reordena a atividade para a posição `index` (0 = primeira linha)."""
+    out = canvas_routes._clean_cronograma(current)
+    idx, item = _find_crono_item(out["atividades"], atividade_id, "Atividade")
+    items = out["atividades"]
+    items.pop(idx)
+    try:
+        dest = int(index)
+    except (TypeError, ValueError) as exc:
+        raise ToolError("index deve ser um inteiro (0 = primeira linha).") from exc
+    dest = max(0, min(dest, len(items)))
+    items.insert(dest, item)
+    out["atividades"] = items
+    return canvas_routes._clean_cronograma(out)
+
+
 def _add_cronograma_marco(current: dict, marco: dict) -> dict:
     out = canvas_routes._clean_cronograma(current)
     if len(out["marcos"]) >= _MAX_MARCOS:
@@ -734,6 +750,15 @@ def register_learner_tools(mcp) -> None:
         current = _cronograma_of(_canvas_load(user, project_id))
         return _canvas_save_cronograma(
             user, project_id, _delete_cronograma_atividade(current, atividade_id)
+        )
+
+    @mcp.tool
+    def canvas_cronograma_move_atividade(project_id: str, atividade_id: str, index: int) -> dict:
+        """Reordena uma atividade no Gantt. `index` 0 = primeira linha; a duração/semanas não mudam."""
+        user = _canvas_user()
+        current = _cronograma_of(_canvas_load(user, project_id))
+        return _canvas_save_cronograma(
+            user, project_id, _move_cronograma_atividade(current, atividade_id, index)
         )
 
     @mcp.tool

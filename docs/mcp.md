@@ -142,7 +142,7 @@ para autoavaliações.
 | `canvas_cronograma_create` | **Escrita** — cria ou substitui o cronograma |
 | `canvas_cronograma_update` | **Escrita** — merge do Gantt (atividades/marcos substituem a lista se enviados) |
 | `canvas_cronograma_delete` | **Escrita** — zera o cronograma |
-| `canvas_cronograma_add_atividade` / `canvas_cronograma_update_atividade` / `canvas_cronograma_delete_atividade` | **Escrita** — atividade do Gantt sem apagar as outras |
+| `canvas_cronograma_add_atividade` / `canvas_cronograma_update_atividade` / `canvas_cronograma_delete_atividade` / `canvas_cronograma_move_atividade` | **Escrita** — atividade do Gantt (inclui reordenar) |
 | `canvas_cronograma_add_marco` / `canvas_cronograma_update_marco` / `canvas_cronograma_delete_marco` | **Escrita** — marco de decisão sem apagar os outros |
 | `canvas_approve_portfolio` | **Escrita** — aprova e cria sistema no inventário |
 | `canvas_aprovar_projeto` | **Escrita** — aprovação C-level (quem aprovou, início, ritmo) e entra no Roadmap |

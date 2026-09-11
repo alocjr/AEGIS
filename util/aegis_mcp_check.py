@@ -54,6 +54,7 @@ EXPECTED_NEW_TOOLS = (
     "canvas_roadmap_list",
     "canvas_roadmap_add",
     "canvas_roadmap_update",
+    "canvas_cronograma_move_atividade",
     "admin_list_organizations",
     "admin_set_user_organizations",
 )

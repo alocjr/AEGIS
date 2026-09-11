@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   ANALISE_CRITERIOS,
   analisePonderada,
@@ -17,7 +17,12 @@ const emit = defineEmits<{
   persist: []
 }>()
 
+const open = ref(true)
 const ponderada = computed(() => analisePonderada(props.modelValue.scores))
+
+function toggle() {
+  open.value = !open.value
+}
 
 function setScore(id: AnaliseCriterioId, n: number) {
   const current = props.modelValue.scores[id]
@@ -37,12 +42,18 @@ function onObservacaoBlur(ev: Event) {
 </script>
 
 <template>
-  <section class="exec">
-    <div class="exec-head">
+  <section class="exec" :class="{ collapsed: !open }">
+    <button
+      type="button"
+      class="exec-head"
+      :aria-expanded="open"
+      aria-controls="analise-executiva-body"
+      @click="toggle"
+    >
       <span class="num">08</span>
       <div class="exec-copy">
         <div class="cell-title">Análise executiva</div>
-        <div class="hint">
+        <div v-if="open" class="hint">
           Método de seleção e priorização. Note cada critério de 1 a 5; os pesos são os sugeridos para o comitê.
         </div>
       </div>
@@ -57,62 +68,68 @@ function onObservacaoBlur(ev: Event) {
           <small>Sem notas ainda</small>
         </template>
       </div>
-    </div>
+      <span class="exec-caret" aria-hidden="true">{{ open ? '−' : '+' }}</span>
+    </button>
 
-    <div class="exec-table-wrap">
-      <table class="exec-table">
-        <thead>
-          <tr>
-            <th class="c-crit">Critério</th>
-            <th class="c-peso">Peso</th>
-            <th class="c-q">Pergunta de decisão</th>
-            <th class="c-nota">Nota</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in ANALISE_CRITERIOS" :key="c.id">
-            <td class="c-crit">{{ c.label }}</td>
-            <td class="c-peso">{{ c.peso }}%</td>
-            <td class="c-q">{{ c.pergunta }}</td>
-            <td class="c-nota">
-              <div class="dots" role="group" :aria-label="`Nota de ${c.label}`">
-                <button
-                  v-for="n in 5"
-                  :key="c.id + n"
-                  type="button"
-                  class="dot"
-                  :class="{ active: modelValue.scores[c.id] === n }"
-                  @click="setScore(c.id, n)"
-                >
-                  {{ n }}
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <div v-if="open" id="analise-executiva-body" class="exec-body">
+      <div class="exec-table-wrap">
+        <table class="exec-table">
+          <thead>
+            <tr>
+              <th class="c-crit">Critério</th>
+              <th class="c-peso">Peso</th>
+              <th class="c-q">Pergunta de decisão</th>
+              <th class="c-nota">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in ANALISE_CRITERIOS" :key="c.id">
+              <td class="c-crit">{{ c.label }}</td>
+              <td class="c-peso">{{ c.peso }}%</td>
+              <td class="c-q">{{ c.pergunta }}</td>
+              <td class="c-nota">
+                <div class="dots" role="group" :aria-label="`Nota de ${c.label}`">
+                  <button
+                    v-for="n in 5"
+                    :key="c.id + n"
+                    type="button"
+                    class="dot"
+                    :class="{ active: modelValue.scores[c.id] === n }"
+                    @click="setScore(c.id, n)"
+                  >
+                    {{ n }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <label class="exec-obs">
-      <span>Observação do comitê (opcional)</span>
-      <textarea
-        :value="modelValue.observacao"
-        class="write write-sm"
-        rows="2"
-        maxlength="2000"
-        placeholder="Síntese da discussão, premissas ou ressalvas da priorização…"
-        @blur="onObservacaoBlur"
-      />
-    </label>
+      <label class="exec-obs">
+        <span>Observação do comitê (opcional)</span>
+        <textarea
+          :value="modelValue.observacao"
+          class="write write-sm"
+          rows="2"
+          maxlength="2000"
+          placeholder="Síntese da discussão, premissas ou ressalvas da priorização…"
+          @blur="onObservacaoBlur"
+        />
+      </label>
+    </div>
   </section>
 </template>
 
 <style scoped>
 .exec {
   border-bottom: 1px solid var(--line);
-  padding: 16px 18px 18px;
+  padding: 4px 18px 8px;
   position: relative;
   background: var(--paper);
+}
+.exec:not(.collapsed) {
+  padding-bottom: 18px;
 }
 .exec::before {
   content: '';
@@ -127,12 +144,41 @@ function onObservacaoBlur(ev: Event) {
   display: flex;
   align-items: flex-start;
   gap: 12px 18px;
-  margin-bottom: 12px;
-  padding-left: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 0 8px 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.exec.collapsed .exec-head {
+  align-items: center;
+  padding-bottom: 12px;
+}
+.exec.collapsed .exec-caret,
+.exec.collapsed .num {
+  margin-top: 0;
+  padding-top: 0;
+}
+.exec.collapsed .exec-total {
+  padding-top: 0;
+}
+.exec.collapsed .exec-total b {
+  font-size: 22px;
 }
 .exec-copy {
   flex: 1;
   min-width: 0;
+}
+.exec-caret {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-soft);
 }
 .exec-total {
   margin-left: auto;
@@ -168,6 +214,9 @@ function onObservacaoBlur(ev: Event) {
 }
 .exec-total.empty small {
   font-size: 12px;
+}
+.exec-body {
+  padding-left: 8px;
 }
 .num {
   font-family: var(--sans);

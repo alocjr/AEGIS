@@ -17,6 +17,7 @@ from app.mcp.tools_learner import (
     _delete_cronograma_marco,
     _empty_cronograma,
     _merge_cronograma,
+    _move_cronograma_atividade,
     _update_cronograma_atividade,
     _update_cronograma_marco,
 )
@@ -135,6 +136,17 @@ class McpCanvasCronogramaTests(unittest.TestCase):
         self.assertEqual(crono["atividades"][0]["semana_fim"], 2)
         crono = _delete_cronograma_atividade(crono, aid)
         self.assertEqual(crono["atividades"], [])
+
+    def test_move_atividade_reorders(self) -> None:
+        crono = _empty_cronograma()
+        crono = _add_cronograma_atividade(crono, {"titulo": "A", "semana_inicio": 1, "semana_fim": 1})
+        crono = _add_cronograma_atividade(crono, {"titulo": "B", "semana_inicio": 2, "semana_fim": 2})
+        crono = _add_cronograma_atividade(crono, {"titulo": "C", "semana_inicio": 3, "semana_fim": 3})
+        ids = [a["id"] for a in crono["atividades"]]
+        moved = _move_cronograma_atividade(crono, ids[0], 2)
+        self.assertEqual([a["titulo"] for a in moved["atividades"]], ["B", "C", "A"])
+        moved = _move_cronograma_atividade(moved, ids[2], 0)
+        self.assertEqual([a["titulo"] for a in moved["atividades"]], ["C", "B", "A"])
 
     def test_add_atividade_requires_titulo(self) -> None:
         with self.assertRaises(ToolError):
