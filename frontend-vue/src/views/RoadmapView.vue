@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StateBlock from '@/components/ui/StateBlock.vue'
 import {
+  CANVAS_PRIORIDADES,
   listRoadmapProjects,
   moveRoadmapProject,
+  periodicidadeLabel,
   type CanvasPrioridade,
+  type CanvasQuadrant,
   type CanvasRoadmapItem,
 } from '@/api/canvasProjects'
 
@@ -24,6 +27,18 @@ const windowStart = ref(startOfMonth(new Date()))
 const draggingId = ref<string | null>(null)
 const dragPreview = ref<string | null>(null)
 const saveError = ref<string | null>(null)
+const hoverItem = ref<CanvasRoadmapItem | null>(null)
+const tooltipPos = ref({ x: 0, y: 0 })
+const tooltipRef = ref<HTMLElement | null>(null)
+const TOOLTIP_GAP = 14
+
+const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
+  ganho_rapido: 'Ganho rápido',
+  aposta_estrategica: 'Aposta estratégica',
+  incremental: 'Incremental',
+  evitar: 'Evitar · vaidade',
+}
+
 let drag: {
   id: string
   originIso: string
@@ -126,11 +141,60 @@ function barStyle(item: CanvasRoadmapItem): Record<string, string> {
   return { gridColumn: `${from + 1} / ${to + 1}` }
 }
 
-function barTitle(item: CanvasRoadmapItem): string {
+function spanEndIso(item: CanvasRoadmapItem): string {
   const start = parseIso(liveStart(item))
   const end = addMonths(startOfMonth(start), durationMonths(item.semanas))
   end.setDate(0)
-  return `${item.title}: ${formatIso(liveStart(item))} → ${formatIso(toIsoDate(end))}`
+  return toIsoDate(end)
+}
+
+function barTitle(item: CanvasRoadmapItem): string {
+  return `${item.title}: ${formatIso(liveStart(item))} → ${formatIso(spanEndIso(item))}`
+}
+
+function prioLabel(p: CanvasPrioridade | string): string {
+  const id = prioTone(p)
+  return CANVAS_PRIORIDADES.find((x) => x.id === id)?.label || id
+}
+
+function quadrantLabel(q: CanvasQuadrant): string {
+  return q ? QUADRANT_LABEL[q] : ''
+}
+
+function clipText(text: string, max = 180): string {
+  const t = text.trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, max - 1)}…`
+}
+
+function placeTooltip(ev: MouseEvent) {
+  if (!hoverItem.value) return
+  const rect = tooltipRef.value?.getBoundingClientRect()
+  let left = ev.clientX + TOOLTIP_GAP
+  let top = ev.clientY + TOOLTIP_GAP
+  if (rect?.width) {
+    if (left + rect.width > window.innerWidth - 8) left = ev.clientX - rect.width - TOOLTIP_GAP
+    if (left < 8) left = 8
+    if (top + rect.height > window.innerHeight - 8) top = ev.clientY - rect.height - TOOLTIP_GAP
+    if (top < 8) top = 8
+  }
+  tooltipPos.value = { x: left, y: top }
+}
+
+async function onRowEnter(item: CanvasRoadmapItem, ev: MouseEvent) {
+  if (draggingId.value) return
+  hoverItem.value = item
+  await nextTick()
+  placeTooltip(ev)
+}
+
+function onRowMove(ev: MouseEvent) {
+  if (!hoverItem.value || draggingId.value) return
+  placeTooltip(ev)
+}
+
+function hideTooltip() {
+  hoverItem.value = null
 }
 
 function prioTone(p: CanvasPrioridade | string): string {
@@ -164,6 +228,7 @@ function onBarPointerDown(item: CanvasRoadmapItem, ev: PointerEvent) {
   const track = (ev.currentTarget as HTMLElement).closest('.track') as HTMLElement | null
   if (!track) return
   ev.preventDefault()
+  hideTooltip()
   const colWidth = track.clientWidth / MONTHS
   drag = {
     id: item.id,
@@ -214,10 +279,12 @@ function onBarLostCapture() {
 
 onMounted(() => {
   void load()
+  window.addEventListener('scroll', hideTooltip, { passive: true })
 })
 
 onUnmounted(() => {
   drag = null
+  window.removeEventListener('scroll', hideTooltip)
 })
 </script>
 
@@ -251,7 +318,7 @@ onUnmounted(() => {
         <p v-if="saveError" class="save-err">{{ saveError }}</p>
       </div>
 
-      <div class="gantt-card">
+      <div class="gantt-card" @scroll="hideTooltip">
         <div class="gantt" :style="{ '--months': String(MONTHS) }">
           <div class="gantt-head">
             <div class="label-col">Projeto</div>
@@ -272,7 +339,10 @@ onUnmounted(() => {
             v-for="item in items"
             :key="item.id"
             class="gantt-row"
-            :class="{ dragging: draggingId === item.id }"
+            :class="{ dragging: draggingId === item.id, hovered: hoverItem?.id === item.id }"
+            @mouseenter="onRowEnter(item, $event)"
+            @mousemove="onRowMove"
+            @mouseleave="hideTooltip"
           >
             <div class="label-col">
               <RouterLink :to="`/projetos/${item.id}`" class="proj-title">
@@ -303,7 +373,6 @@ onUnmounted(() => {
                   'clip-end': barLayout(item).clippedEnd,
                 }"
                 :style="barStyle(item)"
-                :title="barTitle(item)"
                 :aria-label="barTitle(item) + '. Arraste para reagendar.'"
                 @pointerdown="onBarPointerDown(item, $event)"
                 @pointermove="onBarPointerMove"
@@ -320,9 +389,78 @@ onUnmounted(() => {
       </div>
       <p class="hint">
         A largura da barra segue o horizonte do cronograma do canvas ({{ WEEKS_PER_MONTH }} semanas ≈ 1 mês).
-        Arrastar move a data de início real; a duração não muda.
+        Arrastar move a data de início real; a duração não muda. Passe o mouse no projeto para ver o resumo.
       </p>
     </template>
+
+    <Teleport to="body">
+      <div
+        ref="tooltipRef"
+        class="proj-tooltip"
+        :class="{ visible: !!hoverItem }"
+        :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
+        role="tooltip"
+      >
+        <template v-if="hoverItem">
+          <div class="tip-title">{{ hoverItem.title || 'Projeto' }}</div>
+          <div class="tip-badge" :data-p="prioTone(hoverItem.prioridade)" :data-q="hoverItem.quadrant || ''">
+            {{ prioLabel(hoverItem.prioridade) }}
+            <template v-if="hoverItem.quadrant"> · {{ quadrantLabel(hoverItem.quadrant) }}</template>
+          </div>
+          <dl class="tip-dl">
+            <div v-if="hoverItem.area_negocio">
+              <dt>Área</dt>
+              <dd>{{ hoverItem.area_negocio }}</dd>
+            </div>
+            <div v-if="hoverItem.responsavel">
+              <dt>Responsável</dt>
+              <dd>{{ hoverItem.responsavel }}</dd>
+            </div>
+            <div>
+              <dt>Início</dt>
+              <dd>{{ formatIso(liveStart(hoverItem)) }}</dd>
+            </div>
+            <div>
+              <dt>Fim previsto</dt>
+              <dd>{{ formatIso(spanEndIso(hoverItem)) }}</dd>
+            </div>
+            <div>
+              <dt>Duração</dt>
+              <dd>
+                {{ hoverItem.semanas }} sem.
+                ({{ durationMonths(hoverItem.semanas) }}
+                {{ durationMonths(hoverItem.semanas) === 1 ? 'mês' : 'meses' }})
+              </dd>
+            </div>
+            <div v-if="hoverItem.periodicidade">
+              <dt>Acompanhamento</dt>
+              <dd>{{ periodicidadeLabel(hoverItem.periodicidade) }}</dd>
+            </div>
+            <div v-if="hoverItem.score_valor != null">
+              <dt>Valor</dt>
+              <dd>{{ hoverItem.score_valor }} / 5</dd>
+            </div>
+            <div v-if="hoverItem.score_viabilidade != null">
+              <dt>Viabilidade</dt>
+              <dd>{{ hoverItem.score_viabilidade }} / 5</dd>
+            </div>
+            <div v-if="hoverItem.objetivo_estrategico" class="tip-wide">
+              <dt>Objetivo estratégico</dt>
+              <dd>{{ clipText(hoverItem.objetivo_estrategico) }}</dd>
+            </div>
+            <div v-if="hoverItem.proximo_passo" class="tip-wide">
+              <dt>Próximo passo</dt>
+              <dd>{{ clipText(hoverItem.proximo_passo) }}</dd>
+            </div>
+            <div v-if="hoverItem.aprovacao_comentario" class="tip-wide">
+              <dt>Comentário da aprovação</dt>
+              <dd>{{ clipText(hoverItem.aprovacao_comentario) }}</dd>
+            </div>
+          </dl>
+          <p class="tip-hint">Nome abre o canvas · barra arrasta a data de início</p>
+        </template>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -464,7 +602,8 @@ onUnmounted(() => {
 .gantt-row:last-child {
   border-bottom: none;
 }
-.gantt-row.dragging {
+.gantt-row.dragging,
+.gantt-row.hovered {
   background: var(--k9);
 }
 .proj-title {
@@ -565,6 +704,82 @@ onUnmounted(() => {
   color: var(--k5);
   line-height: 1.45;
 }
+
+.proj-tooltip {
+  position: fixed;
+  z-index: 500;
+  max-width: 360px;
+  min-width: 240px;
+  background: var(--k0);
+  color: var(--wh);
+  padding: 16px 18px 14px;
+  border-radius: var(--r-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+.proj-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+.tip-title {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.3;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.tip-badge {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+.tip-badge[data-p='P0'] { background: #12232e; color: #fff; }
+.tip-badge[data-p='P1'] { background: #2f6e6a; color: #fff; }
+.tip-badge[data-p='P2'] { background: #c17a2c; color: #fff; }
+.tip-badge[data-p='P3'] { background: #5b7a86; color: #fff; }
+.tip-badge[data-q='ganho_rapido'] { background: #2f6e4a; }
+.tip-badge[data-q='aposta_estrategica'] { background: #c48a26; }
+.tip-badge[data-q='incremental'] { background: #5b7a86; }
+.tip-badge[data-q='evitar'] { background: #9c3b2e; }
+.tip-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+.tip-dl .tip-wide {
+  grid-column: 1 / -1;
+}
+.tip-dl dt {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.tip-dl dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #fff;
+  line-height: 1.35;
+}
+.tip-hint {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
 @media (max-width: 720px) {
   .gantt-head,
   .gantt-row {
