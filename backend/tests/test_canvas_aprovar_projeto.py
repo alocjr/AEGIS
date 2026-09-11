@@ -80,10 +80,12 @@ class CanvasAprovarProjetoTests(unittest.TestCase):
         self.assertTrue(item["projeto_aprovado"])
         self.assertEqual(item["aprovacao_comentario"], "Ana (CEO) e Bruno (CFO)")
         self.assertEqual(item["data_inicio_real"], "2026-04-09")
+        self.assertEqual(item["mes_inicio"], "abr")
         self.assertEqual(item["periodicidade"], "mensal")
         self.assertTrue(item["aprovado_em"])
         stored = db.canvas_projects.find_one({"_id": project["_id"]})
         self.assertTrue(stored["projeto_aprovado"])
+        self.assertEqual(stored["mes_inicio"], "abr")
 
     def test_rejects_invalid_date(self) -> None:
         db = _FakeDb()

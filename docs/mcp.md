@@ -145,6 +145,10 @@ para autoavaliações.
 | `canvas_cronograma_add_atividade` / `canvas_cronograma_update_atividade` / `canvas_cronograma_delete_atividade` | **Escrita** — atividade do Gantt sem apagar as outras |
 | `canvas_cronograma_add_marco` / `canvas_cronograma_update_marco` / `canvas_cronograma_delete_marco` | **Escrita** — marco de decisão sem apagar os outros |
 | `canvas_approve_portfolio` | **Escrita** — aprova e cria sistema no inventário |
+| `canvas_aprovar_projeto` | **Escrita** — aprovação C-level (quem aprovou, início, ritmo) e entra no Roadmap |
+| `canvas_roadmap_list` | Leitura do Gantt de 18 meses (aprovados com data de início) |
+| `canvas_roadmap_add` | **Escrita** — inclui no Roadmap (aprova se faltar comentário/periodicidade) |
+| `canvas_roadmap_update` | **Escrita** — reagenda `data_inicio_real` e/ou `semanas` |
 
 ### OKR
 

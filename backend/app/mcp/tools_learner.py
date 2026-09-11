@@ -33,6 +33,7 @@ from app.schemas import (
     CanvasProjectCloneRequest,
     CanvasProjectCreateRequest,
     CanvasProjectUpdateRequest,
+    CanvasRoadmapMoveRequest,
     MaturityAnswersRequest,
     MaturityVisibilityRequest,
     OkrCycleCreateRequest,
@@ -192,6 +193,40 @@ def _cronograma_pack(item: dict) -> dict:
         "title": item.get("title"),
         "cronograma": item.get("cronograma") or _empty_cronograma(),
     }
+
+
+def _roadmap_semanas_of(item: dict) -> int:
+    if item.get("semanas"):
+        try:
+            return int(item["semanas"])
+        except (TypeError, ValueError):
+            pass
+    return _cronograma_of(item).get("semanas") or 8
+
+
+def _roadmap_pack_item(item: dict) -> dict:
+    """Recorte estável do Gantt de 18 meses (MCP)."""
+    return {
+        "id": item.get("id"),
+        "title": item.get("title"),
+        "area_negocio": item.get("area_negocio") or "",
+        "prioridade": item.get("prioridade") or "P4",
+        "data_inicio_real": item.get("data_inicio_real") or "",
+        "mes_inicio": item.get("mes_inicio") or "",
+        "semanas": _roadmap_semanas_of(item),
+        "periodicidade": item.get("periodicidade") or "",
+        "projeto_aprovado": bool(item.get("projeto_aprovado")),
+    }
+
+
+def _validate_roadmap_semanas(semanas: int) -> int:
+    try:
+        n = int(semanas)
+    except (TypeError, ValueError) as exc:
+        raise ToolError("semanas deve ser um inteiro de 4 a 52 (4 semanas ≈ 1 mês no Gantt).") from exc
+    if n < 4 or n > 52:
+        raise ToolError("semanas deve ser um inteiro de 4 a 52 (4 semanas ≈ 1 mês no Gantt).")
+    return n
 
 
 def _find_crono_item(items: list[dict], item_id: str, label: str) -> tuple[int, dict]:
@@ -746,11 +781,12 @@ def register_learner_tools(mcp) -> None:
         data_inicio_real: str,
         periodicidade: str,
     ) -> dict:
-        """Aprovação executiva do projeto (C-level). Só projetos aprovados entram no Mapa Estratégico.
+        """Aprovação executiva do projeto (C-level). Coloca o canvas no Roadmap (Gantt de 18 meses).
 
         comentario: pessoas que aprovaram (ex.: 'Ana CEO, Bruno CFO').
         data_inicio_real: data real de início no formato AAAA-MM-DD.
         periodicidade: quinzenal, mensal, bimestral ou trimestral.
+        Para só reagendar um projeto já aprovado, use canvas_roadmap_update.
         """
         user = _canvas_user()
         body = validate_model(
@@ -769,6 +805,133 @@ def register_learner_tools(mcp) -> None:
             org_id=_org_id(user),
             db=get_db(),
         )
+
+    def _roadmap_apply_semanas(user: dict, project_id: str, semanas: int) -> dict:
+        n = _validate_roadmap_semanas(semanas)
+        current = _cronograma_of(_canvas_load(user, project_id))
+        packed = _canvas_save_cronograma(user, project_id, _merge_cronograma(current, {"semanas": n}))
+        return packed
+
+    def _roadmap_current(user: dict, project_id: str) -> dict:
+        item = _canvas_load(user, project_id)
+        item["semanas"] = _cronograma_of(item).get("semanas") or 8
+        return item
+
+    @mcp.tool
+    def canvas_roadmap_list() -> dict:
+        """Lista o Roadmap da org ativa: projetos aprovados com data de início, no Gantt de 18 meses.
+
+        A largura da barra no Gantt é `semanas` (4 semanas ≈ 1 mês). Use canvas_roadmap_add
+        para incluir um canvas e canvas_roadmap_update para mudar a data ou a duração.
+        """
+        user = _canvas_user()
+        listed = call_route(
+            canvas_routes.list_roadmap,
+            user=user,
+            org_id=_org_id(user),
+            db=get_db(),
+        )
+        items = [_roadmap_pack_item(i) for i in (listed.get("items") or [])]
+        return {"items": items}
+
+    @mcp.tool
+    def canvas_roadmap_add(
+        project_id: str,
+        data_inicio_real: str,
+        comentario: str | None = None,
+        periodicidade: str | None = None,
+        semanas: int | None = None,
+    ) -> dict:
+        """Inclui um canvas no Roadmap (Gantt de 18 meses) na org ativa.
+
+        Se o projeto ainda não foi aprovado, informe `comentario` (quem aprovou) e
+        `periodicidade` (`quinzenal` | `mensal` | `bimestral` | `trimestral`) — equivale
+        a canvas_aprovar_projeto. Se já estiver aprovado, só agenda `data_inicio_real`
+        (AAAA-MM-DD). `semanas` (4–52, opcional) define a duração da barra (4 ≈ 1 mês).
+        """
+        user = _canvas_user()
+        current = _roadmap_current(user, project_id)
+        start = (data_inicio_real or "").strip()
+        if current.get("projeto_aprovado"):
+            body = validate_model(CanvasRoadmapMoveRequest, {"data_inicio_real": start})
+            item = call_route(
+                canvas_routes.move_roadmap_project,
+                project_id=project_id,
+                body=body,
+                user=user,
+                org_id=_org_id(user),
+                db=get_db(),
+            )
+        else:
+            comment = (comentario or "").strip()
+            period = (periodicidade or "").strip()
+            if not comment or not period:
+                raise ToolError(
+                    "Projeto nao aprovado: informe comentario (quem aprovou) e "
+                    "periodicidade (quinzenal, mensal, bimestral ou trimestral) "
+                    "para inclui-lo no roadmap."
+                )
+            body = validate_model(
+                CanvasAprovarProjetoRequest,
+                {
+                    "comentario": comment,
+                    "data_inicio_real": start,
+                    "periodicidade": period,
+                },
+            )
+            item = call_route(
+                canvas_routes.aprovar_projeto,
+                project_id=project_id,
+                body=body,
+                user=user,
+                org_id=_org_id(user),
+                db=get_db(),
+            )
+        if semanas is not None:
+            packed = _roadmap_apply_semanas(user, project_id, semanas)
+            item["semanas"] = packed["cronograma"]["semanas"]
+        else:
+            item["semanas"] = _roadmap_semanas_of(item)
+        return _roadmap_pack_item(item)
+
+    @mcp.tool
+    def canvas_roadmap_update(
+        project_id: str,
+        data_inicio_real: str | None = None,
+        semanas: int | None = None,
+    ) -> dict:
+        """Edita um projeto no Roadmap: reagenda a data de início e/ou a duração em semanas.
+
+        `data_inicio_real`: AAAA-MM-DD (a duração não muda). `semanas`: 4–52 (4 ≈ 1 mês no Gantt).
+        Informe ao menos um dos dois. Só projetos já aprovados.
+        """
+        user = _canvas_user()
+        start = (data_inicio_real or "").strip()
+        if not start and semanas is None:
+            raise ToolError("Informe data_inicio_real e/ou semanas.")
+        current = _roadmap_current(user, project_id)
+        if not current.get("projeto_aprovado"):
+            raise ToolError(
+                "So projetos aprovados entram no roadmap. Use canvas_roadmap_add "
+                "(comentario + periodicidade) ou canvas_aprovar_projeto."
+            )
+        item = current
+        if start:
+            body = validate_model(CanvasRoadmapMoveRequest, {"data_inicio_real": start})
+            item = call_route(
+                canvas_routes.move_roadmap_project,
+                project_id=project_id,
+                body=body,
+                user=user,
+                org_id=_org_id(user),
+                db=get_db(),
+            )
+        if semanas is not None:
+            packed = _roadmap_apply_semanas(user, project_id, semanas)
+            item["semanas"] = packed["cronograma"]["semanas"]
+        else:
+            item["semanas"] = _roadmap_semanas_of(item)
+        return _roadmap_pack_item(item)
 
     # ── Curso ────────────────────────────────────────────────────────────────
 

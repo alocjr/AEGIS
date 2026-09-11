@@ -916,10 +916,12 @@ def aprovar_projeto(
     comentario = (body.comentario or "").strip()
     if not comentario:
         raise HTTPException(status_code=400, detail="Informe as pessoas que aprovaram o projeto.")
+    start = _clean_iso_date(body.data_inicio_real)
     updates = {
         "projeto_aprovado": True,
         "aprovacao_comentario": comentario[:1000],
-        "data_inicio_real": _clean_iso_date(body.data_inicio_real),
+        "data_inicio_real": start,
+        "mes_inicio": _mes_from_iso(start),
         "periodicidade": body.periodicidade,
         "updated_at": now,
     }

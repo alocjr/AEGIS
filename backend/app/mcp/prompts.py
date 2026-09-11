@@ -49,6 +49,8 @@ def register_prompts(mcp) -> None:
             "`canvas_cronograma_create` / `canvas_cronograma_update` / "
             "`canvas_cronograma_delete`, ou as tools de atividade/marco. "
             "`canvas_approve_portfolio` envia o projeto ao inventário de Governança. "
+            "Roadmap (Gantt de 18 meses dos projetos aprovados): `canvas_roadmap_list`, "
+            "`canvas_roadmap_add` (aprova/agenda) e `canvas_roadmap_update` (data ou duração). "
             "Confirme a organização ativa com `org_list` / `org_switch` antes de importar.\n"
         )
 

@@ -17,7 +17,7 @@ MCP_PATH = "/mcp"
 # Bump quando o catálogo de tools mudar. O Claude cacheia tools/list por URL/nome
 # do connector e ignora notifications/tools/list_changed; serverInfo.version
 # diferente ajuda alguns clientes a tratar o catálogo como novo.
-TOOLS_CATALOG_VERSION = "2026.09.12"
+TOOLS_CATALOG_VERSION = "2026.09.13"
 
 
 def get_auth() -> AegisOAuthProvider:
@@ -56,10 +56,11 @@ def create_mcp() -> FastMCP:
             "okr_create_key_result / okr_update_key_result / okr_activate; "
             "canvas_create / canvas_update / canvas_import / "
             "canvas_cronograma_create / canvas_cronograma_update / canvas_cronograma_delete; "
+            "canvas_roadmap_list / canvas_roadmap_add / canvas_roadmap_update; "
             "governance_create_system / governance_update_system / governance_create_assessment / "
             "governance_create_gate / governance_decide_gate. "
             "Se o cliente ainda listar um catálogo antigo (sem org_list / "
-            "org_switch / canvas_clone), remova e recoloque o connector e abra um chat novo."
+            "org_switch / canvas_clone / canvas_roadmap_add), remova e recoloque o connector e abra um chat novo."
         ),
         auth=auth,
     )
