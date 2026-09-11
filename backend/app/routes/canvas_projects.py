@@ -98,6 +98,18 @@ _EMPTY_FIELDS = {
         "atividades": [],
         "marcos": [],
     },
+    "analise_executiva": {
+        "scores": {
+            "valor_economico": None,
+            "urgencia_risco": None,
+            "viabilidade_dados": None,
+            "capacidade_adocao": None,
+            "tempo_evidencia": None,
+            "reutilizacao": None,
+            "risco_residual": None,
+        },
+        "observacao": "",
+    },
     "dados_estruturado": {"descricao": "", "sensibilidade": None},
     "riscos_estruturado": {"descricao": "", "regulatorio": [], "human_in_the_loop": None},
     "status": "rascunho",
@@ -231,6 +243,35 @@ def _clean_cronograma(value) -> dict:
     }
 
 
+_ANALISE_CRITERIO_IDS = (
+    "valor_economico",
+    "urgencia_risco",
+    "viabilidade_dados",
+    "capacidade_adocao",
+    "tempo_evidencia",
+    "reutilizacao",
+    "risco_residual",
+)
+
+
+def _empty_analise_executiva() -> dict:
+    return {
+        "scores": {key: None for key in _ANALISE_CRITERIO_IDS},
+        "observacao": "",
+    }
+
+
+def _clean_analise_executiva(value) -> dict:
+    """Normaliza notas 1–5 dos sete critérios; ignora ids desconhecidos."""
+    raw = value if isinstance(value, dict) else {}
+    scores_in = raw.get("scores") if isinstance(raw.get("scores"), dict) else {}
+    scores = {key: _score_1_5(scores_in.get(key)) for key in _ANALISE_CRITERIO_IDS}
+    return {
+        "scores": scores,
+        "observacao": str(raw.get("observacao") or "")[:2000],
+    }
+
+
 def _quadrant(score_valor: int | None, score_viabilidade: int | None) -> str | None:
     if score_valor is None or score_viabilidade is None:
         return None
@@ -301,6 +342,7 @@ def _to_item(doc: dict, *, summary: bool = False) -> dict:
         "proximo_passo": doc.get("proximo_passo") or "",
         "justificativa_tows": doc.get("justificativa_tows") or "",
         "cronograma": _clean_cronograma(doc.get("cronograma")),
+        "analise_executiva": _clean_analise_executiva(doc.get("analise_executiva")),
         "opportunity_type_options": list(OPPORTUNITY_TYPE_OPTIONS),
         "dados_estruturado": doc.get("dados_estruturado")
         or {"descricao": "", "sensibilidade": None},
@@ -509,6 +551,7 @@ def _clone_doc(source: dict, *, dest_org_id: ObjectId, actor_id, title: str) -> 
         "proximo_passo": source.get("proximo_passo") or "",
         "justificativa_tows": source.get("justificativa_tows") or "",
         "cronograma": cronograma,
+        "analise_executiva": _clean_analise_executiva(source.get("analise_executiva")),
         "dados_estruturado": copy.deepcopy(
             source.get("dados_estruturado") or {"descricao": "", "sensibilidade": None}
         ),
@@ -1069,6 +1112,8 @@ def update_project(
             updates[key] = _clean_ref_ids(data[key])
     if "cronograma" in data and data["cronograma"] is not None:
         updates["cronograma"] = _clean_cronograma(data["cronograma"])
+    if "analise_executiva" in data and data["analise_executiva"] is not None:
+        updates["analise_executiva"] = _clean_analise_executiva(data["analise_executiva"])
     if "prioridade" in data:
         updates["prioridade"] = _clean_prioridade(data["prioridade"])
     if "mes_inicio" in data:
@@ -1084,6 +1129,7 @@ def update_project(
             "tows_ids",
             "kr_ids",
             "cronograma",
+            "analise_executiva",
             "prioridade",
             "mes_inicio",
             "visibility",

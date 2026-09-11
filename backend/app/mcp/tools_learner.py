@@ -630,6 +630,9 @@ def register_learner_tools(mcp) -> None:
         canvas_cronograma_update, canvas_cronograma_delete e as tools de atividade/marco.
         Prioridade C-level: `prioridade` (P0–P4) e `mes_inicio` (jan–dez).
         Visibilidade: `visibility` (`shared` | `private`).
+        Análise executiva: `analise_executiva` `{ scores: { valor_economico, urgencia_risco,
+        viabilidade_dados, capacidade_adocao, tempo_evidencia, reutilizacao, risco_residual },
+        observacao }` — notas 1–5 nos critérios ponderados (bloco 08).
         """
         user = _canvas_user()
         raw = parse_json_object(fields, label="fields")

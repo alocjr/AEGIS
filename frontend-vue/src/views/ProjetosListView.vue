@@ -420,7 +420,7 @@ onUnmounted(() => {
   <div class="wrap">
     <PageHeader
       title="Projetos · Canvas de Oportunidades"
-      subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→08)."
+      subtitle="Um canvas por área de negócio. Crie um projeto, abra o canvas e preencha da dor à decisão (01→09)."
     >
       <template #actions>
         <RouterLink to="/roadmap" class="link-roadmap">Roadmap →</RouterLink>
@@ -623,7 +623,7 @@ onUnmounted(() => {
               Nenhum projeto pontuado corresponde à busca.
             </template>
             <template v-else>
-              Nenhum projeto pontuado ainda. Abra um canvas e preencha Valor e Viabilidade no bloco 08.
+              Nenhum projeto pontuado ainda. Abra um canvas e preencha Valor e Viabilidade no bloco 09.
             </template>
           </p>
         </div>

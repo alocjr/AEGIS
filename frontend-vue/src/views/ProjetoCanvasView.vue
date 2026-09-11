@@ -20,6 +20,7 @@ import {
 import type { ArtifactVisibility } from '@/lib/visibility'
 import ArtifactVisibilityToggle from '@/components/ui/ArtifactVisibilityToggle.vue'
 import CanvasCronograma from '@/components/canvas/CanvasCronograma.vue'
+import CanvasAnaliseExecutiva from '@/components/canvas/CanvasAnaliseExecutiva.vue'
 import CanvasAprovarModal from '@/components/canvas/CanvasAprovarModal.vue'
 import CanvasPdfExport from '@/components/canvas/CanvasPdfExport.vue'
 import CanvasCloneModal from '@/components/canvas/CanvasCloneModal.vue'
@@ -37,6 +38,7 @@ import {
 } from '@/api/swotAnalysis'
 import { getActiveOkrCycle, type OkrCycle } from '@/api/okrs'
 import { useAutosave } from '@/composables/useAutosave'
+import { emptyAnaliseExecutiva, mergeAnaliseExecutiva } from '@/lib/canvasAnaliseExecutiva'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,7 +83,7 @@ const EVAL_CELLS: EvalHelp[] = [
     hint: 'Ganho direto (tempo/custo/receita) + indireto (qualidade/risco). Como medir?',
     tagline: 'o porquê',
     answers: 'Que ganho concreto essa oportunidade traz, e como vamos medir se deu certo?',
-    pulls: 'Puxa a nota de Valor no bloco 08.',
+    pulls: 'Puxa a nota de Valor no bloco 09.',
     questions: [
       'Qual o ganho direto: tempo economizado, custo reduzido, receita gerada, capacidade liberada?',
       'Qual o ganho indireto: qualidade, redução de risco, experiência do cliente, retenção?',
@@ -100,7 +102,7 @@ const EVAL_CELLS: EvalHelp[] = [
       'Métrica de sucesso definida: "% de contatos resolvidos sem intervenção humana".',
     ],
     alert:
-      'Se ninguém consegue nomear a métrica nem a linha de base, o “valor” ainda é entusiasmo — não dá para pontuar o bloco 08 com honestidade.',
+      'Se ninguém consegue nomear a métrica nem a linha de base, o “valor” ainda é entusiasmo — não dá para pontuar o bloco 09 com honestidade.',
   },
   {
     field: 'dados',
@@ -109,7 +111,7 @@ const EVAL_CELLS: EvalHelp[] = [
     hint: 'Combustível: volume, qualidade, acesso, formato. Sem dado, não sai do papel.',
     tagline: 'o veto',
     answers: 'Existe dado disponível, com qualidade e acesso, para alimentar essa oportunidade? Sem isso, ela não sai do papel.',
-    pulls: 'Puxa a nota de Viabilidade no bloco 08.',
+    pulls: 'Puxa a nota de Viabilidade no bloco 09.',
     questions: [
       'Que dado a IA precisa consumir para funcionar? Ele existe hoje?',
       'Onde está — sistema, planilha, e-mail, cabeça das pessoas? É acessível via API/export?',
@@ -137,7 +139,7 @@ const EVAL_CELLS: EvalHelp[] = [
     hint: 'CapEx (construir) × OpEx (operar: inferência/tokens + manutenção) + integração.',
     tagline: 'o preço real',
     answers: 'Quanto custa construir e, principalmente, operar e integrar isso ao dia a dia?',
-    pulls: 'Puxa as notas de Valor e de Viabilidade no bloco 08.',
+    pulls: 'Puxa as notas de Valor e de Viabilidade no bloco 09.',
     questions: [
       'CapEx (construir): desenvolvimento, configuração, integração inicial, curadoria de dados.',
       'OpEx (operar): custo de inferência/tokens no volume real, licenças, manutenção, monitoramento.',
@@ -165,7 +167,7 @@ const EVAL_CELLS: EvalHelp[] = [
     hint: 'LGPD e regras do setor, alucinação, dependência. Que supervisão humana é obrigatória?',
     tagline: 'os limites',
     answers: 'O que pode dar errado e que supervisão é obrigatória para operar com segurança?',
-    pulls: 'Puxa a nota de Viabilidade no bloco 08.',
+    pulls: 'Puxa a nota de Viabilidade no bloco 09.',
     questions: [
       'Regulatório: LGPD, regras do setor (saúde, financeiro, jurídico), retenção de dados.',
       'Erro do modelo: o que acontece se a IA errar? O erro é reversível ou caro?',
@@ -221,6 +223,7 @@ const form = ref({
   tows_ids: [] as string[],
   kr_ids: [] as string[],
   cronograma: emptyCronograma(),
+  analise_executiva: emptyAnaliseExecutiva(),
   prioridade: 'P4' as CanvasPrioridade,
   mes_inicio: '' as CanvasMesInicio,
   visibility: 'shared' as ArtifactVisibility,
@@ -492,6 +495,7 @@ function applyProject(p: CanvasProject) {
       atividades: (p.cronograma?.atividades || []).map((a) => ({ ...a })),
       marcos: (p.cronograma?.marcos || []).map((m) => ({ ...m })),
     },
+    analise_executiva: mergeAnaliseExecutiva(p.analise_executiva),
     prioridade: p.prioridade || 'P4',
     mes_inicio: p.mes_inicio || '',
     visibility: p.visibility || 'shared',
@@ -688,7 +692,7 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
             Canvas de Oportunidades de IA
             <span>por área de negócio</span>
           </h1>
-          <p class="subtitle">Um canvas por área. Preencha na ordem 01 → 08: da dor real à decisão de investir.</p>
+          <p class="subtitle">Um canvas por área. Preencha na ordem 01 → 09: da dor real à decisão de investir.</p>
           <ArtifactVisibilityToggle
             :model-value="form.visibility"
             @update:model-value="form.visibility = $event; persist()"
@@ -1107,9 +1111,14 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
         </div>
       </div>
 
+      <CanvasAnaliseExecutiva
+        v-model="form.analise_executiva"
+        @persist="persist"
+      />
+
       <div class="decision">
         <div class="dec-left">
-          <span class="num num-amber">08</span>
+          <span class="num num-amber">09</span>
           <div class="cell-title">Decisão</div>
           <div class="hint">Preencha 04–07 antes de pontuar. Notas de 1 a 5 — o cruzamento define o quadrante e o próximo passo.</div>
           <div class="scores">
@@ -1178,7 +1187,7 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
 
       <section class="crono-section">
         <div class="crono-kicker">
-          <span class="num num-amber">09</span>
+          <span class="num num-amber">10</span>
           <span class="cell-title">Cronograma</span>
         </div>
         <CanvasCronograma
@@ -1237,6 +1246,7 @@ async function submitApprove(payload: CanvasAprovarProjetoPayload) {
       :proximo-passo="form.proximo_passo"
       :justificativa-tows="form.justificativa_tows"
       :cronograma="form.cronograma"
+      :analise-executiva="form.analise_executiva"
       @close="exportOpen = false"
     />
   </div>

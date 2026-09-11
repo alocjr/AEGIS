@@ -1,4 +1,7 @@
 import { del, get, patch, post, put } from './client'
+import type { CanvasAnaliseExecutiva } from '@/lib/canvasAnaliseExecutiva'
+
+export type { CanvasAnaliseExecutiva } from '@/lib/canvasAnaliseExecutiva'
 
 export type CanvasQuadrant =
   | 'ganho_rapido'
@@ -111,6 +114,7 @@ export interface CanvasProjectSummary {
 export interface CanvasProject extends CanvasProjectSummary {
   /** Justificativa de como o projeto trata as iniciativas TOWS vinculadas. */
   justificativa_tows: string
+  analise_executiva: CanvasAnaliseExecutiva
   contexto: string[]
   dores: string[]
   oportunidade: string[]
@@ -181,6 +185,7 @@ export type CanvasProjectPayload = Partial<{
   justificativa_tows: string
   kr_ids: string[]
   cronograma: CanvasCronograma
+  analise_executiva: CanvasAnaliseExecutiva
   prioridade: CanvasPrioridade
   mes_inicio: CanvasMesInicio
   visibility?: 'shared' | 'private'

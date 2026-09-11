@@ -132,6 +132,25 @@ class CanvasCronograma(BaseModel):
     marcos: list[CanvasCronogramaMarco] = Field(default_factory=list, max_length=12)
 
 
+class CanvasAnaliseExecutivaScores(BaseModel):
+    """Notas 1–5 do método de seleção e priorização (Análise executiva)."""
+
+    valor_economico: int | None = Field(None, ge=1, le=5)
+    urgencia_risco: int | None = Field(None, ge=1, le=5)
+    viabilidade_dados: int | None = Field(None, ge=1, le=5)
+    capacidade_adocao: int | None = Field(None, ge=1, le=5)
+    tempo_evidencia: int | None = Field(None, ge=1, le=5)
+    reutilizacao: int | None = Field(None, ge=1, le=5)
+    risco_residual: int | None = Field(None, ge=1, le=5)
+
+
+class CanvasAnaliseExecutiva(BaseModel):
+    """Bloco 08 do canvas — critério ponderado antes da Decisão."""
+
+    scores: CanvasAnaliseExecutivaScores | None = None
+    observacao: str | None = Field(None, max_length=2000)
+
+
 CanvasPrioridade = Literal["P0", "P1", "P2", "P3", "P4"]
 CanvasMesInicio = Literal[
     "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"
@@ -165,6 +184,7 @@ class CanvasProjectUpdateRequest(BaseModel):
     # Key Results (OKR) que este projeto endereça
     kr_ids: list[str] | None = Field(None, max_length=20)
     cronograma: CanvasCronograma | None = None
+    analise_executiva: CanvasAnaliseExecutiva | None = None
     prioridade: CanvasPrioridade | None = None
     mes_inicio: CanvasMesInicio | Literal[""] | None = None
     visibility: ArtifactVisibility | None = None

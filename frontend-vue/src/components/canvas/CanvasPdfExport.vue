@@ -9,6 +9,12 @@ import {
   type CanvasPrioridade,
   type CanvasQuadrant,
 } from '@/api/canvasProjects'
+import {
+  ANALISE_CRITERIOS,
+  analisePonderada,
+  formatNota,
+  type CanvasAnaliseExecutiva,
+} from '@/lib/canvasAnaliseExecutiva'
 
 const props = defineProps<{
   open: boolean
@@ -33,6 +39,7 @@ const props = defineProps<{
   proximoPasso: string
   justificativaTows: string
   cronograma: CanvasCronograma
+  analiseExecutiva?: CanvasAnaliseExecutiva | null
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -71,6 +78,15 @@ const horizonteLabel = computed(() => {
   const meses = Math.ceil(n / WEEKS_PER_MONTH)
   return `${n} sem. · ${meses} ${meses === 1 ? 'mês' : 'meses'}`
 })
+
+const analiseScores = computed(() => {
+  const scores = props.analiseExecutiva?.scores
+  return ANALISE_CRITERIOS.map((c) => ({
+    ...c,
+    score: scores?.[c.id] ?? null,
+  }))
+})
+const analiseNota = computed(() => analisePonderada(props.analiseExecutiva?.scores))
 
 function items(list: string[]): string[] {
   return (list || []).map((s) => s.trim()).filter(Boolean)
@@ -290,9 +306,26 @@ async function savePdf() {
             </section>
           </div>
 
+          <section class="exec">
+            <div class="exec-kicker">
+              <span class="num">08</span>
+              <h2>Análise executiva</h2>
+              <span v-if="analiseNota.value != null" class="exec-score">
+                {{ formatNota(analiseNota.value) }}/5 · {{ Math.round(analiseNota.pct || 0) }}%
+              </span>
+            </div>
+            <div class="exec-row">
+              <div v-for="c in analiseScores" :key="c.id" class="exec-cell">
+                <b>{{ c.label }}</b>
+                <span>{{ c.peso }}%</span>
+                <em>{{ c.score ?? '—' }}</em>
+              </div>
+            </div>
+          </section>
+
           <div class="decision">
             <section class="dec-left">
-              <span class="num num-amber">08</span>
+              <span class="num num-amber">09</span>
               <h2>Decisão</h2>
               <div class="scores">
                 <div>
@@ -336,7 +369,7 @@ async function savePdf() {
 
           <section class="crono">
             <div class="crono-kicker">
-              <span class="num num-amber">09</span>
+              <span class="num num-amber">10</span>
               <h2>Cronograma</h2>
               <span class="horizonte">{{ horizonteLabel }}</span>
               <span v-if="cronograma.subtitulo" class="crono-sub">{{ cronograma.subtitulo }}</span>
@@ -635,6 +668,70 @@ h2 {
   padding: 1px 7px;
   background: #fff;
   color: var(--ink-soft);
+}
+
+.exec {
+  flex-shrink: 0;
+  padding: 6px 12px 7px 14px;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.exec::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--teal);
+}
+.exec-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.exec-kicker h2 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.exec-score {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--teal);
+}
+.exec-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.exec-cell {
+  min-width: 0;
+  font-size: 7.5px;
+  line-height: 1.25;
+  color: var(--ink-soft);
+}
+.exec-cell b {
+  display: block;
+  font-size: 8px;
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-cell span {
+  display: block;
+}
+.exec-cell em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--ink);
 }
 
 .decision {
