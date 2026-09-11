@@ -15,6 +15,11 @@ import {
 
 const MONTHS = 18
 const WEEKS_PER_MONTH = 4
+const LABEL_W_KEY = 'aegis.roadmap.labelWidth'
+const LABEL_W_DEFAULT = 360
+const LABEL_W_MIN = 180
+const LABEL_W_MAX = 720
+const MONTHS_MIN_PX = 280
 const MONTH_LABELS = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
@@ -30,6 +35,9 @@ const saveError = ref<string | null>(null)
 const hoverItem = ref<CanvasRoadmapItem | null>(null)
 const tooltipPos = ref({ x: 0, y: 0 })
 const tooltipRef = ref<HTMLElement | null>(null)
+const ganttRef = ref<HTMLElement | null>(null)
+const labelWidth = ref(readLabelWidth())
+const resizingCol = ref(false)
 const TOOLTIP_GAP = 14
 
 const QUADRANT_LABEL: Record<Exclude<CanvasQuadrant, null>, string> = {
@@ -46,6 +54,36 @@ let drag: {
   colWidth: number
   pointerId: number
 } | null = null
+let colResize: { startX: number; startW: number; pointerId: number } | null = null
+
+function readLabelWidth(): number {
+  try {
+    const n = Number(localStorage.getItem(LABEL_W_KEY))
+    if (!Number.isFinite(n)) return LABEL_W_DEFAULT
+    return Math.min(LABEL_W_MAX, Math.max(LABEL_W_MIN, n))
+  } catch {
+    return LABEL_W_DEFAULT
+  }
+}
+
+function persistLabelWidth(n: number) {
+  try {
+    localStorage.setItem(LABEL_W_KEY, String(n))
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function resetLabelWidth() {
+  labelWidth.value = LABEL_W_DEFAULT
+  persistLabelWidth(LABEL_W_DEFAULT)
+}
+
+function clampLabelWidth(n: number): number {
+  const total = ganttRef.value?.clientWidth || 0
+  const maxFit = total > 0 ? Math.max(LABEL_W_MIN, total - MONTHS_MIN_PX) : LABEL_W_MAX
+  return Math.round(Math.min(LABEL_W_MAX, maxFit, Math.max(LABEL_W_MIN, n)))
+}
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -277,6 +315,33 @@ function onBarLostCapture() {
   dragPreview.value = null
 }
 
+function onResizePointerDown(ev: PointerEvent) {
+  if (ev.button !== 0) return
+  ev.preventDefault()
+  ev.stopPropagation()
+  hideTooltip()
+  colResize = {
+    startX: ev.clientX,
+    startW: labelWidth.value,
+    pointerId: ev.pointerId,
+  }
+  resizingCol.value = true
+  ;(ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId)
+}
+
+function onResizePointerMove(ev: PointerEvent) {
+  if (!colResize || ev.pointerId !== colResize.pointerId) return
+  labelWidth.value = clampLabelWidth(colResize.startW + (ev.clientX - colResize.startX))
+}
+
+function onResizePointerUp(ev: PointerEvent) {
+  if (!colResize || ev.pointerId !== colResize.pointerId) return
+  labelWidth.value = clampLabelWidth(labelWidth.value)
+  persistLabelWidth(labelWidth.value)
+  colResize = null
+  resizingCol.value = false
+}
+
 onMounted(() => {
   void load()
   window.addEventListener('scroll', hideTooltip, { passive: true })
@@ -284,6 +349,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   drag = null
+  colResize = null
   window.removeEventListener('scroll', hideTooltip)
 })
 </script>
@@ -319,7 +385,23 @@ onUnmounted(() => {
       </div>
 
       <div class="gantt-card" @scroll="hideTooltip">
-        <div class="gantt" :style="{ '--months': String(MONTHS) }">
+        <div
+          ref="ganttRef"
+          class="gantt"
+          :class="{ 'gantt--resizing': resizingCol }"
+          :style="{ '--months': String(MONTHS), '--label-w': `${labelWidth}px` }"
+        >
+          <button
+            type="button"
+            class="col-resizer"
+            aria-label="Ajustar largura da coluna de projetos"
+            title="Arraste para ajustar a largura do nome"
+            @pointerdown="onResizePointerDown"
+            @pointermove="onResizePointerMove"
+            @pointerup="onResizePointerUp"
+            @pointercancel="onResizePointerUp"
+            @dblclick="resetLabelWidth"
+          />
           <div class="gantt-head">
             <div class="label-col">Projeto</div>
             <div class="months">
@@ -388,8 +470,8 @@ onUnmounted(() => {
         </div>
       </div>
       <p class="hint">
-        A largura da barra segue o horizonte do cronograma do canvas ({{ WEEKS_PER_MONTH }} semanas ≈ 1 mês).
-        Arrastar move a data de início real; a duração não muda. Passe o mouse no projeto para ver o resumo.
+        Arrastar a barra move a data de início; a duração não muda. Arraste a borda da coluna
+        Projeto para ver mais do nome (duplo clique restaura). Passe o mouse no projeto para o resumo.
       </p>
     </template>
 
@@ -466,7 +548,7 @@ onUnmounted(() => {
 
 <style scoped>
 .wrap {
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 28px 20px 60px;
 }
@@ -533,13 +615,49 @@ onUnmounted(() => {
   overflow-x: auto;
 }
 .gantt {
-  min-width: 860px;
+  position: relative;
+  min-width: 0;
 }
 .gantt-head,
 .gantt-row {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(640px, 1fr);
+  grid-template-columns: var(--label-w, 360px) minmax(0, 1fr);
   align-items: stretch;
+}
+.gantt--resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+.col-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--label-w, 360px);
+  width: 10px;
+  margin-left: -5px;
+  z-index: 4;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+.col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: var(--bd);
+  transition: background 0.15s, width 0.15s, left 0.15s;
+}
+.col-resizer:hover::after,
+.col-resizer:focus-visible::after,
+.gantt--resizing .col-resizer::after {
+  left: 3px;
+  width: 4px;
+  background: var(--k0);
 }
 .gantt-head {
   border-bottom: 1px solid var(--bd);
@@ -612,9 +730,9 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--k0);
   text-decoration: none;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .proj-title:hover {
   text-decoration: underline;
@@ -778,12 +896,5 @@ onUnmounted(() => {
   margin: 12px 0 0;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.45);
-}
-
-@media (max-width: 720px) {
-  .gantt-head,
-  .gantt-row {
-    grid-template-columns: 140px minmax(560px, 1fr);
-  }
 }
 </style>
